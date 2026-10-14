@@ -1,0 +1,290 @@
+--!strict
+-- Digging tools. All balancing lives here.
+--
+-- power        : damage dealt to every cell inside the dig radius per hit.
+-- radius       : dig radius in cells around the target cell (0 = only the target cell).
+-- cooldown     : seconds between hits.
+-- energyCost   : battery energy consumed per hit.
+-- reach        : max distance in studs from the character to the dig point.
+-- model        : recipe consumed by Util/ToolModels to build the 3D model procedurally.
+
+export type ToolModel = {
+	kind: "shovel" | "pick" | "drill" | "plasma",
+	handleColor: Color3,
+	handleMaterial: Enum.Material,
+	headColor: Color3,
+	headMaterial: Enum.Material,
+	accentColor: Color3?,
+	scale: number,
+	glow: boolean?,
+}
+
+export type Tool = {
+	id: string,
+	name: string,
+	description: string,
+	price: number,
+	purchasable: boolean,
+	power: number,
+	radius: number,
+	cooldown: number,
+	energyCost: number,
+	reach: number,
+	animation: "swing" | "chop" | "drill",
+	sound: string,
+	model: ToolModel,
+	order: number,
+}
+
+local M = Enum.Material
+
+local list: { Tool } = {
+	{
+		id = "rusty_shovel",
+		name = "Pala oxidada",
+		description = "Vieja, pero todavía cava.",
+		price = 0,
+		purchasable = true,
+		power = 1,
+		radius = 0,
+		cooldown = 0.4,
+		energyCost = 1,
+		reach = 13,
+		animation = "swing",
+		sound = "swing_light",
+		model = {
+			kind = "shovel",
+			handleColor = Color3.fromRGB(120, 84, 52),
+			handleMaterial = M.Wood,
+			headColor = Color3.fromRGB(140, 92, 60),
+			headMaterial = M.CorrodedMetal,
+			scale = 1,
+		},
+	},
+	{
+		id = "reinforced_shovel",
+		name = "Pala reforzada",
+		description = "Cava un área más amplia y atraviesa la pizarra.",
+		price = 100,
+		purchasable = true,
+		power = 2,
+		radius = 1,
+		cooldown = 0.38,
+		energyCost = 1,
+		reach = 14,
+		animation = "swing",
+		sound = "swing_light",
+		model = {
+			kind = "shovel",
+			handleColor = Color3.fromRGB(90, 62, 40),
+			handleMaterial = M.WoodPlanks,
+			headColor = Color3.fromRGB(150, 156, 164),
+			headMaterial = M.Metal,
+			accentColor = Color3.fromRGB(60, 60, 64),
+			scale = 1.08,
+		},
+	},
+	{
+		id = "steel_shovel",
+		name = "Pala de acero",
+		description = "Hoja de acero templado para roca dura.",
+		price = 400,
+		purchasable = true,
+		power = 4,
+		radius = 1,
+		cooldown = 0.32,
+		energyCost = 1.5,
+		reach = 15,
+		animation = "swing",
+		sound = "swing_heavy",
+		model = {
+			kind = "shovel",
+			handleColor = Color3.fromRGB(40, 40, 46),
+			handleMaterial = M.SmoothPlastic,
+			headColor = Color3.fromRGB(196, 206, 220),
+			headMaterial = M.DiamondPlate,
+			accentColor = Color3.fromRGB(230, 70, 50),
+			scale = 1.15,
+		},
+	},
+	{
+		id = "miner_pick",
+		name = "Pico minero",
+		description = "Rompe minerales duros con golpes precisos.",
+		price = 1200,
+		purchasable = true,
+		power = 7,
+		radius = 1.5,
+		cooldown = 0.32,
+		energyCost = 2,
+		reach = 15,
+		animation = "chop",
+		sound = "swing_heavy",
+		model = {
+			kind = "pick",
+			handleColor = Color3.fromRGB(200, 40, 40),
+			handleMaterial = M.SmoothPlastic,
+			headColor = Color3.fromRGB(170, 180, 196),
+			headMaterial = M.Metal,
+			scale = 1.1,
+		},
+	},
+	{
+		id = "industrial_pick",
+		name = "Pico industrial",
+		description = "Cabeza doble reforzada para la roca antigua.",
+		price = 6000,
+		purchasable = true,
+		power = 12,
+		radius = 1.5,
+		cooldown = 0.28,
+		energyCost = 3,
+		reach = 16,
+		animation = "chop",
+		sound = "swing_heavy",
+		model = {
+			kind = "pick",
+			handleColor = Color3.fromRGB(250, 190, 30),
+			handleMaterial = M.SmoothPlastic,
+			headColor = Color3.fromRGB(60, 64, 72),
+			headMaterial = M.DiamondPlate,
+			accentColor = Color3.fromRGB(30, 30, 30),
+			scale = 1.2,
+		},
+	},
+	{
+		id = "portable_drill",
+		name = "Taladro portátil",
+		description = "Excavación continua y rápida.",
+		price = 25000,
+		purchasable = true,
+		power = 20,
+		radius = 1.5,
+		cooldown = 0.16,
+		energyCost = 3,
+		reach = 14,
+		animation = "drill",
+		sound = "drill",
+		model = {
+			kind = "drill",
+			handleColor = Color3.fromRGB(240, 140, 30),
+			handleMaterial = M.SmoothPlastic,
+			headColor = Color3.fromRGB(180, 190, 200),
+			headMaterial = M.Metal,
+			accentColor = Color3.fromRGB(40, 40, 40),
+			scale = 1.1,
+		},
+	},
+	{
+		id = "advanced_drill",
+		name = "Taladro avanzado",
+		description = "Broca de titanio y motor de alta potencia.",
+		price = 90000,
+		purchasable = true,
+		power = 35,
+		radius = 2,
+		cooldown = 0.15,
+		energyCost = 5,
+		reach = 15,
+		animation = "drill",
+		sound = "drill",
+		model = {
+			kind = "drill",
+			handleColor = Color3.fromRGB(40, 90, 200),
+			handleMaterial = M.SmoothPlastic,
+			headColor = Color3.fromRGB(210, 220, 230),
+			headMaterial = M.DiamondPlate,
+			accentColor = Color3.fromRGB(255, 220, 60),
+			scale = 1.2,
+		},
+	},
+	{
+		id = "plasma_digger",
+		name = "Excavador de plasma",
+		description = "Funde la roca volcánica con un haz de plasma.",
+		price = 300000,
+		purchasable = true,
+		power = 55,
+		radius = 2,
+		cooldown = 0.14,
+		energyCost = 7,
+		reach = 18,
+		animation = "drill",
+		sound = "plasma",
+		model = {
+			kind = "plasma",
+			handleColor = Color3.fromRGB(30, 30, 40),
+			handleMaterial = M.SmoothPlastic,
+			headColor = Color3.fromRGB(255, 80, 200),
+			headMaterial = M.Neon,
+			accentColor = Color3.fromRGB(120, 220, 255),
+			scale = 1.2,
+			glow = true,
+		},
+	},
+	{
+		id = "abyss_borer",
+		name = "Perforadora abisal",
+		description = "Diseñada para la roca que no debería existir.",
+		price = 1000000,
+		purchasable = true,
+		power = 85,
+		radius = 2.5,
+		cooldown = 0.14,
+		energyCost = 10,
+		reach = 18,
+		animation = "drill",
+		sound = "plasma",
+		model = {
+			kind = "plasma",
+			handleColor = Color3.fromRGB(10, 14, 20),
+			handleMaterial = M.SmoothPlastic,
+			headColor = Color3.fromRGB(40, 255, 220),
+			headMaterial = M.Neon,
+			accentColor = Color3.fromRGB(20, 60, 80),
+			scale = 1.3,
+			glow = true,
+		},
+	},
+	{
+		id = "ancestral_tool",
+		name = "Herramienta ancestral",
+		description = "Se desbloquea al descubrir el secreto del núcleo.",
+		price = 0,
+		purchasable = false,
+		power = 120,
+		radius = 3,
+		cooldown = 0.12,
+		energyCost = 8,
+		reach = 20,
+		animation = "chop",
+		sound = "plasma",
+		model = {
+			kind = "pick",
+			handleColor = Color3.fromRGB(230, 220, 190),
+			handleMaterial = M.Marble,
+			headColor = Color3.fromRGB(255, 230, 120),
+			headMaterial = M.Neon,
+			accentColor = Color3.fromRGB(80, 255, 230),
+			scale = 1.35,
+			glow = true,
+		},
+	},
+} :: any
+
+local Tools = {}
+Tools.List = list
+Tools.ById = {} :: { [string]: Tool }
+Tools.DefaultToolId = "rusty_shovel"
+
+for index, tool in list do
+	tool.order = index
+	assert(Tools.ById[tool.id] == nil, "Duplicate tool id " .. tool.id)
+	Tools.ById[tool.id] = tool
+end
+
+function Tools.get(id: string): Tool?
+	return Tools.ById[id]
+end
+
+return Tools

@@ -1,0 +1,126 @@
+--!strict
+-- Tool and upgrade purchases. Every request is validated on the server: ownership, price,
+-- remaining levels and distance to a shop counter.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
+local Tools = require(ReplicatedStorage.Shared.Config.Tools)
+local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Format = require(ReplicatedStorage.Shared.Util.Format)
+local RateLimiter = require(ReplicatedStorage.Shared.Util.RateLimiter)
+local PlayerDataService = require(script.Parent.PlayerDataService)
+local PlotService = require(script.Parent.PlotService)
+local StateService = require(script.Parent.StateService)
+local EquipmentService = require(script.Parent.EquipmentService)
+local EnergyService = require(script.Parent.EnergyService)
+
+local ShopService = {}
+
+type Result = { ok: boolean, message: string }
+
+local function nearShop(player: Player): boolean
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root then
+		return false
+	end
+	for _, plot in PlotService.all() do
+		local points = plot.points
+		if points and (points.shop - root.Position).Magnitude <= GameConfig.ShopDistance then
+			return true
+		end
+	end
+	return false
+end
+
+local function buyTool(player: Player, profile: any, toolId: string): Result
+	local tool = Tools.get(toolId)
+	if not tool or not tool.purchasable then
+		return { ok = false, message = "Esta herramienta no está a la venta." }
+	end
+	if profile.tools[toolId] then
+		return { ok = false, message = "Ya tienes esta herramienta." }
+	end
+	if not nearShop(player) then
+		return { ok = false, message = "Vuelve al garaje para comprar." }
+	end
+	if profile.coins < tool.price then
+		return { ok = false, message = "Te faltan " .. Format.number(tool.price - profile.coins) .. " monedas." }
+	end
+	profile.coins -= tool.price
+	profile.tools[toolId] = true
+	profile.equippedTool = toolId
+	EquipmentService.equip(player)
+	StateService.push(player)
+	return { ok = true, message = "¡" .. tool.name .. " comprada y equipada!" }
+end
+
+local function equipTool(player: Player, profile: any, toolId: string): Result
+	if not Tools.get(toolId) or not profile.tools[toolId] then
+		return { ok = false, message = "No tienes esta herramienta." }
+	end
+	profile.equippedTool = toolId
+	EquipmentService.equip(player)
+	StateService.push(player)
+	return { ok = true, message = "Herramienta equipada." }
+end
+
+local function buyUpgrade(player: Player, profile: any, trackId: string): Result
+	local track = Upgrades.ById[trackId]
+	if not track then
+		return { ok = false, message = "Mejora desconocida." }
+	end
+	local current = profile.upgrades[trackId] or 1
+	local nextLevel = track.levels[current + 1]
+	if not nextLevel then
+		return { ok = false, message = "Ya está al máximo." }
+	end
+	if not nearShop(player) then
+		return { ok = false, message = "Vuelve al garaje para comprar." }
+	end
+	if profile.coins < nextLevel.price then
+		return { ok = false, message = "Te faltan " .. Format.number(nextLevel.price - profile.coins) .. " monedas." }
+	end
+	profile.coins -= nextLevel.price
+	profile.upgrades[trackId] = current + 1
+	if trackId == "battery" then
+		EnergyService.refresh(player)
+	end
+	StateService.push(player)
+	return {
+		ok = true,
+		message = string.format("%s mejorada: %s %s", track.name, Format.number(nextLevel.value), track.unit),
+	}
+end
+
+local actions: { [string]: (Player, any, string) -> Result } = {
+	buyTool = buyTool,
+	equipTool = equipTool,
+	buyUpgrade = buyUpgrade,
+}
+
+function ShopService.start()
+	local limiter = RateLimiter.new(GameConfig.RateLimits.Shop.rate, GameConfig.RateLimits.Shop.burst)
+	Remotes.func("Shop").OnServerInvoke = function(player: Player, action: any, id: any): Result
+		if not limiter:allow(player) then
+			return { ok = false, message = "Demasiado rápido." }
+		end
+		if type(action) ~= "string" or type(id) ~= "string" or #id > 64 then
+			return { ok = false, message = "Petición no válida." }
+		end
+		local handler = actions[action]
+		local profile = PlayerDataService.get(player)
+		if not handler or not profile then
+			return { ok = false, message = "Petición no válida." }
+		end
+		return handler(player, profile, id)
+	end
+	Players.PlayerRemoving:Connect(function(player)
+		limiter:forget(player)
+	end)
+end
+
+return ShopService
