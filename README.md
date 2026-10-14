@@ -2,10 +2,11 @@
 
 Juego de excavación para Roblox: cava, descubre, vende, mejora y sigue bajando.
 
-> **Estado: Fase 1 (prototipo real) implementada en código.** Todavía **no se ha ejecutado dentro de
-> Roblox Studio** (el entorno donde se escribió no tiene Studio). La lógica pura tiene tests
-> automáticos y todo el código está comprobado contra los tipos de la API de Roblox, pero hay que
-> probarlo en Studio. Ver [`docs/PHASE1_REPORT.md`](docs/PHASE1_REPORT.md).
+> **Estado: Fases 1, 2 y 3 implementadas en código** (excavación real, parcelas, tienda, guardado,
+> cuevas, cofres, hallazgos, historia, misiones y economía reequilibrada). **Todavía no se ha
+> ejecutado dentro de Roblox Studio**: la lógica tiene tests automáticos y el código está comprobado
+> contra los tipos de la API de Roblox, pero hay que probarlo en Studio. Ver
+> [`docs/PHASE1_REPORT.md`](docs/PHASE1_REPORT.md) y [`docs/PHASE2_3_REPORT.md`](docs/PHASE2_3_REPORT.md).
 
 ## Cómo abrirlo en Roblox Studio (Rojo)
 
@@ -92,4 +93,5 @@ tools/luaucheck/target/release/luaucheck run tests/balance_sim.lua  # simulació
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — decisiones técnicas, excavación, persistencia, seguridad.
 - [`docs/BALANCE.md`](docs/BALANCE.md) — economía y tiempos objetivo.
-- [`docs/PHASE1_REPORT.md`](docs/PHASE1_REPORT.md) — qué está hecho, qué está probado, qué falta.
+- [`docs/PHASE1_REPORT.md`](docs/PHASE1_REPORT.md) — Fase 1: qué está hecho, qué está probado, qué falta.
+- [`docs/PHASE2_3_REPORT.md`](docs/PHASE2_3_REPORT.md) — Fases 2–3 y revisión general con los fallos corregidos.

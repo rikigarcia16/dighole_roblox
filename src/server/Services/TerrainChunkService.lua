@@ -107,10 +107,20 @@ function TerrainChunkService.writeBox(
 	Terrain:WriteVoxels(Region3.new(min, max), CELL, materials, occupancies)
 end
 
--- Generates layer chunks until `targetDepth` cells exist below the surface.
-function TerrainChunkService.ensureDepth(plot: PlotTerrain, targetDepth: number, yieldBetweenChunks: boolean?)
+-- Generates layer chunks until `targetDepth` cells exist below the surface. When yielding between
+-- chunks, `stillValid` is checked before every chunk so a generation whose owner left stops
+-- instead of writing over a plot that is being cleared or reassigned.
+function TerrainChunkService.ensureDepth(
+	plot: PlotTerrain,
+	targetDepth: number,
+	yieldBetweenChunks: boolean?,
+	stillValid: (() -> boolean)?
+)
 	targetDepth = math.min(targetDepth, GameConfig.MaxDepthCells + 1)
 	while plot.generatedDepth < targetDepth do
+		if stillValid and not stillValid() then
+			return
+		end
 		local d0 = plot.generatedDepth
 		local d1 = d0 + GameConfig.ChunkDepth - 1
 		TerrainChunkService.writeBox(plot, -1, N, d0, d1, -1, N)

@@ -120,5 +120,14 @@ Los nombres del encargo se corresponden así: `GameConfig` → `Config/*`; `Play
 `InventoryService` (inventario + descubrimientos + venta); `EconomyService` → monedas dentro de
 `InventoryService`/`ShopService`; `ShopService` (herramientas y mejoras); `EquipmentService`;
 `EnergyService`; `PlotService`; `StateService` (sincronización); `EffectsController`;
-`UIController`. `QuestService`, `MultiplayerService` (invitaciones) y `CheckpointService` llegan en
-fases posteriores.
+`UIController`; `QuestService` (+ `Logic/QuestLogic`); `SpecialsService` (cuevas, cofres e hitos de
+historia); `FxService`; `DetectorController`. `MultiplayerService` (invitaciones) y
+`CheckpointService` llegan en fases posteriores.
+
+## 7. Contenido subterráneo
+
+`OreGeneration.resourceAt` devuelve `"air"` para el espacio vacío natural (cuevas y huecos de los
+hitos de historia), así que el terreno se sigue regenerando de forma idéntica sin guardar nada.
+`SpecialsService` crea la decoración, los cofres y los hitos cuando se genera su chunk; sus avisos
+de interacción solo se activan cuando el jugador cava una celda vecina ("revelado"). Los cofres
+abiertos se guardan por clave de cueva en el perfil del dueño de la parcela.

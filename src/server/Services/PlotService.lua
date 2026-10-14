@@ -31,6 +31,7 @@ export type Plot = {
 	generatedDepth: number,
 	deepestDug: number,
 	ready: boolean,
+	releasing: boolean, -- terrain is being cleared; the plot cannot be claimed yet
 	collaborators: { [number]: boolean }, -- userIds allowed to dig (owner always allowed)
 	folder: Folder?,
 	points: WorldBuilder.PlotPoints?,
@@ -130,13 +131,29 @@ function PlotService.teleportToSurface(player: Player)
 	end
 end
 
-local function claim(player: Player, profile: any)
-	local plot: Plot? = nil
+local function findFreePlot(): (Plot?, boolean)
+	local anyReleasing = false
 	for _, candidate in plots do
 		if not candidate.owner then
-			plot = candidate
-			break
+			if not candidate.releasing then
+				return candidate, false
+			end
+			anyReleasing = true
 		end
+	end
+	return nil, anyReleasing
+end
+
+local function claim(player: Player, profile: any)
+	local plot, waitForRelease = findFreePlot()
+	-- A plot whose previous owner just left frees up as soon as its terrain is cleared.
+	local deadline = os.clock() + 15
+	while not plot and waitForRelease and os.clock() < deadline and player.Parent do
+		task.wait(0.5)
+		plot, waitForRelease = findFreePlot()
+	end
+	if not player.Parent then
+		return
 	end
 	if not plot then
 		warn("[PlotService] no free plot for", player.Name)
@@ -166,7 +183,10 @@ local function claim(player: Player, profile: any)
 	TerrainChunkService.ensureDepth(
 		p,
 		math.max(GameConfig.InitialChunks * GameConfig.ChunkDepth, p.deepestDug + GameConfig.GenerateAheadCells),
-		true
+		true,
+		function()
+			return plotByPlayer[player] == p
+		end
 	)
 
 	if plotByPlayer[player] ~= p then
@@ -192,6 +212,7 @@ local function release(player: Player)
 	plotByPlayer[player] = nil
 	plot.owner = nil
 	plot.ready = false
+	plot.releasing = true
 	plot.dug = {}
 	plot.damage = {}
 	plot.deepestDug = 0
@@ -206,6 +227,7 @@ local function release(player: Player)
 		end
 	end
 	TerrainChunkService.clear(plot)
+	plot.releasing = false
 end
 
 function PlotService.start()
@@ -233,6 +255,7 @@ function PlotService.start()
 			generatedDepth = 0,
 			deepestDug = 0,
 			ready = false,
+			releasing = false,
 			collaborators = {},
 		}
 		local folder, points = WorldBuilder.buildPlot(worldFolder, index, originX, originZ)

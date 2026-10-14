@@ -33,6 +33,7 @@ type Session = {
 local PlayerDataService = {}
 
 local sessions: { [Player]: Session } = {}
+local loading: { [Player]: boolean } = {}
 local loadedCallbacks: { (Player, Profile) -> () } = {}
 local beforeSaveCallbacks: { (Player, Profile) -> () } = {}
 
@@ -150,6 +151,11 @@ local function save(session: Session, release: boolean): boolean
 	local profile = session.profile
 	local ok, err = retry(3, function()
 		dataStore:UpdateAsync(session.key, function(record: any)
+			if not release and session.released then
+				-- An autosave that reaches the store after the final save must not re-take the
+				-- lock (the player would be locked out of other servers until it expires).
+				return nil
+			end
 			record = type(record) == "table" and record or {}
 			local lock = record.lock
 			if type(lock) == "table" and lock.jobId ~= JOB_ID then
@@ -190,7 +196,13 @@ function PlayerDataService.beforeSave(callback: (Player, Profile) -> ())
 end
 
 local function onPlayerAdded(player: Player)
+	-- PlayerAdded and the initial GetPlayers() loop can both see the same player.
+	if sessions[player] or loading[player] then
+		return
+	end
+	loading[player] = true
 	local session = load(player)
+	loading[player] = nil
 	if not session then
 		return
 	end

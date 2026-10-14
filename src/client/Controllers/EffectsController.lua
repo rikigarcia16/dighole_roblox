@@ -292,10 +292,18 @@ function EffectsController.start()
 	end)
 
 	Remotes.event("DigFx").OnClientEvent:Connect(
-		function(player: Player, position: Vector3, resourceId: string, broke: boolean, toolId: string, bestId: string?)
-			if player ~= localPlayer then
-				local tool = Tools.get(toolId)
-				EffectsController.swing(player.Character, tool and tool.animation or "swing")
+		function(
+			player: Player,
+			position: Vector3,
+			resourceId: string,
+			broke: boolean,
+			toolId: string?,
+			bestId: string?
+		)
+			-- toolId is nil for non-dig effects (e.g. opening a chest): no swing then.
+			local tool = toolId and Tools.get(toolId)
+			if player ~= localPlayer and tool then
+				EffectsController.swing(player.Character, tool.animation)
 			end
 			EffectsController.hit(position, resourceId, broke)
 			if bestId then

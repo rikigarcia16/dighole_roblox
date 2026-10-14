@@ -584,8 +584,6 @@ function UIController.start()
 			text = if UserInputService.TouchEnabled
 				then "<b>Objetivo:</b> mantén pulsado CAVAR para excavar tu terreno."
 				else "<b>Objetivo:</b> mantén pulsado el clic izquierdo (o E) sobre el suelo para cavar."
-		elseif state.used >= state.capacity then
-			text = "<b>Mochila llena:</b> vuelve a la superficie y vende en el carro verde."
 		elseif not state.tools.reinforced_shovel and state.coins >= 100 then
 			text = "<b>Objetivo:</b> compra la Pala reforzada en el garaje."
 		elseif not hasSold and (state.discoveries.dirt or 0) > 0 and state.coins < 100 then
