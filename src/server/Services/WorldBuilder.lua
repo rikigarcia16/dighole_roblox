@@ -428,7 +428,7 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 			material = Enum.Material.Fabric,
 			collide = false,
 		})
-		prompt(note, "Note", "Nota misteriosa", "Leer", 8)
+		prompt(note, "Note", "Nota misteriosa", "Leer", 8):SetAttribute("NoteId", "house_note")
 		local light = Instance.new("PointLight")
 		light.Range = 18
 		light.Brightness = 0.8

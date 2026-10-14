@@ -18,13 +18,26 @@ local pending: { [Player]: boolean } = {}
 local stateEvent = Remotes.event("State")
 local notifyEvent = Remotes.event("Notify")
 local lastNotify: { [Player]: { [string]: number } } = {}
+local beforePushCallbacks: { (Player) -> () } = {}
+local snapshotProviders: { (Player, any, any) -> () } = {}
+
+-- Runs right before a state snapshot is sent (QuestService uses it to complete quests based on
+-- the latest state, so rewards are included in the same snapshot).
+function StateService.beforePush(callback: (Player) -> ())
+	table.insert(beforePushCallbacks, callback)
+end
+
+-- Lets other services add fields to the snapshot: provider(player, profile, snapshot).
+function StateService.addSnapshotProvider(provider: (Player, any, any) -> ())
+	table.insert(snapshotProviders, provider)
+end
 
 function StateService.snapshot(player: Player): any?
 	local profile = PlayerDataService.get(player)
 	if not profile then
 		return nil
 	end
-	return {
+	local snapshot = {
 		coins = profile.coins,
 		inventory = profile.inventory,
 		used = Inventory.used(profile.inventory),
@@ -35,8 +48,14 @@ function StateService.snapshot(player: Player): any?
 		discoveries = profile.discoveries,
 		zonesReached = profile.zonesReached,
 		maxDepth = profile.stats.maxDepth,
+		stats = profile.stats,
+		clues = profile.clues,
 		persistent = PlayerDataService.isPersistent(player),
 	}
+	for _, provider in snapshotProviders do
+		provider(player, profile, snapshot)
+	end
+	return snapshot
 end
 
 function StateService.push(player: Player)
@@ -47,6 +66,12 @@ function StateService.push(player: Player)
 	task.defer(function()
 		pending[player] = nil
 		if player.Parent then
+			for _, callback in beforePushCallbacks do
+				local ok, err = pcall(callback, player)
+				if not ok then
+					warn("[StateService] beforePush failed:", err)
+				end
+			end
 			local snapshot = StateService.snapshot(player)
 			if snapshot then
 				stateEvent:FireClient(player, snapshot)

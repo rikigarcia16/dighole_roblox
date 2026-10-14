@@ -9,15 +9,16 @@
 --   GetState() -> snapshot                          RemoteFunction: initial state
 -- Server -> Client
 --   State(snapshot)                                 full state after any change
---   DigFx(player, position, resourceId, broke, toolId)  hit feedback broadcast to nearby players
+--   DigFx(player, position, resourceId, broke, toolId?, highlightId?)  hit feedback for nearby players
 --   Collected(resourceId, amount, isNew)            item pickup popup
 --   Notify(kind: string, text: string)              toast message
 --   ZoneEntered(zoneId: string, firstTime: boolean)
+--   ShowNote(noteId: string)                       open a story note (after server validation)
 
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local EVENTS = { "Dig", "ReturnToSurface", "Sell", "State", "DigFx", "Collected", "Notify", "ZoneEntered" }
+local EVENTS = { "Dig", "ReturnToSurface", "Sell", "State", "DigFx", "Collected", "Notify", "ZoneEntered", "ShowNote" }
 local FUNCTIONS = { "Shop", "GetState" }
 
 local Remotes = {}

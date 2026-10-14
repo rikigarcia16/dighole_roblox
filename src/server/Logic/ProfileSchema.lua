@@ -6,10 +6,12 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Tools = require(Shared.Config.Tools)
 local Upgrades = require(Shared.Config.Upgrades)
 local Resources = require(Shared.Config.Resources)
+local Quests = require(Shared.Config.Quests)
+local Story = require(Shared.Config.Story)
 
 local ProfileSchema = {}
 
-ProfileSchema.CURRENT_VERSION = 1
+ProfileSchema.CURRENT_VERSION = 2
 
 export type Profile = {
 	version: number,
@@ -20,15 +22,21 @@ export type Profile = {
 	inventory: { [string]: number },
 	discoveries: { [string]: number }, -- resourceId -> total ever collected
 	zonesReached: { [string]: boolean },
+	clues: { [string]: boolean }, -- story notes read
+	quests: { index: number, completed: { [string]: boolean } },
 	stats: {
 		cellsDug: number,
 		maxDepth: number,
 		coinsEarned: number,
 		sales: number,
+		cavesFound: number,
+		chestsOpened: number,
+		findsFound: number,
 	},
 	plot: {
 		seed: number,
 		dug: { number }, -- CellSet encoded keys of excavated cells
+		openedChests: { string }, -- cave keys whose chest was already opened
 	},
 }
 
@@ -46,13 +54,25 @@ function ProfileSchema.default(seed: number): Profile
 		inventory = {},
 		discoveries = {},
 		zonesReached = { garden = true },
-		stats = { cellsDug = 0, maxDepth = 0, coinsEarned = 0, sales = 0 },
-		plot = { seed = seed, dug = {} },
+		clues = {},
+		quests = { index = 1, completed = {} },
+		stats = {
+			cellsDug = 0,
+			maxDepth = 0,
+			coinsEarned = 0,
+			sales = 0,
+			cavesFound = 0,
+			chestsOpened = 0,
+			findsFound = 0,
+		},
+		plot = { seed = seed, dug = {}, openedChests = {} },
 	}
 end
 
 local migrations: { [number]: (any) -> () } = {
-	-- [1] = function(data) ... upgrade v1 -> v2 ... end,
+	-- v1 -> v2: quests, clues and chests were added. Their defaults come from reconcile; nothing to
+	-- convert. Kept as the template for future migrations.
+	[1] = function(_data) end,
 }
 
 local function finiteNonNegative(value: any, fallback: number): number
@@ -124,6 +144,27 @@ function ProfileSchema.reconcile(data: any, seed: number): Profile
 		end
 	end
 
+	if type(data.clues) == "table" then
+		for id, read in data.clues do
+			if read == true and Story.Notes[id] then
+				profile.clues[id] = true
+			end
+		end
+	end
+
+	if type(data.quests) == "table" then
+		if type(data.quests.index) == "number" then
+			profile.quests.index = math.clamp(math.floor(data.quests.index), 1, #Quests + 1)
+		end
+		if type(data.quests.completed) == "table" then
+			for id, done in data.quests.completed do
+				if done == true and type(id) == "string" then
+					profile.quests.completed[id] = true
+				end
+			end
+		end
+	end
+
 	if type(data.stats) == "table" then
 		for key, default in profile.stats do
 			profile.stats[key] = finiteNonNegative(data.stats[key], default)
@@ -136,6 +177,13 @@ function ProfileSchema.reconcile(data: any, seed: number): Profile
 		end
 		if type(data.plot.dug) == "table" then
 			profile.plot.dug = data.plot.dug
+		end
+		if type(data.plot.openedChests) == "table" then
+			for _, key in data.plot.openedChests do
+				if type(key) == "string" and #key <= 32 then
+					table.insert(profile.plot.openedChests, key)
+				end
+			end
 		end
 	end
 

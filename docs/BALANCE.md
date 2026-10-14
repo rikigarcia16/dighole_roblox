@@ -43,26 +43,34 @@ Mochila nivel 2                             1.1              1.9
 first purchase                              1.1              1.9
 tool: Pala reforzada                        2.2              3.7
 Batería nivel 2                            2.8              4.8
+first find: Fragmento antiguo               3.1              5.2
 Mochila nivel 3                             4.2              7.1
 25 m                                        4.3              7.4
 tool: Pala de acero                         5.6              9.5
 ZONA 2 (50 m)                               6.4             10.9
 Batería nivel 3                            6.7             11.4
-tool: Pico minero                           8.0             13.5
-Mochila nivel 4                            10.0             17.0
-Batería nivel 4                           11.6             19.8
-ZONA 3 (150 m)                             12.2             20.7
-tool: Pico industrial                      14.6             24.7
-Mochila nivel 5                            15.8             26.9
-Batería nivel 5                           18.4             31.3
-ZONA 4 (350 m)                             20.3             34.4
-tool: Taladro portátil                    21.0             35.7
-Mochila nivel 6                            23.8             40.4
-Batería nivel 6                           25.9             44.1
-tool: Taladro avanzado                     28.4             48.3
-Mochila nivel 7                            31.9             54.2
-tool: Excavador de plasma                  36.5             62.1
-tool: Perforadora abisal                   43.1             73.2
+first find: Geoda                           7.8             13.2
+tool: Pico minero                          10.0             17.0
+Mochila nivel 4                            12.3             20.9
+ZONA 3 (150 m)                             13.6             23.1
+Batería nivel 4                           14.1             24.0
+first find: Fósil raro                    15.0             25.6
+tool: Pico industrial                      18.6             31.6
+Mochila nivel 5                            22.2             37.7
+ZONA 4 (350 m)                             24.7             41.9
+first find: Reliquia                       25.1             42.7
+Batería nivel 5                           26.4             45.0
+tool: Taladro portátil                    35.3             60.0
+Mochila nivel 6                            39.5             67.1
+ZONA 5 (650 m)                             39.7             67.6
+Batería nivel 6                           46.2             78.6
+ZONA 6 (1000 m)                            55.8             94.9
+tool: Taladro avanzado                     56.3             95.7
+first find: Artefacto antiguo              56.3             95.8
+Mochila nivel 7                            66.2            112.5
+tool: Excavador de plasma                  77.3            131.4
+ZONA 7 (1500 m)                            78.3            133.1
+tool: Perforadora abisal                  110.0            187.1
 ```
 
 ### Comparación con los objetivos del encargo
@@ -74,7 +82,32 @@ tool: Perforadora abisal                   43.1             73.2
 | Primera herramienta importante | minutos 5–10 | ~3,7 min (Pala reforzada); Pala de acero ~9,5 min ✅ |
 | Primera zona nueva | minutos 10–20 | ~11 min ✅ |
 
-**Problema conocido:** el juego medio y avanzado va demasiado rápido (todas las herramientas en
-~75 min estimados). Se subieron los precios altos y se bajó la densidad de vetas profundas, pero el
-reequilibrio de verdad toca en la **Fase 3**, cuando las zonas profundas tengan contenido y se
-pueda probar con jugadores reales. Estas cifras son una simulación, no datos de jugadores.
+**Reequilibrio de la Fase 3:** se subieron los precios desde la Pala de acero (×2–3), los niveles
+altos de mochila y batería, y la dureza de las rocas base profundas (cristalina 28, arenisca 55,
+basalto 110, abisal 180, núcleo 300). Resultado estimado: núcleo en ~2 h 15 min y todas las
+herramientas en ~3 h. El juego temprano no cambia.
+
+| Hito | Estimación jugador |
+|---|---|
+| Zona 3 (150 m) | ~23 min |
+| Zona 4 (350 m) | ~42 min |
+| Zona 5 (650 m) | ~68 min |
+| Zona 6 (1000 m) | ~95 min |
+| Zona 7 (1500 m) | ~133 min |
+
+Para la primera versión probablemente convenga alargar algo el tramo 650–1500 m (objetivo
+orientativo 3–5 h hasta el núcleo) cuando esas zonas tengan contenido (Fase 5). Estas cifras son
+una simulación de un bot que cava en línea recta, no datos de jugadores: hay que validarlas con
+pruebas reales.
+
+## Otras fuentes de monedas
+
+- **Cofres** en cuevas (45 % de las cuevas): 40–14 000 monedas según la zona (±20 %) más 2–4
+  unidades de un mineral valioso de esa profundidad. Cada cofre se abre una sola vez (guardado).
+- **Hallazgos ocultos** dentro de la roca: Fragmento antiguo (2–160 m), Geoda (50–400 m),
+  Fósil raro (150–700 m), Reliquia (350–1200 m), Artefacto antiguo (1000 m+). No ocupan mochila.
+- **Misiones**: 12 en cadena, unas 1 500 monedas en total.
+- **Pistas**: la caja del minero (150) y la placa de piedra (1 000).
+
+La simulación cuenta los hallazgos pero no los cofres ni las misiones, así que el ritmo real será
+algo más rápido de lo que indica la tabla.

@@ -25,15 +25,15 @@ local InventoryService = require(script.Parent.InventoryService)
 local EquipmentService = require(script.Parent.EquipmentService)
 local EnergyService = require(script.Parent.EnergyService)
 local StateService = require(script.Parent.StateService)
+local SpecialsService = require(script.Parent.SpecialsService)
+local FxService = require(script.Parent.FxService)
 
 local DiggingService = {}
 
 local CELL = GameConfig.CellSize
-local FX_RADIUS = 220
 local PROBE_DEPTHS = { 0.5, 2, 3.5 }
 
 local lastHit: { [Player]: number } = {}
-local digFx = Remotes.event("DigFx")
 local zoneEvent = Remotes.event("ZoneEntered")
 
 local function isFiniteVector(v: Vector3): boolean
@@ -53,23 +53,6 @@ type Hit = { cx: number, d: number, cz: number, key: number, resource: Resources
 
 local function rarityOrder(resource: Resources.Resource): number
 	return Resources.Rarities[resource.rarity].order
-end
-
-local function broadcastFx(
-	player: Player,
-	position: Vector3,
-	resourceId: string,
-	broke: boolean,
-	toolId: string,
-	bestId: string?
-)
-	for _, other in Players:GetPlayers() do
-		local character = other.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if other == player or (root and (root.Position - position).Magnitude <= FX_RADIUS) then
-			digFx:FireClient(other, player, position, resourceId, broke, toolId, bestId)
-		end
-	end
 end
 
 local function handleDig(player: Player, position: any, normal: any)
@@ -124,7 +107,11 @@ local function handleDig(player: Player, position: any, normal: any)
 	local tx, td, tz
 	for _, depthIn in PROBE_DEPTHS do
 		local cx, d, cz = Grid.worldToCell(plot.originX, plot.originZ, position - unitNormal * depthIn)
-		if Grid.inDigArea(cx, d, cz) and not plot.dug[Grid.key(cx, d, cz)] then
+		if
+			Grid.inDigArea(cx, d, cz)
+			and not plot.dug[Grid.key(cx, d, cz)]
+			and OreGeneration.resourceAt(plot.seed, cx, d, cz) ~= "air"
+		then
 			tx, td, tz = cx, d, cz
 			break
 		end
@@ -179,7 +166,7 @@ local function handleDig(player: Player, position: any, normal: any)
 				"too_hard",
 				3
 			)
-			broadcastFx(player, targetCenter, blockedBy.id, false, tool.id, nil)
+			FxService.broadcast(player, targetCenter, blockedBy.id, false, tool.id, nil)
 		end
 		return
 	end
@@ -230,6 +217,22 @@ local function handleDig(player: Player, position: any, normal: any)
 		for id, count in counts do
 			lost += count - InventoryService.collect(player, id, count)
 		end
+
+		-- Hidden finds inside base rock (weightless: they always fit in the backpack).
+		for _, hit in broken do
+			if not hit.resource.isOre then
+				local findId = OreGeneration.findAt(plot.seed, hit.cx, hit.d, hit.cz)
+				local find = findId and Resources.get(findId)
+				if find then
+					InventoryService.collect(player, find.id, 1, true)
+					profile.stats.findsFound += 1
+					StateService.notify(player, "find", "¡Hallazgo! " .. find.name)
+					if not best or rarityOrder(find) > rarityOrder(best) then
+						best = find
+					end
+				end
+			end
+		end
 		if lost > 0 then
 			StateService.notify(
 				player,
@@ -255,11 +258,12 @@ local function handleDig(player: Player, position: any, normal: any)
 			profile.zonesReached[zone.id] = true
 			zoneEvent:FireClient(player, zone.id, true)
 		end
+		SpecialsService.onCellsBroken(player, plot, broken)
 		StateService.push(player)
 	end
 
 	local targetResource = hits[1].resource
-	broadcastFx(
+	FxService.broadcast(
 		player,
 		targetCenter,
 		targetResource.id,

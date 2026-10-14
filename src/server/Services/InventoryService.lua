@@ -36,14 +36,16 @@ function InventoryService.isFull(player: Player): boolean
 	return Inventory.used(profile.inventory) >= InventoryService.capacity(player)
 end
 
--- Adds resources to the backpack. Returns the amount that fit.
-function InventoryService.collect(player: Player, resourceId: string, amount: number): number
+-- Adds resources to the backpack. Returns the amount that fit. Rewards (chests) pass
+-- `ignoreCapacity` so a reward is never lost to a full backpack.
+function InventoryService.collect(player: Player, resourceId: string, amount: number, ignoreCapacity: boolean?): number
 	local profile = PlayerDataService.get(player)
 	local resource = Resources.get(resourceId)
 	if not profile or not resource then
 		return 0
 	end
-	local added = Inventory.add(profile.inventory, resourceId, amount, InventoryService.capacity(player))
+	local capacity = if ignoreCapacity then math.huge else InventoryService.capacity(player)
+	local added = Inventory.add(profile.inventory, resourceId, amount, capacity)
 	if added <= 0 then
 		return 0
 	end

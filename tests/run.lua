@@ -15,7 +15,11 @@ local GameConfig = H.module("ReplicatedStorage", "Shared", "Config", "GameConfig
 test("every resource has the required fields", function()
 	for _, r in Resources.List do
 		ok(type(r.id) == "string" and type(r.name) == "string", "id/name")
-		ok(r.value > 0 and r.hardness > 0 and r.requiredPower >= 1 and r.weight > 0, r.id .. " numbers")
+		ok(r.value > 0 and r.hardness > 0 and r.requiredPower >= 1 and r.weight >= 0, r.id .. " numbers")
+		ok(r.terrainMaterial ~= nil or r.find ~= nil, r.id .. " is neither terrain nor a find")
+		if r.find then
+			ok(r.weight == 0 and r.find.chance > 0 and r.find.chance < 0.05, r.id .. " find rule")
+		end
 		ok(Resources.Rarities[r.rarity], r.id .. " rarity")
 		if r.isOre then
 			ok(r.spawn and r.spawn.minDepth < r.spawn.maxDepth, r.id .. " spawn")
@@ -175,8 +179,8 @@ test("ore generation is deterministic and depth-correct", function()
 			local id = OreGeneration.resourceAt(42, x, d, 9)
 			eq(id, OreGeneration.resourceAt(42, x, d, 9), "deterministic")
 			local r = Resources.get(id)
-			ok(r, "valid id " .. tostring(id))
-			if r.isOre then
+			ok(r or id == "air", "valid id " .. tostring(id))
+			if r and r.isOre then
 				ok(d >= r.spawn.minDepth and d < r.spawn.maxDepth, id .. " outside its depth at " .. d)
 			end
 		end
@@ -189,8 +193,10 @@ local function census(seed, fromDepth, toDepth)
 		for x = 0, 15 do
 			for z = 0, 15 do
 				local id = OreGeneration.resourceAt(seed, x, d, z)
-				counts[id] = (counts[id] or 0) + 1
-				total += 1
+				if id ~= "air" then
+					counts[id] = (counts[id] or 0) + 1
+					total += 1
+				end
 			end
 		end
 	end
@@ -261,6 +267,159 @@ test("profile defaults and reconcile sanitises bad data", function()
 	eq(r.stats.cellsDug, 12)
 	eq(r.plot.seed, 77)
 	eq(ProfileSchema.reconcile(nil, 3).plot.seed, 3)
+end)
+
+test("caves stay inside the dig area, below the mines threshold, and are deterministic", function()
+	local caves, cells = 0, 0
+	for _, seed in { 1, 2, 3, 4, 5 } do
+		for _, cave in OreGeneration.cavesInRange(seed, 0, 400) do
+			caves += 1
+			ok(cave.by * 8 >= 56, "cave too shallow")
+			eq(OreGeneration.caveInBlock(seed, cave.bx, cave.by, cave.bz).cx, cave.cx, "deterministic")
+		end
+		for d = 0, 300 do
+			for x = -1, 16 do
+				for z = -1, 16 do
+					if OreGeneration.resourceAt(seed, x, d, z) == "air" then
+						cells += 1
+						ok(
+							x >= 0 and x < 16 and z >= 0 and z < 16,
+							"air in the border ring at " .. x .. "," .. d .. "," .. z
+						)
+						ok(d >= 56 or OreGeneration.landmarkAt(seed, x, d, z), "air above the caves at depth " .. d)
+					end
+				end
+			end
+		end
+	end
+	ok(caves > 20, "too few caves: " .. caves)
+	print(string.format("       %d caves, %d air cells in 5 plots (0-400 m)", caves, cells))
+end)
+
+test("chests sit on the cave floor", function()
+	local chests = 0
+	for _, seed in { 10, 20, 30, 40 } do
+		for _, cave in OreGeneration.cavesInRange(seed, 0, 600) do
+			local c = cave.chest
+			if c then
+				chests += 1
+				local here = OreGeneration.caveAt(seed, c.cx, c.d, c.cz)
+				ok(here and here.key == cave.key, "chest cell is inside its cave")
+				local below = OreGeneration.caveAt(seed, c.cx, c.d + 1, c.cz)
+				ok(not below or below.key ~= cave.key, "chest is floating")
+			end
+		end
+	end
+	ok(chests > 5, "too few chests: " .. chests)
+end)
+
+test("landmarks are pockets of air at their depth", function()
+	for _, seed in { 7, 8, 9 } do
+		local list = OreGeneration.landmarks(seed)
+		eq(#list, 2)
+		for _, l in list do
+			eq(OreGeneration.resourceAt(seed, l.cx, l.d, l.cz), "air")
+			ok(l.cx >= 4 and l.cx <= 11 and l.cz >= 4 and l.cz <= 11, "landmark near the middle")
+			ok(OreGeneration.resourceAt(seed, l.cx, l.d + 1, l.cz) ~= "air", "landmark has a floor")
+		end
+	end
+end)
+
+test("hidden finds respect their depth ranges and rates", function()
+	local counts, cells = {}, 0
+	for d = 2, 149 do
+		for x = 0, 15 do
+			for z = 0, 15 do
+				local id = OreGeneration.findAt(77, x, d, z)
+				cells += 1
+				if id then
+					counts[id] = (counts[id] or 0) + 1
+					local rule = Resources.get(id).find
+					ok(d >= rule.minDepth and d < rule.maxDepth, id .. " out of range at " .. d)
+				end
+			end
+		end
+	end
+	local rate = (counts.antique_fragment or 0) / cells
+	ok(rate > 0.003 and rate < 0.009, "antique rate " .. rate)
+	ok((counts.geode or 0) > 0, "geodes exist")
+	ok(not counts.fossil, "no fossils above 150 m")
+end)
+
+test("weightless finds ignore backpack capacity", function()
+	local inv = { dirt = 20 }
+	eq(Inventory.add(inv, "geode", 1, 20), 1)
+	eq(Inventory.used(inv), 20)
+end)
+
+test("quest chain advances in order and never pays twice", function()
+	local QuestLogic = H.module("ServerScriptService", "Server", "Logic", "QuestLogic")
+	local Quests = H.module("ReplicatedStorage", "Shared", "Config", "Quests")
+	local p = ProfileSchema.default(1)
+	eq(QuestLogic.view(p).id, "dig_10")
+	p.stats.cellsDug = 12
+	p.stats.sales = 1
+	local done = QuestLogic.advance(p)
+	eq(#done, 2, "two quests at once")
+	eq(p.coins, 15 + 20)
+	eq(QuestLogic.view(p).id, "copper_5")
+	eq(#QuestLogic.advance(p), 0, "nothing more")
+	eq(p.coins, 35, "no double reward")
+	p.quests.index = 1 -- even if the index were rolled back, completed quests do not pay again
+	QuestLogic.advance(p)
+	eq(p.coins, 35)
+	-- finishing everything
+	p.discoveries.copper = 5
+	p.tools.reinforced_shovel = true
+	p.stats.maxDepth = 200
+	p.clues.miner_box = true
+	p.clues.stone_tablet = true
+	p.discoveries.antique_fragment = 1
+	p.discoveries.geode = 1
+	p.stats.cavesFound = 1
+	QuestLogic.advance(p)
+	eq(QuestLogic.view(p), nil, "chain finished")
+	eq(p.quests.index, #Quests + 1)
+	for _, q in Quests do
+		ok(p.quests.completed[q.id], q.id .. " completed")
+	end
+end)
+
+test("every quest references something that exists", function()
+	local Quests = H.module("ReplicatedStorage", "Shared", "Config", "Quests")
+	local Story = H.module("ReplicatedStorage", "Shared", "Config", "Story")
+	for _, q in Quests do
+		if q.kind == "collect" then
+			ok(Resources.get(q.key), q.id)
+		end
+		if q.kind == "tool" then
+			ok(Tools.get(q.key), q.id)
+		end
+		if q.kind == "clue" then
+			ok(Story.Notes[q.key], q.id)
+		end
+	end
+	for _, id in Story.NoteOrder do
+		ok(Story.Notes[id], id)
+	end
+end)
+
+test("profile v1 data migrates to v2", function()
+	local r =
+		ProfileSchema.reconcile({ version = 1, coins = 10, stats = { cellsDug = 4 }, plot = { seed = 3, dug = {} } }, 1)
+	eq(r.version, 2)
+	eq(r.coins, 10)
+	eq(r.quests.index, 1)
+	eq(r.stats.cavesFound, 0)
+	ok(type(r.plot.openedChests) == "table" and type(r.clues) == "table", "new tables")
+	local bad = ProfileSchema.reconcile({
+		quests = { index = 999 },
+		clues = { fake = true, miner_box = true },
+		plot = { openedChests = { "1_8_0", 5, string.rep("x", 100) } },
+	}, 1)
+	ok(bad.quests.index <= 13, "quest index clamped")
+	ok(bad.clues.miner_box and not bad.clues.fake, "clues sanitised")
+	eq(#bad.plot.openedChests, 1, "chest keys sanitised")
 end)
 
 print("Terrain writes (fake Terrain)")

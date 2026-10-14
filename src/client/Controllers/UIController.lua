@@ -19,7 +19,7 @@ local Format = require(ReplicatedStorage.Shared.Util.Format)
 local UI = script.Parent.Parent.UI
 local Build = require(UI.Build)
 local Theme = require(UI.Theme)
-local Story = require(UI.Story)
+local Story = require(ReplicatedStorage.Shared.Config.Story)
 local ShopUI = require(UI.ShopUI)
 local InventoryUI = require(UI.InventoryUI)
 
@@ -311,6 +311,8 @@ function UIController.start()
 		sell = Theme.coins,
 		discovery = Color3.fromRGB(150, 120, 255),
 		info = Theme.energy,
+		quest = Theme.accent,
+		find = Color3.fromRGB(255, 150, 220),
 	}
 	local toastCount = 0
 	local function toast(kind: string, text: string)
@@ -358,6 +360,8 @@ function UIController.start()
 			EffectsController.playUi("error")
 		elseif kind == "sell" then
 			EffectsController.playUi("sell")
+		elseif kind == "quest" then
+			EffectsController.playUi("purchase")
 		end
 	end
 
@@ -423,16 +427,16 @@ function UIController.start()
 		Parent = gui,
 		[Build.Children] = { Build.corner(8), Build.stroke(Color3.fromRGB(120, 96, 60), 3), Build.padding(22) },
 	})
-	Build.label({
-		Text = Story.FirstNote.title,
+	local noteTitle = Build.label({
+		Text = "",
 		Size = UDim2.new(1, 0, 0, 32),
 		TextColor3 = Color3.fromRGB(70, 50, 30),
 		MaxTextSize = 26,
 		ZIndex = 41,
 		Parent = note,
 	})
-	Build.label({
-		Text = Story.FirstNote.body,
+	local noteBody = Build.label({
+		Text = "",
 		Position = UDim2.fromOffset(0, 40),
 		Size = UDim2.new(1, 0, 1, -96),
 		Font = Enum.Font.Merriweather,
@@ -455,13 +459,25 @@ function UIController.start()
 	noteClose.Activated:Connect(function()
 		note.Visible = false
 	end)
+	local function openNote(noteId: string)
+		local data = Story.Notes[noteId]
+		if not data then
+			return
+		end
+		noteTitle.Text = data.title
+		noteBody.Text = data.body
+		note.Visible = true
+		EffectsController.playUi("ui_click")
+	end
+	Remotes.event("ShowNote").OnClientEvent:Connect(openNote)
 
 	-- Panels -----------------------------------------------------------------------------------------
 	local function getState()
 		return ClientState.data
 	end
 	local shop = ShopUI.new(gui, { getState = getState, notify = toast, playUi = EffectsController.playUi })
-	local inventory = InventoryUI.new(gui, { getState = getState, playUi = EffectsController.playUi })
+	local inventory =
+		InventoryUI.new(gui, { getState = getState, playUi = EffectsController.playUi, openNote = openNote })
 
 	backpackButton.Activated:Connect(function()
 		EffectsController.playUi("ui_click")
@@ -494,9 +510,6 @@ function UIController.start()
 		if action == "Shop" then
 			inventory.close()
 			shop.open()
-		elseif action == "Note" then
-			note.Visible = true
-			EffectsController.playUi("ui_click")
 		end
 	end)
 
@@ -547,7 +560,27 @@ function UIController.start()
 			return
 		end
 		local text
-		if not hasDug and (state.maxDepth or 0) == 0 then
+		local quest = state.quest
+		if state.used >= state.capacity then
+			text = "<b>Mochila llena:</b> vuelve a la superficie y vende en el carro verde."
+		elseif quest then
+			text = string.format(
+				'<font color="#FFC440"><b>Misión %d/%d</b></font>  %s\n<b>%s / %s</b>  ·  <font color="#AAB0C4">%s</font>',
+				quest.index,
+				quest.total,
+				quest.title,
+				Format.number(quest.progress),
+				Format.number(quest.target),
+				if quest.id == "dig_10"
+					then (if UserInputService.TouchEnabled
+						then "Mantén pulsado CAVAR."
+						else "Mantén clic izquierdo (o E) sobre el suelo.")
+					else quest.hint
+			)
+			if quest.reward > 0 then
+				text ..= string.format('\n<font color="#FFCD3C">Recompensa: ● %s</font>', Format.number(quest.reward))
+			end
+		elseif not hasDug and (state.maxDepth or 0) == 0 then
 			text = if UserInputService.TouchEnabled
 				then "<b>Objetivo:</b> mantén pulsado CAVAR para excavar tu terreno."
 				else "<b>Objetivo:</b> mantén pulsado el clic izquierdo (o E) sobre el suelo para cavar."

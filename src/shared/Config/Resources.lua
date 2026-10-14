@@ -8,6 +8,9 @@
 -- value           : coins per unit when sold.
 -- weight          : backpack units used by one collected cell.
 -- spawn           : ore placement (base rocks are placed by Zones.lua instead).
+-- find            : hidden treasures. They have no terrain material: a base-rock cell may hide one,
+--                   and it is revealed (and collected) when that cell breaks. Finds ignore the
+--                   backpack limit so a lucky discovery is never lost.
 
 export type Rarity = "Common" | "Uncommon" | "Rare" | "Epic" | "Legendary" | "Unique"
 
@@ -17,18 +20,25 @@ export type SpawnRule = {
 	chance: number, -- relative weight of this ore inside a vein roll
 }
 
+export type FindRule = {
+	minDepth: number,
+	maxDepth: number,
+	chance: number, -- probability per broken base-rock cell
+}
+
 export type Resource = {
 	id: string,
 	name: string,
 	value: number,
 	color: Color3,
-	terrainMaterial: Enum.Material,
+	terrainMaterial: Enum.Material?,
 	rarity: Rarity,
 	hardness: number,
 	requiredPower: number,
 	weight: number,
 	isOre: boolean,
 	spawn: SpawnRule?,
+	find: FindRule?,
 	effect: string, -- key into EffectsController presets
 	sound: string, -- key into Sounds config
 	icon: string, -- glyph used by the UI icon generator
@@ -104,7 +114,7 @@ local list: { Resource } = {
 		color = Color3.fromRGB(88, 84, 92),
 		terrainMaterial = M.Slate,
 		rarity = "Common",
-		hardness = 8,
+		hardness = 10,
 		requiredPower = 2,
 		weight = 1,
 		isOre = false,
@@ -120,7 +130,7 @@ local list: { Resource } = {
 		color = Color3.fromRGB(70, 74, 110),
 		terrainMaterial = M.Mud,
 		rarity = "Common",
-		hardness = 16,
+		hardness = 28,
 		requiredPower = 4,
 		weight = 1,
 		isOre = false,
@@ -136,7 +146,7 @@ local list: { Resource } = {
 		color = Color3.fromRGB(196, 168, 120),
 		terrainMaterial = M.Sand,
 		rarity = "Common",
-		hardness = 30,
+		hardness = 55,
 		requiredPower = 7,
 		weight = 1,
 		isOre = false,
@@ -152,7 +162,7 @@ local list: { Resource } = {
 		color = Color3.fromRGB(46, 40, 40),
 		terrainMaterial = M.Basalt,
 		rarity = "Common",
-		hardness = 60,
+		hardness = 110,
 		requiredPower = 12,
 		weight = 1,
 		isOre = false,
@@ -168,7 +178,7 @@ local list: { Resource } = {
 		color = Color3.fromRGB(26, 28, 36),
 		terrainMaterial = M.Cobblestone,
 		rarity = "Common",
-		hardness = 100,
+		hardness = 180,
 		requiredPower = 20,
 		weight = 1,
 		isOre = false,
@@ -184,7 +194,7 @@ local list: { Resource } = {
 		color = Color3.fromRGB(210, 236, 232),
 		terrainMaterial = M.Snow,
 		rarity = "Common",
-		hardness = 160,
+		hardness = 300,
 		requiredPower = 35,
 		weight = 1,
 		isOre = false,
@@ -401,21 +411,115 @@ local list: { Resource } = {
 	},
 } :: any
 
+-- Hidden finds: kept in a separate literal because they have no terrain material.
+local finds: { Resource } = {
+	{
+		id = "antique_fragment",
+		name = "Fragmento antiguo",
+		value = 30,
+		color = Color3.fromRGB(196, 150, 96),
+		rarity = "Uncommon",
+		hardness = 1,
+		requiredPower = 1,
+		weight = 0,
+		isOre = false,
+		find = { minDepth = 2, maxDepth = 160, chance = 0.006 },
+		effect = "shine",
+		sound = "discover_rare",
+		icon = "⚱",
+		uses = { "Pieza de un objeto que alguien enterró a propósito" },
+	},
+	{
+		id = "geode",
+		name = "Geoda",
+		value = 90,
+		color = Color3.fromRGB(150, 110, 200),
+		rarity = "Rare",
+		hardness = 1,
+		requiredPower = 1,
+		weight = 0,
+		isOre = false,
+		find = { minDepth = 50, maxDepth = 400, chance = 0.005 },
+		effect = "crystal",
+		sound = "discover_rare",
+		icon = "◎",
+		uses = { "Por dentro brilla más que por fuera" },
+	},
+	{
+		id = "fossil",
+		name = "Fósil raro",
+		value = 320,
+		color = Color3.fromRGB(230, 220, 190),
+		rarity = "Epic",
+		hardness = 1,
+		requiredPower = 1,
+		weight = 0,
+		isOre = false,
+		find = { minDepth = 150, maxDepth = 700, chance = 0.004 },
+		effect = "shine",
+		sound = "discover_epic",
+		icon = "☙",
+		uses = { "Una criatura que nadie ha descrito nunca" },
+	},
+	{
+		id = "relic",
+		name = "Reliquia",
+		value = 900,
+		color = Color3.fromRGB(255, 210, 120),
+		rarity = "Epic",
+		hardness = 1,
+		requiredPower = 1,
+		weight = 0,
+		isOre = false,
+		find = { minDepth = 350, maxDepth = 1200, chance = 0.003 },
+		effect = "shine",
+		sound = "discover_epic",
+		icon = "♜",
+		uses = { "Tiene los mismos símbolos que la placa de piedra" },
+	},
+	{
+		id = "ancient_artifact",
+		name = "Artefacto antiguo",
+		value = 5000,
+		color = Color3.fromRGB(80, 255, 230),
+		rarity = "Unique",
+		hardness = 1,
+		requiredPower = 1,
+		weight = 0,
+		isOre = false,
+		find = { minDepth = 1000, maxDepth = 2200, chance = 0.002 },
+		effect = "abyss",
+		sound = "discover_legendary",
+		icon = "✺",
+		uses = { "Todavía está caliente" },
+	},
+} :: any
+for _, find in finds do
+	table.insert(list, find)
+end
+
 local Resources = {}
 Resources.Rarities = Rarities
 Resources.List = list
 Resources.ById = {} :: { [string]: Resource }
 Resources.ByMaterial = {} :: { [Enum.Material]: Resource }
 Resources.Ores = {} :: { Resource }
+Resources.Finds = {} :: { Resource }
 
 for index, resource in list do
 	resource.order = index
 	assert(Resources.ById[resource.id] == nil, "Duplicate resource id " .. resource.id)
-	assert(Resources.ByMaterial[resource.terrainMaterial] == nil, "Terrain material reused by " .. resource.id)
 	Resources.ById[resource.id] = resource
-	Resources.ByMaterial[resource.terrainMaterial] = resource
+	local material = resource.terrainMaterial
+	if material then
+		assert(Resources.ByMaterial[material] == nil, "Terrain material reused by " .. resource.id)
+		Resources.ByMaterial[material] = resource
+	end
 	if resource.isOre then
 		table.insert(Resources.Ores, resource)
+	end
+	if resource.find then
+		table.insert(Resources.Finds, resource)
 	end
 end
 

@@ -42,6 +42,7 @@ local CELL = GameConfig.CellSize
 local plots: { Plot } = {}
 local plotByPlayer: { [Player]: Plot } = {}
 local readyCallbacks: { (Player, Plot) -> () } = {}
+local releasedCallbacks: { (Plot) -> () } = {}
 local worldFolder: Folder
 
 local function originFor(index: number): (number, number)
@@ -89,6 +90,11 @@ end
 
 function PlotService.onReady(callback: (Player, Plot) -> ())
 	table.insert(readyCallbacks, callback)
+end
+
+-- Called after a plot is freed (its owner left), before its terrain is cleared.
+function PlotService.onReleased(callback: (Plot) -> ())
+	table.insert(releasedCallbacks, callback)
 end
 
 function PlotService.updateBoard(plot: Plot)
@@ -193,6 +199,12 @@ local function release(player: Player)
 		plot.folder:SetAttribute("Owner", nil)
 	end
 	PlotService.updateBoard(plot)
+	for _, callback in releasedCallbacks do
+		local ok, err = pcall(callback, plot)
+		if not ok then
+			warn("[PlotService] release callback failed:", err)
+		end
+	end
 	TerrainChunkService.clear(plot)
 end
 

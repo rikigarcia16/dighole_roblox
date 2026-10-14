@@ -101,7 +101,9 @@ local function simulate(seed, maxMinutes)
 		local x, z = cellInLayer % SHAFT + 6, cellInLayer // SHAFT + 6
 		local id = OreGeneration.resourceAt(seed, x, depth, z)
 		local r = Resources.get(id)
-		if r.requiredPower > tool.power then
+		if not r then
+			-- natural air (cave / landmark pocket): nothing to dig
+		elseif r.requiredPower > tool.power then
 			-- cannot break it: skip the cell (the player digs around it)
 			if r.isOre == false then
 				-- the whole layer is base rock we cannot dig: we are blocked until we buy something
@@ -123,6 +125,11 @@ local function simulate(seed, maxMinutes)
 				discovered[id] = true
 				coins += r.value * 5
 			end
+			local findId = not r.isOre and OreGeneration.findAt(seed, x, depth, z)
+			if findId then
+				inventory[findId] = (inventory[findId] or 0) + 1
+				event("first find: " .. Resources.get(findId).name)
+			end
 			if used >= Upgrades.valueAt("backpack", levels.backpack) or energy <= 0 then
 				sell()
 			end
@@ -143,6 +150,15 @@ local function simulate(seed, maxMinutes)
 			if depth == 350 then
 				event("ZONA 4 (350 m)")
 			end
+			if depth == 650 then
+				event("ZONA 5 (650 m)")
+			end
+			if depth == 1000 then
+				event("ZONA 6 (1000 m)")
+			end
+			if depth == 1500 then
+				event("ZONA 7 (1500 m)")
+			end
 		end
 	end
 	return events, depth, coins
@@ -151,7 +167,7 @@ end
 local seeds = { 11, 222, 3333 }
 local merged = {}
 for _, seed in seeds do
-	local events = simulate(seed, 180)
+	local events = simulate(seed, 600)
 	for name, time in events do
 		merged[name] = merged[name] or {}
 		table.insert(merged[name], time)

@@ -21,11 +21,11 @@ local list: { Track } = {
 		levels = {
 			{ value = 20, price = 0 },
 			{ value = 40, price = 75 },
-			{ value = 80, price = 300 },
-			{ value = 150, price = 1500 },
-			{ value = 300, price = 8000 },
-			{ value = 600, price = 40000 },
-			{ value = 1200, price = 200000 },
+			{ value = 80, price = 350 },
+			{ value = 150, price = 2500 },
+			{ value = 300, price = 15000 },
+			{ value = 600, price = 90000 },
+			{ value = 1200, price = 500000 },
 		},
 	},
 	{
@@ -36,10 +36,10 @@ local list: { Track } = {
 		levels = {
 			{ value = 60, price = 0 },
 			{ value = 120, price = 120 },
-			{ value = 250, price = 500 },
-			{ value = 500, price = 2500 },
-			{ value = 1000, price = 12000 },
-			{ value = 2000, price = 60000 },
+			{ value = 250, price = 600 },
+			{ value = 500, price = 4000 },
+			{ value = 1000, price = 25000 },
+			{ value = 2000, price = 150000 },
 		},
 	},
 } :: any

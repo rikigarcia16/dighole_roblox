@@ -8,6 +8,7 @@ local order = {
 	"EffectsController",
 	"AmbienceController",
 	"DigController",
+	"DetectorController",
 	"UIController",
 }
 

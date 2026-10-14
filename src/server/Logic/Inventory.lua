@@ -21,8 +21,13 @@ function Inventory.add(inventory: { [string]: number }, id: string, amount: numb
 	if not resource or amount <= 0 then
 		return 0
 	end
-	local free = capacity - Inventory.used(inventory)
-	local fit = math.clamp(math.floor(free / resource.weight), 0, amount)
+	local fit
+	if resource.weight <= 0 then
+		fit = amount -- weightless items (hidden finds) always fit
+	else
+		local free = capacity - Inventory.used(inventory)
+		fit = math.clamp(math.floor(free / resource.weight), 0, amount)
+	end
 	if fit > 0 then
 		inventory[id] = (inventory[id] or 0) + fit
 	end

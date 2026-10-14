@@ -21,6 +21,14 @@ local AIR = Enum.Material.Air
 
 local TerrainChunkService = {}
 
+local chunkCallbacks: { (any, number, number) -> () } = {}
+
+-- Called with (plot, firstDepth, lastDepth) after each generated chunk (used to place cave props,
+-- chests and story objects).
+function TerrainChunkService.onChunkGenerated(callback: (any, number, number) -> ())
+	table.insert(chunkCallbacks, callback)
+end
+
 export type PlotTerrain = {
 	originX: number,
 	originZ: number,
@@ -36,18 +44,22 @@ function TerrainChunkService.cellState(plot: PlotTerrain, cx: number, d: number,
 	if diggable and plot.dug[Grid.key(cx, d, cz)] then
 		return AIR, 0
 	end
-	local resource = Resources.get(OreGeneration.resourceAt(plot.seed, cx, d, cz))
-	if not resource then
+	local id = OreGeneration.resourceAt(plot.seed, cx, d, cz)
+	if id == "air" then
+		return AIR, 0
+	end
+	local resource = Resources.get(id)
+	local material = resource and resource.terrainMaterial
+	if not resource or not material then
 		return Enum.Material.Rock, 1
 	end
 	if diggable then
 		local damage = plot.damage[Grid.key(cx, d, cz)]
 		if damage then
-			return resource.terrainMaterial,
-				math.max(GameConfig.MinOccupancyWhileDamaged, 1 - damage / resource.hardness)
+			return material, math.max(GameConfig.MinOccupancyWhileDamaged, 1 - damage / resource.hardness)
 		end
 	end
-	return resource.terrainMaterial, 1
+	return material, 1
 end
 
 -- Rewrites the inclusive cell box [x0..x1] x [d0..d1] x [z0..z1] from the plot state.
@@ -103,6 +115,12 @@ function TerrainChunkService.ensureDepth(plot: PlotTerrain, targetDepth: number,
 		local d1 = d0 + GameConfig.ChunkDepth - 1
 		TerrainChunkService.writeBox(plot, -1, N, d0, d1, -1, N)
 		plot.generatedDepth = d1 + 1
+		for _, callback in chunkCallbacks do
+			local ok, err = pcall(callback, plot, d0, d1)
+			if not ok then
+				warn("[TerrainChunkService] chunk callback failed:", err)
+			end
+		end
 		if yieldBetweenChunks then
 			task.wait()
 		end
@@ -155,9 +173,12 @@ end
 
 function TerrainChunkService.applyMaterialColors()
 	for _, resource in Resources.List do
-		pcall(function()
-			Terrain:SetMaterialColor(resource.terrainMaterial, resource.color)
-		end)
+		local material = resource.terrainMaterial
+		if material then
+			pcall(function()
+				Terrain:SetMaterialColor(material, resource.color)
+			end)
+		end
 	end
 end
 

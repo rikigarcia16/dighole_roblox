@@ -11,6 +11,8 @@ local order = {
 	"EquipmentService",
 	"InventoryService",
 	"ShopService",
+	"QuestService",
+	"SpecialsService",
 	"DiggingService",
 }
 

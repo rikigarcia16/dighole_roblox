@@ -4,6 +4,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Resources = require(ReplicatedStorage.Shared.Config.Resources)
+local Story = require(ReplicatedStorage.Shared.Config.Story)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Format = require(ReplicatedStorage.Shared.Util.Format)
 local Build = require(script.Parent.Build)
@@ -12,7 +13,7 @@ local Modal = require(script.Parent.Modal)
 
 local InventoryUI = {}
 
-type Deps = { getState: () -> any, playUi: (key: string) -> () }
+type Deps = { getState: () -> any, playUi: (key: string) -> (), openNote: (noteId: string) -> () }
 
 local function swatch(parent: Instance, resource: Resources.Resource, discovered: boolean): Frame
 	local frame = Build("Frame", {
@@ -128,6 +129,53 @@ function InventoryUI.new(parent: Instance, deps: Deps)
 			footer.Text = if items == 0
 				then "Tu mochila está vacía. Cava para encontrar minerales."
 				else "Vende todo en el carro de la estación de venta, junto a tu agujero."
+		elseif currentTab == "journal" then
+			local read = 0
+			for order, noteId in Story.NoteOrder do
+				local note = Story.Notes[noteId]
+				local known = state.clues and state.clues[noteId] == true
+				if known then
+					read += 1
+				end
+				local r = row(order)
+				Build("Frame", {
+					Size = UDim2.fromOffset(40, 40),
+					BackgroundColor3 = if known then Color3.fromRGB(245, 234, 204) else Theme.panelLight,
+					Parent = r,
+					[Build.Children] = { Build.corner(8), Build.stroke(Theme.stroke, 2) },
+				})
+				Build.label({
+					Text = if known
+						then string.format("<b>%s</b>\n%s", note.title, note.source)
+						else string.format("<b>???</b>\nPista sin descubrir (%s)", note.source),
+					RichText = true,
+					Font = Theme.bodyFont,
+					TextColor3 = if known then Theme.text else Theme.textDim,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					Size = UDim2.new(1, -140, 1, 0),
+					MaxTextSize = 15,
+					Parent = r,
+				})
+				if known then
+					local readButton = Build.button(
+						"Leer",
+						Color3.fromRGB(150, 110, 70),
+						{ Size = UDim2.fromOffset(76, 38), Parent = r }
+					)
+					readButton.Activated:Connect(function()
+						deps.openNote(noteId)
+					end)
+				end
+			end
+			local stats = state.stats or {}
+			summary.Text = string.format("%d/%d pistas", read, #Story.NoteOrder)
+			footer.Text = string.format(
+				"Cuevas: %d · Cofres: %d · Hallazgos: %d · Récord: %d m",
+				stats.cavesFound or 0,
+				stats.chestsOpened or 0,
+				stats.findsFound or 0,
+				state.maxDepth or 0
+			)
 		else
 			local found = 0
 			for _, resource in Resources.List do
@@ -150,6 +198,10 @@ function InventoryUI.new(parent: Instance, deps: Deps)
 				else
 					local hint = if resource.spawn
 						then string.format("Se rumorea que aparece a partir de %d m", resource.spawn.minDepth)
+						elseif resource.find then string.format(
+							"Se esconde dentro de la roca a partir de %d m",
+							resource.find.minDepth
+						)
 						else "Material de roca de alguna capa profunda"
 					text = "<b>???</b>\n" .. hint
 				end
@@ -169,10 +221,11 @@ function InventoryUI.new(parent: Instance, deps: Deps)
 		end
 	end
 
-	local backpackTab, logTab
+	local backpackTab, logTab, journalTab
 	local function highlightTabs()
 		backpackTab.BackgroundColor3 = if currentTab == "backpack" then Theme.accent else Theme.card
 		logTab.BackgroundColor3 = if currentTab == "log" then Theme.accent else Theme.card
+		journalTab.BackgroundColor3 = if currentTab == "journal" then Theme.accent else Theme.card
 	end
 	backpackTab = modal:addTab("Mochila", 1, function()
 		currentTab = "backpack"
@@ -181,6 +234,11 @@ function InventoryUI.new(parent: Instance, deps: Deps)
 	end)
 	logTab = modal:addTab("Descubrimientos", 2, function()
 		currentTab = "log"
+		highlightTabs()
+		render()
+	end)
+	journalTab = modal:addTab("Diario", 3, function()
+		currentTab = "journal"
 		highlightTabs()
 		render()
 	end)
