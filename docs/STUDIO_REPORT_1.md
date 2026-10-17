@@ -146,6 +146,8 @@ E mirando al suelo.
 ## 7. Qué queda pendiente
 
 - Volver a probar en Studio los arreglos 2, 3 y 4.
-- `luaucheck run tests/run.lua` y `tests/static_checks.lua`: **no ejecutados** (requiere Rust/cargo,
-  no instalado aquí). Solo pasé StyLua.
+- ~~`luaucheck` no ejecutado~~ → ejecutado después en la sesión en la nube: los 66 scripts compilan,
+  `tests/static_checks.lua` pasa y `tests/run.lua` pasa (49/49) tras adaptar un test que simulaba
+  `task.spawn` en vez de `task.defer`. Ese test ahora reproduce el fallo 1: falla con el código
+  anterior y pasa con el arreglo.
 - G1–G3, F4, F5, C8, M5 (lugar publicado con API Services) y las pruebas de dos jugadores.

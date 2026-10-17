@@ -1360,7 +1360,12 @@ do
 
 	test("background generation stays ahead and stops when the owner changes", function()
 		local spawned = {}
-		H.globals.task.spawn = function(f)
+		-- Like Roblox: task.spawn runs at once inside the caller (the Dig handler), task.defer later.
+		-- With task.spawn the first slabs would be generated during the dig (found in Studio).
+		H.globals.task.spawn = function(f, ...)
+			f(...)
+		end
+		H.globals.task.defer = function(f)
 			table.insert(spawned, f)
 		end
 		local owner = {}
