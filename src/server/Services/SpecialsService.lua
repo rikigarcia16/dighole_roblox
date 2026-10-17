@@ -1,11 +1,12 @@
 --!strict
--- Everything placed underground besides terrain: cave props (per zone style), treasure chests and
--- the story landmarks. Objects are created when their chunk is generated and stay hidden inside
--- sealed air pockets until the player digs into them ("revealed"); only then are their prompts
--- enabled, so nothing can be opened through solid rock.
+-- Everything placed underground besides terrain: cave decoration, treasure chests, geodes and the
+-- story landmarks. Objects are created when their sector is generated and stay hidden inside sealed
+-- rock until the player digs into the connected cave system ("revealed"); only then are their
+-- prompts enabled, so nothing can be opened through solid rock.
 --
--- Reward safety: chests are keyed by cave and the opened keys are saved in the plot owner's
--- profile; landmark rewards are paid once per reader through profile.clues.
+-- Reward safety: chests and geodes have stable ids from the cave layout (Logic/Caves); opened ids
+-- are saved in the plot owner's profile (plot.openedChests) and marked before paying. Landmark
+-- rewards are paid once per reader through profile.clues.
 
 local CollectionService = game:GetService("CollectionService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -15,11 +16,12 @@ local TweenService = game:GetService("TweenService")
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Resources = require(ReplicatedStorage.Shared.Config.Resources)
 local Story = require(ReplicatedStorage.Shared.Config.Story)
+local Tools = require(ReplicatedStorage.Shared.Config.Tools)
 local Zones = require(ReplicatedStorage.Shared.Config.Zones)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Format = require(ReplicatedStorage.Shared.Util.Format)
 local Grid = require(ReplicatedStorage.Shared.Util.Grid)
-local Hash = require(ReplicatedStorage.Shared.Util.Hash)
+local Caves = require(script.Parent.Parent.Logic.Caves)
 local OreGeneration = require(script.Parent.Parent.Logic.OreGeneration)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local PlotService = require(script.Parent.PlotService)
@@ -27,17 +29,19 @@ local TerrainChunkService = require(script.Parent.TerrainChunkService)
 local InventoryService = require(script.Parent.InventoryService)
 local StateService = require(script.Parent.StateService)
 local FxService = require(script.Parent.FxService)
+local CaveProps = require(script.Parent.CaveProps)
 
 local SpecialsService = {}
 
 local CELL = GameConfig.CellSize
 local INTERACT_DISTANCE = 14
+local SECTOR = Caves.SectorHeight
 
 -- Chest coins by zone index (before a ±20% roll).
 local CHEST_COINS = { 40, 120, 380, 950, 2600, 6500, 14000 }
 
 type Special = {
-	kind: "chest" | "landmark",
+	kind: "chest" | "landmark" | "geode",
 	key: string,
 	model: Model,
 	prompt: ProximityPrompt,
@@ -45,53 +49,24 @@ type Special = {
 	opened: boolean,
 	depth: number,
 	noteId: string?,
+	system: string?, -- key of the cave system that reveals it
 }
 
 type PlotState = {
 	folder: Folder,
-	caves: { [string]: OreGeneration.Cave },
-	revealedCaves: { [string]: boolean },
+	sectors: { [number]: boolean }, -- sectors already decorated
+	revealedSystems: { [string]: boolean },
 	specials: { [string]: Special },
-	openedChests: { [string]: boolean },
+	bySystem: { [string]: { Special } },
+	opened: { [string]: boolean },
 }
 
 local states: { [any]: PlotState } = {}
 
 local NEIGHBORS = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } }
 
--- Building helpers -------------------------------------------------------------------------------
-
-local function part(
-	parent: Instance,
-	name: string,
-	size: Vector3,
-	cframe: CFrame,
-	color: Color3,
-	material: Enum.Material,
-	shape: Enum.PartType?
-): Part
-	local p = Instance.new("Part")
-	p.Name = name
-	p.Anchored = true
-	p.Size = size
-	p.CFrame = cframe
-	p.Color = color
-	p.Material = material
-	p.Shape = shape or Enum.PartType.Block
-	p.TopSurface = Enum.SurfaceType.Smooth
-	p.BottomSurface = Enum.SurfaceType.Smooth
-	p.Parent = parent
-	return p
-end
-
-local function light(parent: Instance, color: Color3, range: number, brightness: number)
-	local l = Instance.new("PointLight")
-	l.Color = color
-	l.Range = range
-	l.Brightness = brightness
-	l.Shadows = false
-	l.Parent = parent
-end
+local part = CaveProps.part
+local light = CaveProps.light
 
 local function makePrompt(parent: BasePart, action: string, objectText: string, actionText: string): ProximityPrompt
 	local prompt = Instance.new("ProximityPrompt")
@@ -105,197 +80,6 @@ local function makePrompt(parent: BasePart, action: string, objectText: string, 
 	prompt:SetAttribute("Action", action)
 	prompt.Parent = parent
 	return prompt
-end
-
-local function floorOf(plot: any, cave: OreGeneration.Cave, cx: number, cz: number): Vector3?
-	local top = cave.by * 8
-	for d = top + 7, top, -1 do
-		local found = OreGeneration.caveAt(plot.seed, cx, d, cz)
-		if found and found.key == cave.key then
-			local center = Grid.cellCenter(plot.originX, plot.originZ, cx, d, cz)
-			return center - Vector3.new(0, CELL / 2, 0)
-		end
-	end
-	return nil
-end
-
-local function ceilingOf(plot: any, cave: OreGeneration.Cave, cx: number, cz: number): Vector3?
-	local top = cave.by * 8
-	for d = top, top + 7 do
-		local found = OreGeneration.caveAt(plot.seed, cx, d, cz)
-		if found and found.key == cave.key then
-			local center = Grid.cellCenter(plot.originX, plot.originZ, cx, d, cz)
-			return center + Vector3.new(0, CELL / 2, 0)
-		end
-	end
-	return nil
-end
-
--- Cave props, one style per zone. Kept to a handful of parts per cave.
-local function decorateCave(plot: any, cave: OreGeneration.Cave, parent: Instance)
-	local model = Instance.new("Model")
-	model.Name = "Cave_" .. cave.key
-	local ccx, ccz = math.floor(cave.cx), math.floor(cave.cz)
-	local floor = floorOf(plot, cave, ccx, ccz)
-	if not floor then
-		return
-	end
-	local rng = Random.new(Hash.int(plot.seed, cave.bx, cave.by, cave.bz, 7))
-
-	if cave.zoneId == "forgotten_mines" then
-		-- Old mine supports: two posts, a crossbeam and a hanging lantern.
-		local ceiling = ceilingOf(plot, cave, ccx, ccz)
-		local height = if ceiling then math.max(4, ceiling.Y - floor.Y) else 7
-		local wood = Color3.fromRGB(110, 78, 50)
-		for _, side in { -1, 1 } do
-			part(
-				model,
-				"Support",
-				Vector3.new(0.8, height, 0.8),
-				CFrame.new(floor + Vector3.new(side * 3.2, height / 2, 0)),
-				wood,
-				Enum.Material.WoodPlanks
-			)
-		end
-		part(
-			model,
-			"Beam",
-			Vector3.new(7.4, 0.8, 0.9),
-			CFrame.new(floor + Vector3.new(0, height - 0.4, 0)),
-			wood,
-			Enum.Material.WoodPlanks
-		)
-		local lantern = part(
-			model,
-			"Lantern",
-			Vector3.new(0.7, 0.9, 0.7),
-			CFrame.new(floor + Vector3.new(1.2, height - 1.6, 0)),
-			Color3.fromRGB(255, 190, 90),
-			Enum.Material.Neon
-		)
-		light(lantern, Color3.fromRGB(255, 180, 90), 18, 1.4)
-		if rng:NextNumber() < 0.6 then
-			part(
-				model,
-				"OldPlank",
-				Vector3.new(3.6, 0.3, 0.9),
-				CFrame.new(floor + Vector3.new(-1, 0.2, 2)) * CFrame.Angles(0, rng:NextNumber() * 3, 0.2),
-				wood,
-				Enum.Material.Wood
-			)
-		end
-	elseif cave.zoneId == "ancient_caverns" then
-		local stone = Color3.fromRGB(206, 184, 140)
-		part(
-			model,
-			"Column",
-			Vector3.new(1.8, 6, 1.8),
-			CFrame.new(floor + Vector3.new(2.5, 3, 1)),
-			stone,
-			Enum.Material.Sandstone
-		)
-		local glyph = part(
-			model,
-			"Glyph",
-			Vector3.new(0.1, 1.2, 1.2),
-			CFrame.new(floor + Vector3.new(1.55, 3.5, 1)),
-			Color3.fromRGB(80, 230, 255),
-			Enum.Material.Neon
-		)
-		glyph.CanCollide = false
-		light(glyph, Color3.fromRGB(80, 230, 255), 12, 1)
-	else
-		-- Crystal clusters (crystal caves, volcanic, abyss and core use the zone accent colour).
-		local zone = Zones.at(cave.by * 8)
-		local color = if cave.zoneId == "crystal_caves"
-			then (if rng:NextNumber() < 0.5 then Color3.fromRGB(110, 170, 255) else Color3.fromRGB(180, 110, 255))
-			else zone.accent
-		for i = 1, 4 do
-			local height = 1.5 + rng:NextNumber() * 2.5
-			local offset = Vector3.new(rng:NextNumber() * 5 - 2.5, height / 2 - 0.3, rng:NextNumber() * 5 - 2.5)
-			local shard = part(
-				model,
-				"Crystal",
-				Vector3.new(0.7, height, 0.7),
-				CFrame.new(floor + offset)
-					* CFrame.Angles(rng:NextNumber() * 0.6 - 0.3, rng:NextNumber() * 3, rng:NextNumber() * 0.6 - 0.3),
-				color,
-				Enum.Material.Neon
-			)
-			shard.CanCollide = false
-			shard.Transparency = 0.15
-			if i == 1 then
-				light(shard, color, 16, 1.2)
-			end
-		end
-	end
-
-	for _, d in model:GetDescendants() do
-		if d:IsA("BasePart") then
-			d.CastShadow = false
-		end
-	end
-	model.Parent = parent
-end
-
-local function buildChest(plot: any, cave: OreGeneration.Cave, parent: Instance): Special?
-	local chest = cave.chest
-	if not chest then
-		return nil
-	end
-	local center = Grid.cellCenter(plot.originX, plot.originZ, chest.cx, chest.d, chest.cz)
-	local floorY = center.Y - CELL / 2
-	local model = Instance.new("Model")
-	model.Name = "Chest_" .. cave.key
-	local wood = Color3.fromRGB(130, 84, 46)
-	local gold = Color3.fromRGB(240, 190, 60)
-	local base = part(
-		model,
-		"Base",
-		Vector3.new(2.6, 1.4, 1.7),
-		CFrame.new(center.X, floorY + 0.7, center.Z),
-		wood,
-		Enum.Material.WoodPlanks
-	)
-	part(
-		model,
-		"Band",
-		Vector3.new(2.7, 0.25, 1.8),
-		CFrame.new(center.X, floorY + 1.1, center.Z),
-		gold,
-		Enum.Material.Metal
-	)
-	part(
-		model,
-		"Lid",
-		Vector3.new(2.6, 0.7, 1.7),
-		CFrame.new(center.X, floorY + 1.75, center.Z),
-		wood,
-		Enum.Material.WoodPlanks
-	)
-	part(
-		model,
-		"Lock",
-		Vector3.new(0.4, 0.5, 0.2),
-		CFrame.new(center.X, floorY + 1.35, center.Z - 0.9),
-		gold,
-		Enum.Material.Metal
-	)
-	model.PrimaryPart = base
-	local prompt = makePrompt(base, "Chest", "Cofre", "Abrir")
-	prompt:SetAttribute("CaveKey", cave.key)
-	model.Parent = parent
-	CollectionService:AddTag(model, "THNE_Chest")
-	return {
-		kind = "chest",
-		key = cave.key,
-		model = model,
-		prompt = prompt,
-		revealed = false,
-		opened = false,
-		depth = chest.d,
-		noteId = nil,
-	}
 end
 
 local function buildLandmark(plot: any, landmark: OreGeneration.Landmark, parent: Instance): Special
@@ -387,19 +171,31 @@ local function reveal(special: Special)
 	special.model:SetAttribute("Revealed", true)
 end
 
--- Has the player dug a cell next to any cell of this cave?
-local function caveExposed(plot: any, cave: OreGeneration.Cave): boolean
-	local x0, d0, z0 = cave.bx * 8, cave.by * 8, cave.bz * 8
-	for cx = x0, x0 + 7 do
-		for d = d0, d0 + 7 do
-			for cz = z0, z0 + 7 do
-				if plot.dug[Grid.key(cx, d, cz)] then
-					for _, n in NEIGHBORS do
-						local found = OreGeneration.caveAt(plot.seed, cx + n[1], d + n[2], cz + n[3])
-						if found and found.key == cave.key then
-							return true
-						end
-					end
+local function revealSystem(state: PlotState, key: string): boolean
+	if state.revealedSystems[key] then
+		return false
+	end
+	state.revealedSystems[key] = true
+	local list = state.bySystem[key]
+	if list then
+		for _, special in list do
+			reveal(special)
+		end
+	end
+	return true
+end
+
+-- Has the player dug a cell next to any cell of this system? (used when rebuilding a saved plot)
+local function systemExposed(plot: any, sector: Caves.Sector, system: number): boolean
+	local N = GameConfig.PlotDigCells
+	for i, v in sector.grid do
+		if v == system then
+			local local0 = i - 1
+			local x, z = local0 % N, (local0 // N) % N
+			local d = sector.top + local0 // (N * N)
+			for _, n in NEIGHBORS do
+				if plot.dug[Grid.key(x + n[1], d + n[2], z + n[3])] then
+					return true
 				end
 			end
 		end
@@ -430,18 +226,79 @@ local function stateFor(plot: any): PlotState?
 	folder.Parent = plot.folder
 	local state: PlotState = {
 		folder = folder,
-		caves = {},
-		revealedCaves = {},
+		sectors = {},
+		revealedSystems = {},
 		specials = {},
-		openedChests = {},
+		bySystem = {},
+		opened = {},
 	}
 	if ownerProfile then
 		for _, key in ownerProfile.plot.openedChests do
-			state.openedChests[key] = true
+			state.opened[key] = true
 		end
 	end
 	states[plot] = state
 	return state
+end
+
+-- Colour of the crystals inside a geode, by depth.
+local function geodeColor(depth: number): Color3
+	local zone = Zones.at(depth)
+	if zone.index <= 2 then
+		return Color3.fromRGB(170, 110, 240)
+	elseif zone.index == 3 then
+		return Color3.fromRGB(110, 190, 255)
+	end
+	return zone.accent
+end
+
+local function register(state: PlotState, special: Special)
+	state.specials[special.key] = special
+	if special.system then
+		local list = state.bySystem[special.system]
+		if not list then
+			list = {}
+			state.bySystem[special.system] = list
+		end
+		table.insert(list, special)
+	end
+end
+
+local function buildSector(plot: any, state: PlotState, sector: Caves.Sector)
+	CaveProps.decorate(plot, sector, state.folder)
+	for _, spot in sector.spots do
+		local systemKey = Caves.systemKey(sector.index, spot.system)
+		if not state.opened[spot.id] then
+			local model, prompt
+			if spot.kind == "chest" then
+				model = CaveProps.chest(plot, spot, state.folder)
+				prompt = makePrompt(model.PrimaryPart :: BasePart, "Chest", "Cofre", "Abrir")
+				CollectionService:AddTag(model, "THNE_Chest")
+			else
+				model = CaveProps.geode(plot, spot, geodeColor(spot.d), state.folder)
+				prompt = makePrompt(model.PrimaryPart :: BasePart, "Geode", "Geoda", "Abrir")
+				prompt.HoldDuration = 1.2
+				CollectionService:AddTag(model, "THNE_Geode")
+			end
+			register(state, {
+				kind = spot.kind,
+				key = spot.id,
+				model = model,
+				prompt = prompt,
+				revealed = false,
+				opened = false,
+				depth = spot.d,
+				noteId = nil,
+				system = systemKey,
+			})
+		end
+	end
+	-- Systems the player already opened in an earlier session.
+	for system in sector.systems do
+		if systemExposed(plot, sector, system) then
+			revealSystem(state, Caves.systemKey(sector.index, system))
+		end
+	end
 end
 
 local function onChunkGenerated(plot: any, d0: number, d1: number)
@@ -449,26 +306,19 @@ local function onChunkGenerated(plot: any, d0: number, d1: number)
 	if not state then
 		return
 	end
-	for _, cave in OreGeneration.cavesInRange(plot.seed, d0, d1) do
-		if not state.caves[cave.key] then
-			state.caves[cave.key] = cave
-			decorateCave(plot, cave, state.folder)
-			local chest = if state.openedChests[cave.key] then nil else buildChest(plot, cave, state.folder)
-			if chest then
-				state.specials["chest:" .. cave.key] = chest
-			end
-			if caveExposed(plot, cave) then
-				state.revealedCaves[cave.key] = true
-				if chest then
-					reveal(chest)
-				end
-			end
+	-- Decorate a sector once its last layer exists, so floor/ceiling scans see real rock.
+	for _, sector in Caves.sectorsInRange(plot.seed, d0 - SECTOR, d1) do
+		if not state.sectors[sector.index] and plot.generatedDepth >= sector.top + SECTOR then
+			state.sectors[sector.index] = true
+			buildSector(plot, state, sector)
 		end
 	end
 	for _, landmark in OreGeneration.landmarks(plot.seed) do
-		if landmark.d >= d0 and landmark.d <= d1 and not state.specials["landmark:" .. landmark.id] then
+		local key = "landmark:" .. landmark.id
+		if landmark.d >= d0 and landmark.d <= d1 and not state.specials[key] then
 			local special = buildLandmark(plot, landmark, state.folder)
-			state.specials["landmark:" .. landmark.id] = special
+			special.key = key
+			register(state, special)
 			if landmarkExposed(plot, landmark) then
 				reveal(special)
 			end
@@ -487,24 +337,38 @@ function SpecialsService.onCellsBroken(player: Player, plot: any, broken: { { cx
 		for _, n in NEIGHBORS do
 			local cx, d, cz = cell.cx + n[1], cell.d + n[2], cell.cz + n[3]
 			if Grid.inDigArea(cx, d, cz) and not plot.dug[Grid.key(cx, d, cz)] then
-				local cave = OreGeneration.caveAt(plot.seed, cx, d, cz)
-				if cave and not state.revealedCaves[cave.key] then
-					state.revealedCaves[cave.key] = true
-					local chest = state.specials["chest:" .. cave.key]
-					if chest then
-						reveal(chest)
+				local system = Caves.cellAt(plot.seed, cx, d, cz)
+				if system > 0 then
+					local sectorIndex = d // SECTOR
+					local key = Caves.systemKey(sectorIndex, system)
+					if revealSystem(state, key) then
+						local sector = Caves.sector(plot.seed, sectorIndex)
+						local info = sector.systems[system]
+						if info and info.hasCave then
+							if profile then
+								profile.stats.cavesFound += 1
+							end
+							local hasChest = false
+							local list = state.bySystem[key]
+							if list then
+								for _, special in list do
+									if special.kind == "chest" then
+										hasChest = true
+									end
+								end
+							end
+							StateService.notify(
+								player,
+								"discovery",
+								if hasChest
+									then "¡Has abierto una cueva! Algo brilla en la oscuridad..."
+									else "¡Has abierto una cueva!"
+							)
+						else
+							StateService.notify(player, "discovery", "La roca suena hueca... ¡una geoda!")
+						end
+						StateService.push(player)
 					end
-					if profile then
-						profile.stats.cavesFound += 1
-					end
-					StateService.notify(
-						player,
-						"discovery",
-						if chest
-							then "¡Has abierto una cueva! Algo brilla en el fondo..."
-							else "¡Has abierto una cueva!"
-					)
-					StateService.push(player)
 				end
 				local landmark = OreGeneration.landmarkAt(plot.seed, cx, d, cz)
 				if landmark then
@@ -541,26 +405,34 @@ local function findSpecial(player: Player, prompt: ProximityPrompt): (any, Speci
 	return nil, nil
 end
 
-local function openChest(player: Player, plot: any, special: Special)
+-- Marks a chest/geode as opened before any reward is paid (so a failure can never pay twice).
+local function claimOpen(player: Player, plot: any, special: Special): (any?, PlotState?)
 	local state = states[plot]
 	if not state or special.opened or not special.revealed then
-		return
+		return nil, nil
 	end
 	if not PlotService.canDig(player, plot) then
-		StateService.notify(player, "error", "Este cofre está en la parcela de otro jugador.", "chest_foreign", 3)
-		return
+		StateService.notify(player, "error", "Esto está en la parcela de otro jugador.", "special_foreign", 3)
+		return nil, nil
 	end
 	local profile = PlayerDataService.get(player)
 	local ownerProfile = plot.owner and PlayerDataService.get(plot.owner)
 	if not profile or not ownerProfile then
-		return
+		return nil, nil
 	end
-
 	special.opened = true
 	special.prompt.Enabled = false
 	special.model:SetAttribute("Opened", true)
-	state.openedChests[special.key] = true
+	state.opened[special.key] = true
 	table.insert(ownerProfile.plot.openedChests, special.key)
+	return profile, state
+end
+
+local function openChest(player: Player, plot: any, special: Special)
+	local profile = claimOpen(player, plot, special)
+	if not profile then
+		return
+	end
 
 	local zone = Zones.at(special.depth)
 	local rng = Random.new()
@@ -612,6 +484,82 @@ local function openChest(player: Player, plot: any, special: Special)
 	)
 end
 
+local function openGeode(player: Player, plot: any, special: Special)
+	-- The shell is as hard as the rock around it: the tool must be able to break that rock.
+	local zone = Zones.at(special.depth)
+	local profile = PlayerDataService.get(player)
+	local tool = profile and Tools.get(profile.equippedTool)
+	local required = 1
+	for _, rule in zone.base do
+		local rock = Resources.get(rule.id)
+		if rock then
+			required = math.max(required, rock.requiredPower)
+		end
+	end
+	if not tool or tool.power < required then
+		StateService.notify(
+			player,
+			"error",
+			string.format("La corteza es demasiado dura: necesitas potencia %d.", required),
+			"geode_hard",
+			3
+		)
+		return
+	end
+	local opener = claimOpen(player, plot, special)
+	if not opener then
+		return
+	end
+
+	-- Contents: the geode itself (collection item) and crystals that form at this depth.
+	local rng = Random.new()
+	InventoryService.collect(player, "geode", 1, true)
+	local candidates = {}
+	for _, ore in Resources.Ores do
+		local rule = ore.spawn
+		if rule and special.depth >= rule.minDepth and special.depth < rule.maxDepth and ore.rarity ~= "Common" then
+			table.insert(candidates, ore)
+		end
+	end
+	local crystal = candidates[rng:NextInteger(1, math.max(1, #candidates))] or Resources.get("copper")
+	local amount = rng:NextInteger(3, 6)
+	if crystal then
+		InventoryService.collect(player, crystal.id, amount, true)
+	end
+	opener.stats.geodesOpened += 1
+	StateService.notify(
+		player,
+		"find",
+		string.format("¡Geoda abierta! Dentro había %d × %s", amount, if crystal then crystal.name else "cristal")
+	)
+	StateService.push(player)
+
+	-- Crack the shell: lumps fly apart and fade, the crystals light up.
+	local center = special.model:GetPivot().Position
+	for _, child in special.model:GetChildren() do
+		if child:IsA("BasePart") and (child.Name == "Lump" or child.Name == "Shell" or child.Name == "Seam") then
+			local piece = child :: BasePart
+			piece.CanCollide = false
+			local away = (piece.Position - center)
+			local offset = if away.Magnitude > 0.1 then away.Unit * 3 else Vector3.new(0, 3, 0)
+			TweenService:Create(piece, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Position = piece.Position + offset,
+				Transparency = 1,
+			}):Play()
+		end
+	end
+	local interior = special.model:FindFirstChild("Interior")
+	if interior then
+		for _, crystalPart in interior:GetChildren() do
+			if crystalPart:IsA("BasePart") then
+				TweenService:Create(crystalPart, TweenInfo.new(0.6), { Transparency = 0.05 }):Play()
+			end
+		end
+		light(special.model.PrimaryPart or special.model, geodeColor(special.depth), 18, 1.6)
+	end
+	FxService.broadcast(player, center, crystal and crystal.id or "geode", true, nil, crystal and crystal.id or nil)
+end
+
 local function readLandmark(player: Player, special: Special)
 	local noteId = special.noteId
 	if not noteId or not special.revealed then
@@ -658,7 +606,7 @@ function SpecialsService.start()
 			end
 			return
 		end
-		if action ~= "Chest" and action ~= "Landmark" then
+		if action ~= "Chest" and action ~= "Landmark" and action ~= "Geode" then
 			return
 		end
 		local plot, special = findSpecial(player, prompt)
@@ -667,6 +615,8 @@ function SpecialsService.start()
 		end
 		if special.kind == "chest" then
 			openChest(player, plot, special)
+		elseif special.kind == "geode" then
+			openGeode(player, plot, special)
 		else
 			readLandmark(player, special)
 		end

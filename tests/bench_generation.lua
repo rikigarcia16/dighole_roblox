@@ -56,3 +56,10 @@ bench("writeBox, one radius-3 hit (7x7x7)", function()
 	local plot = { originX = 0, originZ = 0, seed = 5, dug = {}, damage = {}, generatedDepth = 0 }
 	TerrainChunkService.writeBox(plot, 4, 10, 100, 106, 4, 10)
 end, 50)
+
+local Caves = H.module("ServerScriptService", "Server", "Logic", "Caves")
+local k = 0
+bench("Caves.sector build (one 32 m sector, cold)", function()
+	k += 1
+	Caves.sector(50000 + k, 4)
+end, 20)

@@ -94,7 +94,7 @@ local Quests: { Quest } = {
 	{
 		id = "geode",
 		title = "Encuentra tu primera geoda",
-		hint = "Escondidas en la roca de las minas.",
+		hint = "Rocas huecas en las minas: cava a su lado y ábrelas.",
 		kind = "collect",
 		key = "geode",
 		target = 1,
@@ -103,7 +103,7 @@ local Quests: { Quest } = {
 	{
 		id = "cave",
 		title = "Explora una cueva",
-		hint = "Hay huecos naturales bajo los 56 m.",
+		hint = "Hay galerías y cámaras a partir de los 64 m.",
 		kind = "stat",
 		key = "cavesFound",
 		target = 1,

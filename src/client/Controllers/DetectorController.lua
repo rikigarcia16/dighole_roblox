@@ -59,12 +59,16 @@ function DetectorController.start()
 						setHighlight(instance, near and not clues[noteId], Color3.fromRGB(120, 230, 255), true)
 					end
 				end
-				for _, instance in CollectionService:GetTagged("THNE_Chest") do
-					if instance:IsA("Model") then
-						local visible = instance:GetAttribute("Revealed") == true
-							and instance:GetAttribute("Opened") ~= true
-						local near = (instance:GetPivot().Position - root.Position).Magnitude <= CHEST_RANGE
-						setHighlight(instance, visible and near, Color3.fromRGB(255, 205, 60), false)
+				for tag, color in
+					{ THNE_Chest = Color3.fromRGB(255, 205, 60), THNE_Geode = Color3.fromRGB(190, 140, 255) }
+				do
+					for _, instance in CollectionService:GetTagged(tag) do
+						if instance:IsA("Model") then
+							local visible = instance:GetAttribute("Revealed") == true
+								and instance:GetAttribute("Opened") ~= true
+							local near = (instance:GetPivot().Position - root.Position).Magnitude <= CHEST_RANGE
+							setHighlight(instance, visible and near, color, false)
+						end
 					end
 				end
 			end

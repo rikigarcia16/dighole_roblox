@@ -110,7 +110,7 @@ local function handleDig(player: Player, position: any, normal: any)
 		if
 			Grid.inDigArea(cx, d, cz)
 			and not plot.dug[Grid.key(cx, d, cz)]
-			and OreGeneration.resourceAt(plot.seed, cx, d, cz) ~= "air"
+			and Resources.get(OreGeneration.resourceAt(plot.seed, cx, d, cz)) ~= nil -- not air / water
 		then
 			tx, td, tz = cx, d, cz
 			break
@@ -276,9 +276,16 @@ end
 function DiggingService.start()
 	local limits = GameConfig.RateLimits.Dig
 	local limiter = RateLimiter.new(limits.rate, limits.burst)
+	local profileBegin: (string) -> () = (debug :: any).profilebegin or function(_label: string) end
+	local profileEnd: () -> () = (debug :: any).profileend or function() end
 	Remotes.event("Dig").OnServerEvent:Connect(function(player, position, normal)
 		if limiter:allow(player) then
-			handleDig(player, position, normal)
+			profileBegin("THNE.Dig")
+			local ok, err = pcall(handleDig, player, position, normal)
+			profileEnd()
+			if not ok then
+				warn("[DiggingService] dig failed:", err)
+			end
 		end
 	end)
 

@@ -126,8 +126,24 @@ historia); `FxService`; `DetectorController`. `MultiplayerService` (invitaciones
 
 ## 7. Contenido subterráneo
 
-`OreGeneration.resourceAt` devuelve `"air"` para el espacio vacío natural (cuevas y huecos de los
-hitos de historia), así que el terreno se sigue regenerando de forma idéntica sin guardar nada.
-`SpecialsService` crea la decoración, los cofres y los hitos cuando se genera su chunk; sus avisos
-de interacción solo se activan cuando el jugador cava una celda vecina ("revelado"). Los cofres
-abiertos se guardan por clave de cueva en el perfil del dueño de la parcela.
+`OreGeneration.resourceAt` devuelve `"air"` para el espacio vacío natural y `"water"` para las
+pozas, así que el terreno se sigue regenerando de forma idéntica sin guardar nada.
+
+`Logic/Caves` organiza el subsuelo en sectores de 32 m (a partir de 64 m). Cada sector se genera una
+vez a partir de (semilla, índice) con la receta de su zona (`Zones.caves`): galerías con suelo plano
+y bifurcaciones, una cámara (cúpula, galería alargada, pozo vertical o doble), chimenea, poza
+contenida y geodas selladas. Las formas que se tocan se unen en sistemas conectados (union-find).
+Cada sector se rasteriza en una rejilla de 16×32×16 celdas cacheada, de modo que consultar una celda
+cuesta una lectura de tabla.
+
+`CaveProps` construye la decoración por estilo (puntales de mina, cristales, columnas, brasas,
+setas), los cofres y las geodas. `SpecialsService` decora cada sector cuando ya está generado,
+activa los avisos de interacción al abrir un sistema ("revelado"), paga las recompensas una sola vez
+y guarda los ids abiertos en el perfil del dueño de la parcela.
+
+## 8. Generación en segundo plano
+
+Cavar nunca espera a la generación. `TerrainChunkService.requestDepth` encola una profundidad
+objetivo y un único trabajador genera capas de 4 celdas (~5 ms cada una medidos en la VM de Luau)
+con un presupuesto de 4 ms por frame. Las peticiones se descartan si cambia el dueño de la parcela.
+Las etiquetas `THNE.GenerateSlab`, `THNE.ChunkCallback` y `THNE.Dig` aparecen en el MicroProfiler.

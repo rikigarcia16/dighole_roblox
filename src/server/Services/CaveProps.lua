@@ -1,0 +1,483 @@
+--!strict
+-- Builds the physical objects of a cave sector: per-style decoration along galleries and in
+-- chambers, chests and geodes. Pure construction (no state, no rewards): SpecialsService owns
+-- reveal, interaction and persistence.
+--
+-- Everything is anchored, placed only in open cells (positions are found by scanning the cave
+-- grid for the floor/ceiling) and kept to a handful of parts per feature.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
+local Zones = require(ReplicatedStorage.Shared.Config.Zones)
+local Grid = require(ReplicatedStorage.Shared.Util.Grid)
+local Hash = require(ReplicatedStorage.Shared.Util.Hash)
+local Caves = require(script.Parent.Parent.Logic.Caves)
+
+local CaveProps = {}
+
+local CELL = GameConfig.CellSize
+
+type Plot = { originX: number, originZ: number, seed: number }
+
+local function part(
+	parent: Instance,
+	name: string,
+	size: Vector3,
+	cframe: CFrame,
+	color: Color3,
+	material: Enum.Material,
+	shape: Enum.PartType?
+): Part
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Anchored = true
+	p.Size = size
+	p.CFrame = cframe
+	p.Color = color
+	p.Material = material
+	p.Shape = shape or Enum.PartType.Block
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.CastShadow = false
+	p.Parent = parent
+	return p
+end
+CaveProps.part = part
+
+function CaveProps.light(parent: Instance, color: Color3, range: number, brightness: number): PointLight
+	local l = Instance.new("PointLight")
+	l.Color = color
+	l.Range = range
+	l.Brightness = brightness
+	l.Shadows = false
+	l.Parent = parent
+	return l
+end
+
+-- World Y of the floor under (x, d, z) and of the ceiling above it, or nil if (x, d, z) is rock.
+local function column(plot: Plot, x: number, d: number, z: number): (number?, number?)
+	if Caves.cellAt(plot.seed, x, d, z) == 0 then
+		return nil, nil
+	end
+	local floorD, ceilD = d, d
+	while Caves.cellAt(plot.seed, x, floorD + 1, z) > 0 and floorD - d < 40 do
+		floorD += 1
+	end
+	while Caves.cellAt(plot.seed, x, ceilD - 1, z) > 0 and d - ceilD < 40 do
+		ceilD -= 1
+	end
+	return GameConfig.SurfaceY - (floorD + 1) * CELL, GameConfig.SurfaceY - ceilD * CELL
+end
+
+local function worldXZ(plot: Plot, x: number, z: number): (number, number)
+	return plot.originX + x * CELL, plot.originZ + z * CELL
+end
+
+-- Galleries -------------------------------------------------------------------------------------
+
+local WOOD = Color3.fromRGB(112, 78, 50)
+
+local function mineSupports(plot: Plot, feature: Caves.Feature, parent: Instance)
+	local points = feature.points
+	if not points then
+		return
+	end
+	local built = 0
+	for s = 1, #points - 1 do
+		local a, b = points[s], points[s + 1]
+		local dx, dz = b.x - a.x, b.z - a.z
+		local length = math.sqrt(dx * dx + dz * dz)
+		if length > 0.5 then
+			local steps = math.floor(length / 3.5)
+			for k = 1, steps do
+				local t = k / (steps + 1)
+				local px, pd, pz = a.x + dx * t, a.d + (b.d - a.d) * t, a.z + dz * t
+				local floorY, ceilY = column(plot, math.floor(px), math.floor(pd), math.floor(pz))
+				if floorY and ceilY and ceilY - floorY >= 6 then
+					local wx, wz = worldXZ(plot, px, pz)
+					local height = ceilY - floorY
+					local frame = CFrame.lookAt(Vector3.new(wx, floorY, wz), Vector3.new(wx + dx, floorY, wz + dz))
+					local half = feature.radius * CELL * 0.7
+					for _, side in { -1, 1 } do
+						part(
+							parent,
+							"Support",
+							Vector3.new(0.7, height, 0.7),
+							frame * CFrame.new(side * half, height / 2, 0),
+							WOOD,
+							Enum.Material.WoodPlanks
+						)
+					end
+					part(
+						parent,
+						"Beam",
+						Vector3.new(half * 2 + 0.8, 0.7, 0.8),
+						frame * CFrame.new(0, height - 0.35, 0),
+						WOOD,
+						Enum.Material.WoodPlanks
+					)
+					built += 1
+					if built % 2 == 1 then
+						local lantern = part(
+							parent,
+							"Lantern",
+							Vector3.new(0.6, 0.8, 0.6),
+							frame * CFrame.new(0.8, height - 1.4, 0),
+							Color3.fromRGB(255, 190, 90),
+							Enum.Material.Neon
+						)
+						lantern.CanCollide = false
+						CaveProps.light(lantern, Color3.fromRGB(255, 180, 90), 16, 1.2)
+					end
+				end
+			end
+		end
+	end
+end
+
+local function glowMarkers(plot: Plot, feature: Caves.Feature, parent: Instance, color: Color3, kind: string)
+	local points = feature.points
+	if not points then
+		return
+	end
+	for s = 2, #points do
+		local p = points[s]
+		local floorY = column(plot, math.floor(p.x), math.floor(p.d), math.floor(p.z))
+		if floorY then
+			local wx, wz = worldXZ(plot, p.x, p.z)
+			if kind == "mushroom" then
+				local stem = part(
+					parent,
+					"Stem",
+					Vector3.new(0.4, 1.4, 0.4),
+					CFrame.new(wx, floorY + 0.7, wz),
+					Color3.fromRGB(200, 220, 210),
+					Enum.Material.SmoothPlastic
+				)
+				stem.CanCollide = false
+				local cap = part(
+					parent,
+					"Cap",
+					Vector3.new(1.6, 0.5, 1.6),
+					CFrame.new(wx, floorY + 1.5, wz),
+					color,
+					Enum.Material.Neon,
+					Enum.PartType.Cylinder
+				)
+				cap.CFrame = CFrame.new(wx, floorY + 1.5, wz) * CFrame.Angles(0, 0, math.rad(90))
+				cap.CanCollide = false
+				CaveProps.light(cap, color, 12, 0.9)
+			else
+				local shard = part(
+					parent,
+					"Glow",
+					Vector3.new(0.6, 1.8, 0.6),
+					CFrame.new(wx, floorY + 0.8, wz) * CFrame.Angles(0.2, s, 0.15),
+					color,
+					Enum.Material.Neon
+				)
+				shard.CanCollide = false
+				CaveProps.light(shard, color, 12, 0.9)
+			end
+		end
+	end
+end
+
+-- Chambers --------------------------------------------------------------------------------------
+
+-- Random open floor positions inside a chamber (deterministic).
+local function floorSpots(plot: Plot, feature: Caves.Feature, count: number, salt: number): { Vector3 }
+	local spots = {}
+	local c = feature.center
+	if not c or not feature.rx or not feature.rz then
+		return spots
+	end
+	local rx, rz = feature.rx :: number, feature.rz :: number
+	for i = 1, count * 4 do
+		if #spots >= count then
+			break
+		end
+		local u = Hash.unit(plot.seed, i, salt, 0, 701)
+		local v = Hash.unit(plot.seed, i, salt, 1, 701)
+		local x = math.floor(c.x + (u - 0.5) * rx * 1.6)
+		local z = math.floor(c.z + (v - 0.5) * rz * 1.6)
+		local floorY = column(plot, x, math.floor(c.d), z)
+		if floorY then
+			local wx, wz = worldXZ(plot, x + 0.5, z + 0.5)
+			table.insert(spots, Vector3.new(wx, floorY, wz))
+		end
+	end
+	return spots
+end
+
+local function chamberProps(
+	plot: Plot,
+	feature: Caves.Feature,
+	style: string,
+	accent: Color3,
+	parent: Instance,
+	salt: number
+)
+	if style == "mine" then
+		local spots = floorSpots(plot, feature, 3, salt)
+		for i, at in spots do
+			if i == 1 then
+				part(
+					parent,
+					"LampPost",
+					Vector3.new(0.5, 6, 0.5),
+					CFrame.new(at + Vector3.new(0, 3, 0)),
+					WOOD,
+					Enum.Material.Wood
+				)
+				local bulb = part(
+					parent,
+					"Lamp",
+					Vector3.new(0.8, 0.9, 0.8),
+					CFrame.new(at + Vector3.new(0, 6.3, 0)),
+					Color3.fromRGB(255, 190, 90),
+					Enum.Material.Neon
+				)
+				bulb.CanCollide = false
+				CaveProps.light(bulb, Color3.fromRGB(255, 180, 90), 26, 1.4)
+			else
+				part(
+					parent,
+					"Crate",
+					Vector3.new(2.2, 2.2, 2.2),
+					CFrame.new(at + Vector3.new(0, 1.1, 0)) * CFrame.Angles(0, i, 0),
+					WOOD,
+					Enum.Material.WoodPlanks
+				)
+			end
+		end
+	elseif style == "ruin" then
+		for i, at in floorSpots(plot, feature, 2, salt) do
+			part(
+				parent,
+				"Column",
+				Vector3.new(1.8, 7, 1.8),
+				CFrame.new(at + Vector3.new(0, 3.5, 0)),
+				Color3.fromRGB(206, 184, 140),
+				Enum.Material.Sandstone
+			)
+			local glyph = part(
+				parent,
+				"Glyph",
+				Vector3.new(0.1, 1.2, 1.2),
+				CFrame.new(at + Vector3.new(0.95, 4, 0)),
+				Color3.fromRGB(80, 230, 255),
+				Enum.Material.Neon
+			)
+			glyph.CanCollide = false
+			if i == 1 then
+				CaveProps.light(glyph, Color3.fromRGB(80, 230, 255), 18, 1)
+			end
+		end
+	elseif style == "lava" then
+		for i, at in floorSpots(plot, feature, 4, salt) do
+			local ember = part(
+				parent,
+				"Ember",
+				Vector3.new(2, 1.2, 1.6),
+				CFrame.new(at + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, i, 0.2),
+				Color3.fromRGB(255, 110, 30),
+				Enum.Material.Neon
+			)
+			ember.CanCollide = false
+			if i <= 2 then
+				CaveProps.light(ember, Color3.fromRGB(255, 120, 40), 20, 1.3)
+			end
+		end
+	elseif style == "abyss" then
+		for _, at in floorSpots(plot, feature, 5, salt) do
+			local cap = part(
+				parent,
+				"GlowCap",
+				Vector3.new(0.6, 2.2, 2.2),
+				CFrame.new(at + Vector3.new(0, 2, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+				accent,
+				Enum.Material.Neon,
+				Enum.PartType.Cylinder
+			)
+			cap.CanCollide = false
+			part(
+				parent,
+				"GlowStem",
+				Vector3.new(0.5, 2, 0.5),
+				CFrame.new(at + Vector3.new(0, 1, 0)),
+				Color3.fromRGB(190, 210, 210),
+				Enum.Material.SmoothPlastic
+			).CanCollide =
+				false
+			CaveProps.light(cap, accent, 14, 0.8)
+		end
+	else
+		-- crystal / core: clusters of glowing shards
+		local color = accent
+		for i, at in floorSpots(plot, feature, 5, salt) do
+			for k = 1, 3 do
+				local h = 1.6 + Hash.unit(plot.seed, i, k, salt, 703) * 2.6
+				local shard = part(
+					parent,
+					"Crystal",
+					Vector3.new(0.7, h, 0.7),
+					CFrame.new(at + Vector3.new((k - 2) * 0.7, h / 2 - 0.3, (k % 2) * 0.6))
+						* CFrame.Angles((k - 2) * 0.25, i, (k % 2 - 0.5) * 0.4),
+					color,
+					Enum.Material.Neon
+				)
+				shard.CanCollide = false
+				shard.Transparency = 0.1
+			end
+			if i <= 2 then
+				local anchor = part(
+					parent,
+					"CrystalLight",
+					Vector3.new(0.2, 0.2, 0.2),
+					CFrame.new(at + Vector3.new(0, 2, 0)),
+					color,
+					Enum.Material.Neon
+				)
+				anchor.Transparency = 1
+				anchor.CanCollide = false
+				CaveProps.light(anchor, color, 22, 1.2)
+			end
+		end
+	end
+end
+
+-- Decorates every feature of a sector into a new Model under `parent`.
+function CaveProps.decorate(plot: Plot, sector: Caves.Sector, parent: Instance): Model
+	local model = Instance.new("Model")
+	model.Name = "Sector_" .. sector.index
+	local zone = Zones.at(sector.top + Caves.SectorHeight / 2)
+	local accent = if sector.style == "crystal" then Color3.fromRGB(130, 170, 255) else zone.accent
+	for i, feature in sector.features do
+		if feature.kind == "tunnel" then
+			if sector.style == "mine" or sector.style == "ruin" then
+				mineSupports(plot, feature, model)
+			elseif sector.style == "abyss" then
+				glowMarkers(plot, feature, model, accent, "mushroom")
+			else
+				glowMarkers(plot, feature, model, accent, "shard")
+			end
+		elseif feature.kind == "chamber" then
+			chamberProps(plot, feature, sector.style, accent, model, sector.index * 10 + i)
+		end
+	end
+	model.Parent = parent
+	return model
+end
+
+-- Chest -----------------------------------------------------------------------------------------
+
+function CaveProps.chest(plot: Plot, spot: Caves.Spot, parent: Instance): Model
+	local center = Grid.cellCenter(plot.originX, plot.originZ, spot.cx, spot.d, spot.cz)
+	local floorY = center.Y - CELL / 2
+	local model = Instance.new("Model")
+	model.Name = "Chest_" .. spot.id
+	local wood = Color3.fromRGB(130, 84, 46)
+	local gold = Color3.fromRGB(240, 190, 60)
+	local base = part(
+		model,
+		"Base",
+		Vector3.new(2.6, 1.4, 1.7),
+		CFrame.new(center.X, floorY + 0.7, center.Z),
+		wood,
+		Enum.Material.WoodPlanks
+	)
+	part(
+		model,
+		"Band",
+		Vector3.new(2.7, 0.25, 1.8),
+		CFrame.new(center.X, floorY + 1.1, center.Z),
+		gold,
+		Enum.Material.Metal
+	)
+	part(
+		model,
+		"Lid",
+		Vector3.new(2.6, 0.7, 1.7),
+		CFrame.new(center.X, floorY + 1.75, center.Z),
+		wood,
+		Enum.Material.WoodPlanks
+	)
+	part(
+		model,
+		"Lock",
+		Vector3.new(0.4, 0.5, 0.2),
+		CFrame.new(center.X, floorY + 1.35, center.Z - 0.9),
+		gold,
+		Enum.Material.Metal
+	)
+	model.PrimaryPart = base
+	model.Parent = parent
+	return model
+end
+
+-- Geode -----------------------------------------------------------------------------------------
+-- A lumpy rock shell around the 3x3x3 pocket; glowing crystals wait inside, hidden until opened.
+
+function CaveProps.geode(plot: Plot, spot: Caves.Spot, crystalColor: Color3, parent: Instance): Model
+	local center = Grid.cellCenter(plot.originX, plot.originZ, spot.cx, spot.d, spot.cz)
+	local model = Instance.new("Model")
+	model.Name = "Geode_" .. spot.id
+	local crust = Color3.fromRGB(118, 104, 96)
+	local shell = part(
+		model,
+		"Shell",
+		Vector3.new(7.2, 6.6, 7.2),
+		CFrame.new(center) * CFrame.Angles(0.2, 0.7, 0.1),
+		crust,
+		Enum.Material.Slate,
+		Enum.PartType.Ball
+	)
+	for i = 1, 5 do
+		local a = i * 1.9
+		local lump = part(
+			model,
+			"Lump",
+			Vector3.new(2.6, 2.2, 2.4),
+			CFrame.new(center + Vector3.new(math.cos(a) * 3, ((i % 3) - 1) * 2, math.sin(a) * 3))
+				* CFrame.Angles(a, a * 0.7, 0.3),
+			crust,
+			Enum.Material.Slate
+		)
+		lump.Name = "Lump"
+	end
+	-- The seam: a faint glowing crack hinting at what is inside.
+	local seam = part(
+		model,
+		"Seam",
+		Vector3.new(7.3, 0.15, 0.4),
+		CFrame.new(center) * CFrame.Angles(0, 0.7, 0.25),
+		crystalColor,
+		Enum.Material.Neon
+	)
+	seam.CanCollide = false
+	local interior = Instance.new("Folder")
+	interior.Name = "Interior"
+	interior.Parent = model
+	for i = 1, 7 do
+		local a = i * 0.9
+		local h = 1.2 + (i % 3) * 0.6
+		local crystal = part(
+			interior,
+			"Crystal",
+			Vector3.new(0.6, h, 0.6),
+			CFrame.new(center + Vector3.new(math.cos(a) * 1.4, -0.8 + (i % 2) * 1.2, math.sin(a) * 1.4))
+				* CFrame.Angles(math.cos(a) * 0.6, a, math.sin(a) * 0.6),
+			crystalColor,
+			Enum.Material.Neon
+		)
+		crystal.CanCollide = false
+		crystal.Transparency = 1 -- shown when the geode opens
+	end
+	model.PrimaryPart = shell
+	model.Parent = parent
+	return model
+end
+
+return CaveProps

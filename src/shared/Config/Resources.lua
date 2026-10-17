@@ -39,6 +39,7 @@ export type Resource = {
 	isOre: boolean,
 	spawn: SpawnRule?,
 	find: FindRule?,
+	rewardOnly: boolean?, -- obtained from structures (e.g. opening a geode), never from terrain
 	effect: string, -- key into EffectsController presets
 	sound: string, -- key into Sounds config
 	icon: string, -- glyph used by the UI icon generator
@@ -439,7 +440,7 @@ local finds: { Resource } = {
 		requiredPower = 1,
 		weight = 0,
 		isOre = false,
-		find = { minDepth = 50, maxDepth = 400, chance = 0.005 },
+		rewardOnly = true, -- geodes are physical structures now (Logic/Caves); opening one gives this item
 		effect = "crystal",
 		sound = "discover_rare",
 		icon = "◎",

@@ -32,11 +32,12 @@ export type Profile = {
 		cavesFound: number,
 		chestsOpened: number,
 		findsFound: number,
+		geodesOpened: number,
 	},
 	plot: {
 		seed: number,
 		dug: { number }, -- CellSet encoded keys of excavated cells
-		openedChests: { string }, -- cave keys whose chest was already opened
+		openedChests: { string }, -- ids of chests and geodes already opened in this plot
 	},
 }
 
@@ -64,6 +65,7 @@ function ProfileSchema.default(seed: number): Profile
 			cavesFound = 0,
 			chestsOpened = 0,
 			findsFound = 0,
+			geodesOpened = 0,
 		},
 		plot = { seed = seed, dug = {}, openedChests = {} },
 	}

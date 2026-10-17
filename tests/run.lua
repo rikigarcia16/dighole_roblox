@@ -16,7 +16,7 @@ test("every resource has the required fields", function()
 	for _, r in Resources.List do
 		ok(type(r.id) == "string" and type(r.name) == "string", "id/name")
 		ok(r.value > 0 and r.hardness > 0 and r.requiredPower >= 1 and r.weight >= 0, r.id .. " numbers")
-		ok(r.terrainMaterial ~= nil or r.find ~= nil, r.id .. " is neither terrain nor a find")
+		ok(r.terrainMaterial ~= nil or r.find ~= nil or r.rewardOnly, r.id .. " cannot be obtained")
 		if r.find then
 			ok(r.weight == 0 and r.find.chance > 0 and r.find.chance < 0.05, r.id .. " find rule")
 		end
@@ -316,48 +316,191 @@ test("profile defaults and reconcile sanitises bad data", function()
 	eq(ProfileSchema.reconcile(nil, 3).plot.seed, 3)
 end)
 
-test("caves stay inside the dig area, below the mines threshold, and are deterministic", function()
-	local caves, cells = 0, 0
-	for _, seed in { 1, 2, 3, 4, 5 } do
-		for _, cave in OreGeneration.cavesInRange(seed, 0, 400) do
-			caves += 1
-			ok(cave.by * 8 >= 56, "cave too shallow")
-			eq(OreGeneration.caveInBlock(seed, cave.bx, cave.by, cave.bz).cx, cave.cx, "deterministic")
-		end
-		for d = 0, 300 do
+local Caves = H.module("ServerScriptService", "Server", "Logic", "Caves")
+
+test("caves: only inside the dig area, never above the first cave depth, deterministic", function()
+	for _, seed in { 1, 2, 3 } do
+		for d = 0, 400 do
 			for x = -1, 16 do
 				for z = -1, 16 do
-					if OreGeneration.resourceAt(seed, x, d, z) == "air" then
-						cells += 1
+					local id = OreGeneration.resourceAt(seed, x, d, z)
+					if id == "air" or id == "water" then
 						ok(
 							x >= 0 and x < 16 and z >= 0 and z < 16,
-							"air in the border ring at " .. x .. "," .. d .. "," .. z
+							"open cell in the border ring at " .. x .. "," .. d .. "," .. z
 						)
-						ok(d >= 56 or OreGeneration.landmarkAt(seed, x, d, z), "air above the caves at depth " .. d)
+						ok(
+							d >= Caves.FirstDepth or OreGeneration.landmarkAt(seed, x, d, z),
+							"open cell above the caves at " .. d
+						)
+					end
+				end
+			end
+		end
+		local a = Caves.sector(seed, 5)
+		local b = Caves.sector(seed + 1000, 5) -- different seed, then back: rebuilt from scratch
+		for k = 1, 60 do
+			Caves.sector(seed + 2000 + k, 3) -- flush the cache
+		end
+		local again = Caves.sector(seed, 5)
+		ok(again ~= a, "cache was flushed")
+		for i2 = 1, #a.grid do
+			eq(again.grid[i2], a.grid[i2], "same layout after rebuild")
+		end
+		local _ = b
+	end
+end)
+
+test("caves: varied shapes, galleries, pools and geodes over many plots", function()
+	local shapes, counts = {}, { tunnel = 0, chamber = 0, shaft = 0, water = 0, geode = 0, chest = 0, sectors = 0 }
+	for seed = 1, 40 do
+		for index = 2, 11 do
+			local sector = Caves.sector(seed, index)
+			counts.sectors += 1
+			for _, f in sector.features do
+				counts[f.kind] += 1
+				if f.shape then
+					shapes[f.shape] = (shapes[f.shape] or 0) + 1
+				end
+				if f.water then
+					counts.water += 1
+				end
+			end
+			for _, spot in sector.spots do
+				counts[spot.kind] += 1
+			end
+		end
+	end
+	for _, name in { "dome", "hall", "pit", "split" } do
+		ok((shapes[name] or 0) > 10, "chamber shape " .. name .. " is rare: " .. tostring(shapes[name]))
+	end
+	ok(counts.tunnel > counts.sectors, "galleries in most sectors")
+	ok(counts.water > 20 and counts.geode > 100 and counts.chest > 100, "pools, geodes and chests exist")
+	print(
+		string.format(
+			"       %d sectors: %d galleries, %d chambers (dome %d, hall %d, pit %d, split %d), %d shafts, %d pools, %d geodes, %d chests",
+			counts.sectors,
+			counts.tunnel,
+			counts.chamber,
+			shapes.dome or 0,
+			shapes.hall or 0,
+			shapes.pit or 0,
+			shapes.split or 0,
+			counts.shaft,
+			counts.water,
+			counts.geode,
+			counts.chest
+		)
+	)
+end)
+
+test("caves: galleries are tall enough to walk through and chambers have floors", function()
+	local tooLow, columns, floorless, floorCells = 0, 0, 0, 0
+	for seed = 1, 15 do
+		for index = 2, 6 do
+			local sector = Caves.sector(seed, index)
+			for _, f in sector.features do
+				if f.kind == "tunnel" and f.points then
+					-- along every gallery centre line, the open column must be >= 2 cells tall
+					for _, p in f.points do
+						local x, z = math.floor(p.x), math.floor(p.z)
+						local d = math.floor(p.d)
+						if Caves.cellAt(seed, x, d, z) > 0 then
+							columns += 1
+							local height = 1
+							while Caves.cellAt(seed, x, d - height, z) > 0 do
+								height += 1
+							end
+							local below = 1
+							while Caves.cellAt(seed, x, d + below, z) > 0 do
+								below += 1
+							end
+							if height + below - 1 < 2 then
+								tooLow += 1
+							end
+						end
+					end
+				elseif f.kind == "chamber" and f.floorD then
+					local c = f.center
+					for x = math.floor(c.x - 1), math.floor(c.x + 1) do
+						for z = math.floor(c.z - 1), math.floor(c.z + 1) do
+							local system, water = Caves.cellAt(seed, x, f.floorD, z)
+							if system > 0 and not water then
+								floorCells += 1
+								local below, belowWater = Caves.cellAt(seed, x, f.floorD + 1, z)
+								if below > 0 and not belowWater then
+									floorless += 1
+								end
+							end
+						end
 					end
 				end
 			end
 		end
 	end
-	ok(caves > 20, "too few caves: " .. caves)
-	print(string.format("       %d caves, %d air cells in 5 plots (0-400 m)", caves, cells))
+	ok(columns > 50, "sampled gallery columns: " .. columns)
+	ok(tooLow / columns < 0.05, "galleries too low: " .. tooLow .. "/" .. columns)
+	ok(
+		floorCells > 50 and floorless / floorCells < 0.15,
+		"chamber floors: " .. floorless .. "/" .. floorCells .. " open below"
+	)
 end)
 
-test("chests sit on the cave floor", function()
-	local chests = 0
-	for _, seed in { 10, 20, 30, 40 } do
-		for _, cave in OreGeneration.cavesInRange(seed, 0, 600) do
-			local c = cave.chest
-			if c then
-				chests += 1
-				local here = OreGeneration.caveAt(seed, c.cx, c.d, c.cz)
-				ok(here and here.key == cave.key, "chest cell is inside its cave")
-				local below = OreGeneration.caveAt(seed, c.cx, c.d + 1, c.cz)
-				ok(not below or below.key ~= cave.key, "chest is floating")
+test("caves: pools are contained by rock and geodes are sealed", function()
+	local N = 16
+	for seed = 1, 30 do
+		for index = 2, 11 do
+			local sector = Caves.sector(seed, index)
+			for i2 in sector.water do
+				local local0 = i2 - 1
+				local x = local0 % N
+				local z = (local0 // N) % N
+				local d = sector.top + local0 // (N * N)
+				for _, n in { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 0, 1 }, { 0, 0, -1 }, { 0, 1, 0 } } do
+					local system, water = Caves.cellAt(seed, x + n[1], d + n[2], z + n[3])
+					ok(system == 0 or water, "water leaks sideways/down at " .. x .. "," .. d .. "," .. z)
+				end
+			end
+			for _, spot in sector.spots do
+				if spot.kind == "geode" then
+					-- every cell around the pocket (within 2.5) is rock except the pocket itself
+					for x = spot.cx - 3, spot.cx + 3 do
+						for d = spot.d - 3, spot.d + 3 do
+							for z = spot.cz - 3, spot.cz + 3 do
+								local r2 = (x - spot.cx) ^ 2 + (d - spot.d) ^ 2 + (z - spot.cz) ^ 2
+								local system = Caves.cellAt(seed, x, d, z)
+								if r2 <= 1.35 * 1.35 then
+									eq(system, spot.system, "geode pocket")
+								elseif r2 <= 2.5 * 2.5 then
+									eq(system, 0, "geode shell is solid")
+								end
+							end
+						end
+					end
+				elseif spot.kind == "chest" then
+					local system, water = Caves.cellAt(seed, spot.cx, spot.d, spot.cz)
+					ok(system > 0 and not water, "chest stands in open air")
+					eq(Caves.cellAt(seed, spot.cx, spot.d + 1, spot.cz), 0, "chest stands on rock")
+				end
 			end
 		end
 	end
-	ok(chests > 5, "too few chests: " .. chests)
+end)
+
+test("caves: overlapping shapes share one system", function()
+	for seed = 1, 20 do
+		local sector = Caves.sector(seed, 4)
+		for _, f in sector.features do
+			if f.kind == "tunnel" and f.points then
+				for _, p in f.points do
+					local system = Caves.cellAt(seed, math.floor(p.x), math.floor(p.d), math.floor(p.z))
+					if system > 0 then
+						eq(system, f.system, "gallery cells belong to the gallery's system")
+					end
+				end
+			end
+		end
+	end
 end)
 
 test("landmarks are pockets of air at their depth", function()
@@ -389,7 +532,6 @@ test("hidden finds respect their depth ranges and rates", function()
 	end
 	local rate = (counts.antique_fragment or 0) / cells
 	ok(rate > 0.003 and rate < 0.009, "antique rate " .. rate)
-	ok((counts.geode or 0) > 0, "geodes exist")
 	ok(not counts.fossil, "no fossils above 150 m")
 end)
 

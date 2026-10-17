@@ -47,6 +47,8 @@ function TerrainChunkService.cellState(plot: PlotTerrain, cx: number, d: number,
 	local id = OreGeneration.resourceAt(plot.seed, cx, d, cz)
 	if id == "air" then
 		return AIR, 0
+	elseif id == "water" then
+		return Enum.Material.Water, 1
 	end
 	local resource = Resources.get(id)
 	local material = resource and resource.terrainMaterial
@@ -112,13 +114,21 @@ end
 local SLAB = 4
 local BACKGROUND_BUDGET_SECONDS = 0.004
 
+-- MicroProfiler labels (Roblox only; no-ops in the offline test runner).
+local profileBegin: (string) -> () = (debug :: any).profilebegin or function(_label: string) end
+local profileEnd: () -> () = (debug :: any).profileend or function() end
+
 local function generateSlab(plot: PlotTerrain)
+	profileBegin("THNE.GenerateSlab")
 	local d0 = plot.generatedDepth
 	local d1 = math.min(d0 + SLAB - 1, GameConfig.MaxDepthCells)
 	TerrainChunkService.writeBox(plot, -1, N, d0, d1, -1, N)
 	plot.generatedDepth = d1 + 1
+	profileEnd()
 	for _, callback in chunkCallbacks do
+		profileBegin("THNE.ChunkCallback")
 		local ok, err = pcall(callback, plot, d0, d1)
+		profileEnd()
 		if not ok then
 			warn("[TerrainChunkService] chunk callback failed:", err)
 		end

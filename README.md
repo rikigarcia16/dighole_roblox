@@ -95,3 +95,7 @@ tools/luaucheck/target/release/luaucheck run tests/balance_sim.lua  # simulació
 - [`docs/BALANCE.md`](docs/BALANCE.md) — economía y tiempos objetivo.
 - [`docs/PHASE1_REPORT.md`](docs/PHASE1_REPORT.md) — Fase 1: qué está hecho, qué está probado, qué falta.
 - [`docs/PHASE2_3_REPORT.md`](docs/PHASE2_3_REPORT.md) — Fases 2–3 y revisión general con los fallos corregidos.
+- [`docs/AUDIT.md`](docs/AUDIT.md) — auditoría priorizada: estado real de cada sistema, límites del motor, decisiones pendientes.
+
+Herramientas: `tools/render` dibuja cortes del subsuelo generado (útil para revisar cambios en la
+generación de cuevas) y `tests/bench_generation.lua` mide el coste de generación en la VM de Luau.
