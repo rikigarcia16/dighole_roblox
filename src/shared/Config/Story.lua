@@ -38,7 +38,7 @@ Story.Notes = {
 		id = "stone_tablet",
 		title = "La placa de piedra",
 		source = "140 m",
-		reward = 1000,
+		reward = 250, -- was 1000: too much for a clue at 140 m (Studio test 1); the reward is the room
 		body = "La placa está tallada en una piedra que no se parece a ninguna de las capas de alrededor. "
 			.. "Los símbolos brillan cuando acercas la mano.\n\n"
 			.. "Junto a ella, una hoja del diario de E., casi borrada:\n\n"

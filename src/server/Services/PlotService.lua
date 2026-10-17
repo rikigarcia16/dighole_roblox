@@ -253,7 +253,19 @@ local function release(player: Player)
 	plot.releasing = false
 end
 
+-- A new Studio place ships with a 2048-stud "Baseplate" at the surface height that covers every
+-- hole (Studio test 1). The world is built from Terrain, so a template baseplate is removed at run
+-- time; the place file itself is not modified.
+local function removeTemplateBaseplate()
+	local baseplate = workspace:FindFirstChild("Baseplate")
+	if baseplate and baseplate:IsA("BasePart") and baseplate.Size.X >= 512 and baseplate.Size.Z >= 512 then
+		warn("[PlotService] removing the template Baseplate: it covers the plots (delete it from the place)")
+		baseplate:Destroy()
+	end
+end
+
 function PlotService.start()
+	removeTemplateBaseplate()
 	worldFolder = Instance.new("Folder")
 	worldFolder.Name = "World"
 	worldFolder.Parent = workspace

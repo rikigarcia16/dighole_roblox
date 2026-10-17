@@ -327,22 +327,43 @@ function CounterRoomBuilder.build(
 			Enum.PartType.Wedge
 		)
 		marker.CanCollide = false
+		-- One lever per ring, all at standing height and 3 studs apart: with the prompts stacked at
+		-- the rings' heights Roblox always offered ring I from the floor (found in Studio).
+		local leverX = cx + (r - 2) * 3
+		part(
+			model,
+			"Lever" .. r,
+			Vector3.new(0.35, 2.6, 0.35),
+			CFrame.new(leverX, floorY + 1.3, cz + 7) * CFrame.Angles(math.rad(-15), 0, 0),
+			Color3.fromRGB(46, 50, 66),
+			Enum.Material.Metal
+		)
+		for dot = 1, r do
+			part(
+				model,
+				"LeverDot",
+				Vector3.new(0.18, 0.18, 0.05),
+				CFrame.new(leverX + (dot - (r + 1) / 2) * 0.3, floorY + 0.5, cz + 7.2),
+				LINE,
+				Enum.Material.Neon
+			).CanCollide =
+				false
+		end
 		local handle = part(
 			model,
 			"Handle" .. r,
-			Vector3.new(1, 1, 1),
-			CFrame.new(cx, y, cz + radius + 1.6),
+			Vector3.new(0.7, 0.7, 0.7),
+			CFrame.new(leverX, floorY + 2.7, cz + 6.7),
 			LINE,
 			Enum.Material.Neon
 		)
-		handle.Transparency = 1
 		handle.CanCollide = false
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.ActionText = "Girar"
 		prompt.ObjectText = "Anillo " .. ROMAN[r]
 		prompt.KeyboardKeyCode = Enum.KeyCode.F
 		prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
-		prompt.MaxActivationDistance = 9
+		prompt.MaxActivationDistance = 6
 		prompt.RequiresLineOfSight = false
 		prompt.Enabled = false
 		prompt:SetAttribute("Action", "CounterRing")

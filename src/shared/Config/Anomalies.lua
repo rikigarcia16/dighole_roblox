@@ -48,6 +48,18 @@ function Anomalies.inReserved(cx: number, d: number, cz: number): boolean
 		and d <= room.d1 + 1
 end
 
+-- Solid rock under the room (and one cell wider): the room stands on its own foundation. Without it
+-- a natural chamber could open right below the floor and players fell under the room on their way
+-- to a doorway (Studio test 1). The cave generator never carves here.
+function Anomalies.inFoundation(cx: number, d: number, cz: number): boolean
+	return cx >= room.x0 - 2
+		and cx <= room.x1 + 2
+		and cz >= room.z0 - 2
+		and cz <= room.z1 + 2
+		and d >= room.d1 + 2
+		and d <= room.d1 + 8
+end
+
 function Anomalies.isDoorway(cx: number, d: number, cz: number): boolean
 	for _, door in Anomalies.CounterDoorways do
 		if cx == door.x and cz >= door.z0 and cz <= door.z1 and d >= door.d0 and d <= door.d1 then

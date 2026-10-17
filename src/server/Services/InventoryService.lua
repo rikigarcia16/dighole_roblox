@@ -19,7 +19,6 @@ local StateService = require(script.Parent.StateService)
 local InventoryService = {}
 
 -- First time a resource is found the player gets a small bonus: discovery is a reward in itself.
-local DISCOVERY_BONUS_MULTIPLIER = 5
 
 local collectedEvent = Remotes.event("Collected")
 
@@ -51,8 +50,8 @@ function InventoryService.collect(player: Player, resourceId: string, amount: nu
 	end
 	local isNew = (profile.discoveries[resourceId] or 0) == 0
 	profile.discoveries[resourceId] = (profile.discoveries[resourceId] or 0) + added
-	if isNew then
-		local bonus = resource.value * DISCOVERY_BONUS_MULTIPLIER
+	local bonus = Inventory.discoveryBonus(resource, isNew)
+	if bonus > 0 then
 		profile.coins += bonus
 		profile.stats.coinsEarned += bonus
 		StateService.notify(

@@ -133,7 +133,7 @@ local function build(seed: number, index: number): Sector
 		if x < 0 or x >= N or z < 0 or z >= N or y < 0 or y >= SECTOR then
 			return
 		end
-		if hasCounter and Anomalies.inReserved(x, y + top, z) then
+		if hasCounter and (Anomalies.inReserved(x, y + top, z) or Anomalies.inFoundation(x, y + top, z)) then
 			return
 		end
 		local i = idx(x, y, z)

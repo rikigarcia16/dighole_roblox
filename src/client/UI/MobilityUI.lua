@@ -391,7 +391,7 @@ function MobilityUI.new(gui: ScreenGui, buttons: Frame, deps: Deps)
 			return
 		end
 		ropeButton.Text = "Cuerda ×" .. mobility.ropes
-		ropeButton.Visible = mobility.ropes > 0 and depth > 1
+		ropeButton.Visible = mobility.ropes > 0 -- also at the rim of the hole (Studio test 1)
 		beaconButton.Visible = depth > Mobility.FreeReturnDepth
 		local def = MobilityRules.installable(depth, mobility.stations)
 		installButton.Visible = def ~= nil

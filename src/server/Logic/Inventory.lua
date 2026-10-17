@@ -45,4 +45,14 @@ function Inventory.value(inventory: { [string]: number }): number
 	return total
 end
 
+-- Coins for the first time a resource is ever found. Structure rewards (geodes, the fossil fragment
+-- given for a repeated species) already pay through their own structure, so they give none: a
+-- repeated fossil must never pay out like a discovery (+225 seen in Studio test 1).
+function Inventory.discoveryBonus(resource: { value: number, rewardOnly: boolean? }, isNew: boolean): number
+	if not isNew or resource.rewardOnly then
+		return 0
+	end
+	return resource.value * 5
+end
+
 return Inventory

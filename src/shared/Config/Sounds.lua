@@ -2,8 +2,10 @@
 -- Sound definitions. Only built-in `rbxasset://sounds/...` files shipped with the Roblox client are
 -- referenced, so the project depends on no third-party audio.
 --
--- VERIFICATION STATUS: none of these paths has been played inside Roblox Studio yet (`verified =
--- false`). Use the Studio-only sound test (F7, see SoundTestController) and update `verified`.
+-- VERIFICATION STATUS (Studio test 1, docs/STUDIO_REPORT_1.md): every file below LOADS in Studio.
+-- `swoosh.wav` did not ("Asset is not approved for the requester") and is no longer used: the
+-- swing is a soft, low click until there is original audio. `verified` stays false because loading
+-- is not the same as sounding right; that is judged by ear (F7, SoundTestController).
 -- A missing file never breaks the game: the Sound simply stays silent and a warning is printed.
 -- For release, replace them with your own uploaded audio (keep the keys, change `id`).
 --
@@ -25,7 +27,6 @@ end
 local THUD = "rbxasset://sounds/action_footsteps_plastic.mp3"
 local COLLIDE = "rbxasset://sounds/collide.wav"
 local PING = "rbxasset://sounds/electronicpingshort.wav"
-local SWOOSH = "rbxasset://sounds/swoosh.wav"
 local CLICK = "rbxasset://sounds/clickfast.wav"
 local BUTTON = "rbxasset://sounds/button.wav"
 local SPLASH = "rbxasset://sounds/impact_water.mp3"
@@ -44,8 +45,8 @@ local Sounds: { [string]: SoundDef } = {
 	break_ore = def(COLLIDE, 0.75, 0.85, 0.95, "Rotura de veta de mineral"),
 	break_crystal = def(PING, 0.4, 1.2, 1.35, "Rotura de cristal"),
 	-- Tool swings.
-	swing_light = def(SWOOSH, 0.2, 1.2, 1.4, "Movimiento de pala"),
-	swing_heavy = def(SWOOSH, 0.25, 0.9, 1.05, "Movimiento de pico"),
+	swing_light = def(CLICK, 0.08, 0.45, 0.55, "Movimiento de pala (provisional: falta audio propio)"),
+	swing_heavy = def(CLICK, 0.1, 0.32, 0.4, "Movimiento de pico (provisional: falta audio propio)"),
 	drill = def(CLICK, 0.3, 0.7, 0.8, "Taladro"),
 	plasma = def(PING, 0.2, 2.0, 2.3, "Excavador de plasma"),
 	too_hard = def(COLLIDE, 0.5, 1.6, 1.7, "Rebote: material demasiado duro"),

@@ -855,6 +855,20 @@ test("counter room: sealed, two doorways, guided galleries, nothing random insid
 		for _, spot in sector.spots do
 			ok(not Anomalies.inReserved(spot.cx, spot.d, spot.cz), spot.kind .. " inside the reserved box")
 		end
+		-- solid foundation: nothing opens right under the floor (players fell under the room in Studio)
+		for x = room.x0 - 2, room.x1 + 2 do
+			for d = room.d1 + 2, room.d1 + 8 do
+				for z = room.z0 - 2, room.z1 + 2 do
+					ok(Anomalies.inFoundation(x, d, z), "foundation box")
+					local id = Caves.cellAt(seed, x, d, z)
+					-- a sealed geode pocket is fine (it is not open space to fall into)
+					ok(
+						id == 0 or (sector.systems[id] and sector.systems[id].hasCave == false),
+						"open cave under the room at " .. x .. "," .. d .. "," .. z .. " (seed " .. seed .. ")"
+					)
+				end
+			end
+		end
 		-- each doorway has open gallery right outside it, at floor level
 		for _, door in Anomalies.CounterDoorways do
 			local outside = if door.x < room.x0 then door.x - 1 else door.x + 1
@@ -983,6 +997,19 @@ test("profile v3 data migrates to v4; counter and mobility sanitised", function(
 	eq(#r.mobility.stations, 1, "duplicate, unknown, NaN stations dropped")
 	eq(#r.mobility.placedRopes, 1, "infinite / oversized ropes dropped")
 	dataStoreRoundTrip(r)
+end)
+
+test("discovery bonus: first find pays, structure rewards (fossil fragment, geode) never do", function()
+	local InventoryLogic = H.module("ServerScriptService", "Server", "Logic", "Inventory")
+	local copper = Resources.get("copper")
+	eq(InventoryLogic.discoveryBonus(copper, true), copper.value * 5)
+	eq(InventoryLogic.discoveryBonus(copper, false), 0)
+	for _, r in Resources.List do
+		if r.rewardOnly then
+			eq(InventoryLogic.discoveryBonus(r, true), 0, r.id .. " pays a discovery bonus")
+		end
+	end
+	eq(InventoryLogic.discoveryBonus(Resources.get("fossil"), true), 0, "repeated fossil pays +225 again")
 end)
 
 test("rescue beacon: free near the surface, bounded cost, never more than the coins held", function()

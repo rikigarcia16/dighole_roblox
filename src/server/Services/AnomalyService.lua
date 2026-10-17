@@ -58,10 +58,11 @@ end
 
 local function setPrompts(counter: Counter)
 	local active = counter.revealed and not counter.puzzle.solved and not counter.busy
-	for _, handle in counter.room.handles do
+	for r, handle in counter.room.handles do
 		local prompt = handle:FindFirstChildOfClass("ProximityPrompt")
 		if prompt then
-			prompt.Enabled = active
+			-- a locked ring offers nothing, so the next lever's prompt is the one shown
+			prompt.Enabled = active and not CounterPuzzle.isLocked(counter.plot.seed, counter.puzzle, r)
 		end
 	end
 	local tabletPrompt = counter.room.tablet:FindFirstChildOfClass("ProximityPrompt")
@@ -203,6 +204,7 @@ local function turnRing(player: Player, counter: Counter, ring: number)
 		profile.anomalies.counter.rings = table.clone(counter.puzzle.rings)
 	end
 	publishRings(counter)
+	setPrompts(counter)
 	if lockedNow then
 		FxService.special(player, counter.room.handles[ring].Position, "counter_lock", nil)
 	end
