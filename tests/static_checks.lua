@@ -9,10 +9,14 @@ end
 local remotesSource = readfile("src/shared/Remotes.lua")
 local declared = {}
 for block in remotesSource:gmatch("local EVENTS = (%b{})") do
-	for name in block:gmatch('"([%w_]+)"') do declared["event:" .. name] = true end
+	for name in block:gmatch('"([%w_]+)"') do
+		declared["event:" .. name] = true
+	end
 end
 for block in remotesSource:gmatch("local FUNCTIONS = (%b{})") do
-	for name in block:gmatch('"([%w_]+)"') do declared["func:" .. name] = true end
+	for name in block:gmatch('"([%w_]+)"') do
+		declared["func:" .. name] = true
+	end
 end
 
 local sounds = readfile("src/shared/Config/Sounds.lua")
@@ -40,4 +44,6 @@ for _, path in listfiles("src") do
 	end
 end
 print(string.format("static checks: %d remote uses verified, %d failures", checked, failures))
-if failures > 0 then error("static checks failed", 0) end
+if failures > 0 then
+	error("static checks failed", 0)
+end

@@ -96,6 +96,8 @@ tools/luaucheck/target/release/luaucheck run tests/balance_sim.lua  # simulació
 - [`docs/PHASE1_REPORT.md`](docs/PHASE1_REPORT.md) — Fase 1: qué está hecho, qué está probado, qué falta.
 - [`docs/PHASE2_3_REPORT.md`](docs/PHASE2_3_REPORT.md) — Fases 2–3 y revisión general con los fallos corregidos.
 - [`docs/AUDIT.md`](docs/AUDIT.md) — auditoría priorizada: estado real de cada sistema, límites del motor, decisiones pendientes.
+- [`docs/PROPOSAL_WIDE_UNDERGROUND.md`](docs/PROPOSAL_WIDE_UNDERGROUND.md) — propuesta medida para ensanchar el subsuelo (sin migrar nada).
+- [`docs/DESIGN_MOBILITY_AND_MINES.md`](docs/DESIGN_MOBILITY_AND_MINES.md) — diseño de movilidad, expediciones y el primer gran hallazgo de las Minas.
 
 Herramientas: `tools/render` dibuja cortes del subsuelo generado (útil para revisar cambios en la
 generación de cuevas) y `tests/bench_generation.lua` mide el coste de generación en la VM de Luau.

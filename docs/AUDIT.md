@@ -7,8 +7,8 @@ Studio, y no hay ninguna sesión de Claude en tu PC conectada a este trabajo. To
 
 - compilación Luau de todos los scripts;
 - análisis de tipos contra las definiciones de la API de Roblox;
-- 31 tests de lógica e integración (`tests/run.lua`);
-- mediciones de rendimiento en la VM de Luau (`tests/bench_generation.lua`);
+- 37 tests de lógica e integración (`tests/run.lua`) y comprobaciones estáticas (`tests/static_checks.lua`);
+- mediciones de rendimiento en la VM de Luau (`tests/bench_generation.lua`, `tests/bench_width.lua`);
 - cortes renderizados del subsuelo generado (`tools/render`).
 
 La física, la red, el aspecto visual, el audio y los DataStores **no se han ejecutado nunca**.
@@ -17,13 +17,15 @@ La física, la red, el aspecto visual, el audio y los DataStores **no se han eje
 
 | Sistema | Estado | Dónde | Notas |
 |---|---|---|---|
-| Excavación autoritativa en servidor | Implementado, sin probar en Studio | `DiggingService.handleDig` | Validación completa: tipos, frecuencia, cooldown, alcance, parcela, línea de visión, potencia y energía |
+| Excavación autoritativa en servidor | Implementado, sin probar en Studio | `DiggingService.handleDig` | Validación completa: tipos, frecuencia, cooldown, alcance, parcela, línea de visión y potencia. **Ya no gasta energía** (decisión de diseño) |
+| Sensación del golpe | **Nuevo en la iteración 3**, sin probar en Studio | `DigController`, `EffectsController`, `Config/DigFeel`, `Util/HardnessView` | Impacto sincronizado con la animación, barra de dureza, preajustes por material, hallazgos por niveles |
 | Terreno por vóxeles y regeneración | Implementado | `TerrainChunkService`, `Logic/OreGeneration` | Generación movida fuera del golpe en esta iteración |
 | Cuevas | **Reescrito en esta iteración** | `Logic/Caves`, `CaveProps`, `SpecialsService` | Antes: una elipse por bloque de 8×8×8 |
 | Geodas | **Estructura física nueva** | `Logic/Caves` (huecos), `CaveProps.geode`, `SpecialsService.openGeode` | Antes: solo un objeto de inventario |
-| Fósiles, reliquias, artefactos | Parcial | `Config/Resources` (`find`) | Solo objetos vendibles: no tienen forma física, no aportan información ni tienen otros usos |
+| Fósiles | **Nuevo en la iteración 3**, sin probar en Studio | `Config/Fossils`, `Logic/FossilBeds`, `Logic/Collection`, `CaveProps.fossil` | 7 especies con modelo físico, colección con profundidad y texto, sesgo de novedad |
+| Reliquias y artefactos | Parcial | `Config/Resources` (`find`) | Siguen siendo objetos vendibles; se convertirán en piezas narrativas (ver `DESIGN_MOBILITY_AND_MINES.md`) |
 | Anomalías únicas | No existe | — | |
-| Registro de descubrimientos | Parcial | `UI/InventoryUI` | Falta dónde se encontró cada cosa (profundidad) |
+| Registro de descubrimientos | Parcial | `UI/InventoryUI` | Los fósiles guardan la profundidad del primer hallazgo; los minerales todavía no |
 | Notas e hitos de historia | Implementado (2 hitos y una nota) | `Config/Story`, `SpecialsService` | Solo texto: faltan estructuras, máquinas y grabaciones |
 | Misiones | Implementado (cadena fija de 12) | `Config/Quests`, `Logic/QuestLogic` | Sin misiones opcionales ni temporales |
 | Expediciones y equipamiento | No existe | — | Solo herramienta, mochila y batería |
@@ -31,8 +33,8 @@ La física, la red, el aspecto visual, el audio y los DataStores **no se han eje
 | Movilidad (cuerda, gancho, jetpack) | No existe | — | Solo teletransporte a la superficie |
 | Casa y garaje evolutivos | No existe | `WorldBuilder` | Construcción fija |
 | Multijugador | Parcial | `PlotService` | Parcelas separadas; el permiso de colaborador existe sin interfaz |
-| Guardado | Implementado, sin probar en Studio | `PlayerDataService` | Bloqueo de sesión, reintentos, versión 2 con migración |
-| Audio | Sin verificar | `Config/Sounds` | Rutas `rbxasset://` que no he podido comprobar que existan |
+| Guardado | Implementado, sin probar en Studio | `PlayerDataService` | Bloqueo de sesión, reintentos, versión 3 con migraciones desde v1 y v2 |
+| Audio | Sin verificar | `Config/Sounds` | Cada sonido lleva `verified = false` y su propósito; prueba F7 en Studio (`SoundTestController`) |
 | Animaciones | Provisional | `EffectsController.swingOffset` | Rotación procedural del hombro, sin assets de Animator |
 
 ## 2. Hallazgos priorizados
@@ -104,3 +106,48 @@ La física, la red, el aspecto visual, el audio y los DataStores **no se han eje
 6. `docs/images/caves_section.png` (corte vertical) y `caves_plans.png` (plantas cada 4 m) muestran
    un ejemplo de la semilla 98765. Cada parcela tiene su propia semilla, así que tu agujero será
    distinto, pero los tipos de forma y sus tamaños deben parecerse.
+
+
+## 5. Iteración 3: sensación del golpe, fósiles y propuestas
+
+### Comprobado en la VM de Luau (sin Studio)
+- Compilación de los 55 scripts y análisis de tipos contra la API de Roblox.
+- 37 tests: preajustes completos por material, sonidos existentes, impacto antes del siguiente
+  golpe en cada herramienta, lógica de la barra de dureza, batería oculta, fósiles (huecos sellados,
+  profundidad válida, cobertura por parcela), colección (paga una vez) y migración v2 → v3.
+- `tests/static_checks.lua`: todos los eventos remotos usados están declarados y todos los sonidos
+  reproducidos existen. **Detectó un fallo real** (faltaba el evento `FossilFound`), ya corregido.
+- `tests/bench_width.lua`: comparación aislada de anchuras (ver `PROPOSAL_WIDE_UNDERGROUND.md`).
+
+### Pendiente de ejecutar en Roblox Studio
+Todo lo visual, sonoro y de red de esta iteración. Lista concreta:
+
+| # | Prueba | Qué debe pasar |
+|---|---|---|
+| S1 | Cavar tierra con la pala oxidada | El brazo sube, y al bajar suena el golpe con un poco de polvo marrón y un fragmento. **No** debe haber retraso apreciable entre el gesto y el sonido. |
+| S2 | Golpear la misma celda hasta romperla | La barra de segmentos encima de la celda se vacía golpe a golpe; al romperse, ráfaga de fragmentos y sonido más grave. |
+| S3 | Apuntar a pizarra (≈50 m) con la pala oxidada | Contorno rojo y "🔒 Pizarra · necesitas potencia 2". Al golpear: chispa y sonido de rebote, sin daño. |
+| S4 | Golpear cobre, roca y cristal | Tres sonidos y partículas distinguibles; el cristal tintinea y brilla. |
+| S5 | Encontrar oro (raro), rubí (épico) | Raro: brillo y campanilla. Épico: destello de luz y una línea de texto bajo el centro que desaparece a los ~2 s. Nunca en cada golpe. |
+| S6 | Dos jugadores | El otro jugador ve el gesto, oye el golpe y ve la rotura a la vez. |
+| S7 | F7 en Studio | Recorre todos los sonidos; la consola indica `loaded=true/false` y la duración de cada uno. Anota los que no carguen. |
+| F1 | Cavar entre 6 y 60 m | Antes o después aparece "Algo con forma de hueso asoma en la roca..." con contorno color hueso. |
+| F2 | Mantener F 2 s sobre el fósil | Los huesos suben y se desvanecen; ficha con nombre, rareza, profundidad y texto; aparece en *Mochila → Fósiles* con la profundidad. |
+| F3 | Extraer una especie repetida | "(repetido): obtienes un Fragmento fósil"; la colección suma +1 y no se pagan monedas. |
+| F4 | Salir y volver a entrar | Los fósiles extraídos no reaparecen; la colección se conserva. |
+| F5 | Perfil guardado con la versión anterior | Carga sin perder inventario (el antiguo "Fósil raro" pasa a ser "Fragmento fósil"). |
+| E1 | Cavar mucho rato | No aparece ninguna barra de energía ni el mensaje "Sin energía"; la mejora de batería no está en la tienda. |
+
+### Sonidos pendientes de verificación
+Todas las rutas de `Config/Sounds.lua` siguen sin verificar: `action_footsteps_plastic.mp3`,
+`collide.wav`, `electronicpingshort.wav`, `swoosh.wav`, `clickfast.wav`, `button.wav` e
+`impact_water.mp3` (todas en `rbxasset://sounds/`). Si alguna no carga, el juego sigue funcionando
+sin ese sonido. El hallazgo de las Minas (diseño en `DESIGN_MOBILITY_AND_MINES.md`) necesitará
+audio propio.
+
+### Nuevos hallazgos de auditoría
+| # | Gravedad | Problema | Estado |
+|---|---|---|---|
+| 16 | Alta | Evento remoto `FossilFound` usado pero no declarado: habría fallado en la primera extracción. | Corregido; `tests/static_checks.lua` lo impide en el futuro. |
+| 17 | Media | Fósil "Huella de una pala" en solo el 31 % de las parcelas: colección imposible para la mayoría (cada jugador cava una sola parcela). | Corregido con sesgo de novedad y rango ampliado: todas las especies en el 84–100 % de las parcelas. |
+| 18 | Media | Un ancho de 40 celdas multiplicaría por 6 la memoria de las cuevas cacheadas (~38 MB con la caché actual). | Documentado en la propuesta; no aplica mientras el ancho sea 16. |
