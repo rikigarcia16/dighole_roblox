@@ -21,6 +21,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Hash = require(Shared.Util.Hash)
 local Zones = require(Shared.Config.Zones)
 local GameConfig = require(Shared.Config.GameConfig)
+local Anomalies = require(Shared.Config.Anomalies)
 
 local Caves = {}
 
@@ -49,6 +50,7 @@ export type Feature = {
 	floorD: number?, -- deepest air layer of a chamber
 	water: boolean?,
 	pillars: { Point }?,
+	guided: boolean?, -- gallery leading to an anomaly (decorated with E.'s chalk marks)
 	top: number?, -- shaft top layer
 }
 
@@ -70,7 +72,8 @@ export type Sector = {
 	water: { [number]: boolean },
 	features: { Feature },
 	spots: { Spot },
-	systems: { [number]: { hasCave: boolean } },
+	systems: { [number]: { hasCave: boolean, counter: boolean? } },
+	counterSystem: number?, -- system id of the Counter room (only in its sector)
 }
 
 local function idx(x: number, y: number, z: number): number
@@ -100,6 +103,9 @@ local function build(seed: number, index: number): Sector
 		return sector
 	end
 
+	-- The Counter's sector keeps its room and shell untouched by every random shape.
+	local hasCounter = index == Anomalies.CounterSector
+
 	local counter = 0
 	local function rand(): number
 		counter += 1
@@ -125,6 +131,9 @@ local function build(seed: number, index: number): Sector
 	end
 	local function carve(x: number, y: number, z: number, system: number)
 		if x < 0 or x >= N or z < 0 or z >= N or y < 0 or y >= SECTOR then
+			return
+		end
+		if hasCounter and Anomalies.inReserved(x, y + top, z) then
 			return
 		end
 		local i = idx(x, y, z)
@@ -378,6 +387,48 @@ local function build(seed: number, index: number): Sector
 		end
 	end
 
+	-- The Counter room --------------------------------------------------------------------------
+	-- Its interior is one sealed system; two mine galleries lead to the only two doorways (west and
+	-- east). The galleries stop one cell short: the player digs the doorway and breaks in.
+	if hasCounter then
+		local room = Anomalies.CounterRoom
+		local roomSystem = newSystem()
+		for x = room.x0, room.x1 do
+			for d = room.d0, room.d1 do
+				for z = room.z0, room.z1 do
+					grid[idx(x, d - top, z)] = roomSystem
+				end
+			end
+		end
+		sector.counterSystem = roomSystem
+		local floorCentre = room.d1 -- gallery centre line at the room's floor layer
+		local c = N // 2
+		local guided = {
+			{
+				{ x = 1.6, d = floorCentre - 3, z = 1.6 },
+				{ x = 1.6, d = floorCentre - 1, z = c - 3 },
+				{ x = room.x0 - 2 + 0.5, d = floorCentre, z = c },
+			},
+			{
+				{ x = N - 1.6, d = floorCentre - 4, z = N - 1.6 },
+				{ x = N - 1.6, d = floorCentre - 1.5, z = c + 3 },
+				{ x = room.x1 + 2 + 0.5, d = floorCentre, z = c },
+			},
+		}
+		for g, points in guided do
+			local system = newSystem()
+			rasteriseTunnel(points, 1.45, system)
+			table.insert(sector.features, {
+				id = string.format("s%d_guide%d", index, g),
+				kind = "tunnel",
+				system = system,
+				points = points,
+				radius = 1.45,
+				guided = true,
+			})
+		end
+	end
+
 	-- Tunnels ------------------------------------------------------------------------------------
 	local deadEnds: { { point: Point, system: number } } = {}
 	for t = 1, recipe.tunnels do
@@ -461,6 +512,9 @@ local function build(seed: number, index: number): Sector
 		feature.system = find(feature.system)
 		sector.systems[feature.system] = { hasCave = true }
 	end
+	if sector.counterSystem then
+		sector.systems[sector.counterSystem] = { hasCave = false, counter = true }
+	end
 
 	local function solidAt(x: number, d: number, z: number): boolean
 		local y = d - top
@@ -475,6 +529,9 @@ local function build(seed: number, index: number): Sector
 	local function tryChest(x: number, d: number, z: number, system: number)
 		local y = d - top
 		if x < 0 or x >= N or z < 0 or z >= N or y < 0 or y >= SECTOR - 1 then
+			return
+		end
+		if hasCounter and Anomalies.inReserved(x, d, z) then
 			return
 		end
 		local i = idx(x, y, z)
@@ -520,11 +577,14 @@ local function build(seed: number, index: number): Sector
 		local gz = 2 + math.floor(rand() * (N - 4))
 		local gd = top + 3 + math.floor(rand() * (SECTOR - 6))
 		-- the pocket (radius 1) and a full rock shell around it (radius 2.5) must be solid
-		local clear = true
+		local clear = not (hasCounter and Anomalies.inReserved(gx, gd, gz))
 		for x = gx - 3, gx + 3 do
 			for d = gd - 3, gd + 3 do
 				for z = gz - 3, gz + 3 do
-					if (x - gx) ^ 2 + (d - gd) ^ 2 + (z - gz) ^ 2 <= 2.6 * 2.6 and not solidAt(x, d, z) then
+					if
+						(x - gx) ^ 2 + (d - gd) ^ 2 + (z - gz) ^ 2 <= 2.6 * 2.6
+						and (not solidAt(x, d, z) or (hasCounter and Anomalies.inReserved(x, d, z)))
+					then
 						clear = false
 					end
 				end

@@ -385,6 +385,7 @@ test("profile defaults and reconcile sanitises bad data", function()
 end)
 
 local Caves = H.module("ServerScriptService", "Server", "Logic", "Caves")
+local Anomalies = H.module("ReplicatedStorage", "Shared", "Config", "Anomalies")
 local FossilBeds = H.module("ServerScriptService", "Server", "Logic", "FossilBeds")
 local Fossils = H.module("ReplicatedStorage", "Shared", "Config", "Fossils")
 
@@ -565,8 +566,10 @@ test("caves: overlapping shapes share one system", function()
 		for _, f in sector.features do
 			if f.kind == "tunnel" and f.points then
 				for _, p in f.points do
-					local system = Caves.cellAt(seed, math.floor(p.x), math.floor(p.d), math.floor(p.z))
-					if system > 0 then
+					local px, pd, pz = math.floor(p.x), math.floor(p.d), math.floor(p.z)
+					local system = Caves.cellAt(seed, px, pd, pz)
+					-- a random gallery may pass through the Counter's reserved box without carving it
+					if system > 0 and not Anomalies.inReserved(px, pd, pz) then
 						eq(system, f.system, "gallery cells belong to the gallery's system")
 					end
 				end
@@ -578,7 +581,7 @@ end)
 test("landmarks are pockets of air at their depth", function()
 	for _, seed in { 7, 8, 9 } do
 		local list = OreGeneration.landmarks(seed)
-		eq(#list, 2)
+		eq(#list, 1, "only the miner's box remains a loose landmark (the tablet is in the Counter)")
 		for _, l in list do
 			eq(OreGeneration.resourceAt(seed, l.cx, l.d, l.cz), "air")
 			ok(l.cx >= 4 and l.cx <= 11 and l.cz >= 4 and l.cz <= 11, "landmark near the middle")
@@ -826,6 +829,55 @@ test("block counter: server stat survives save and load, never derived from the 
 	-- the whole default and loaded profiles are DataStore-safe
 	dataStoreRoundTrip(ProfileSchema.default(7))
 	dataStoreRoundTrip(again)
+end)
+
+test("counter room: sealed, two doorways, guided galleries, nothing random inside", function()
+	local room = Anomalies.CounterRoom
+	for seed = 1, 40 do
+		local sector = Caves.sector(seed, Anomalies.CounterSector)
+		local roomSystem = sector.counterSystem
+		ok(roomSystem and sector.systems[roomSystem].counter, "room system registered")
+		for x = room.x0 - 1, room.x1 + 1 do
+			for d = room.d0 - 1, room.d1 + 1 do
+				for z = room.z0 - 1, room.z1 + 1 do
+					local id = OreGeneration.resourceAt(seed, x, d, z)
+					if Anomalies.inRoom(x, d, z) then
+						eq(id, "air", "room interior is open")
+						eq(Caves.cellAt(seed, x, d, z), roomSystem, "room interior is one system")
+						ok(not FossilBeds.bedAt(seed, x, d, z), "no fossil in the room")
+					else
+						ok(id ~= "air" and id ~= "water", "shell is rock at " .. x .. "," .. d .. "," .. z)
+						ok(Anomalies.isSealed(x, d, z) ~= Anomalies.isDoorway(x, d, z), "shell is sealed or doorway")
+					end
+				end
+			end
+		end
+		for _, spot in sector.spots do
+			ok(not Anomalies.inReserved(spot.cx, spot.d, spot.cz), spot.kind .. " inside the reserved box")
+		end
+		-- each doorway has open gallery right outside it, at floor level
+		for _, door in Anomalies.CounterDoorways do
+			local outside = if door.x < room.x0 then door.x - 1 else door.x + 1
+			local open = 0
+			for z = door.z0, door.z1 do
+				for d = door.d0, door.d1 do
+					if Caves.cellAt(seed, outside, d, z) > 0 then
+						open += 1
+					end
+				end
+			end
+			ok(
+				open >= 2,
+				"gallery reaches doorway at x=" .. door.x .. " (open cells " .. open .. ", seed " .. seed .. ")"
+			)
+		end
+	end
+	-- sealed walls cannot be dug, doorways can
+	ok(Anomalies.isSealed(room.x0 - 1, room.d0, room.z0), "wall corner sealed")
+	ok(
+		not Anomalies.isSealed(Anomalies.CounterDoorways[1].x, room.d1, Anomalies.CounterDoorways[1].z0),
+		"doorway diggable"
+	)
 end)
 
 print("Terrain writes (fake Terrain)")

@@ -91,9 +91,9 @@ end
 
 -- Landmarks -------------------------------------------------------------------------------------
 
+-- (The stone tablet that used to sit at 138 m now lives inside the Counter room: AnomalyService.)
 local LANDMARK_DEFS = {
 	{ id = "miner_box", depth = 44 },
-	{ id = "stone_tablet", depth = 138 },
 }
 
 local landmarkDepths: { [number]: boolean } = {}

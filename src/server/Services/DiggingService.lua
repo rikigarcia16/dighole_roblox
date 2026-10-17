@@ -16,6 +16,7 @@ local Tools = require(ReplicatedStorage.Shared.Config.Tools)
 local Zones = require(ReplicatedStorage.Shared.Config.Zones)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Grid = require(ReplicatedStorage.Shared.Util.Grid)
+local Anomalies = require(ReplicatedStorage.Shared.Config.Anomalies)
 local RateLimiter = require(ReplicatedStorage.Shared.Util.RateLimiter)
 local OreGeneration = require(script.Parent.Parent.Logic.OreGeneration)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -134,9 +135,15 @@ local function handleDig(player: Player, position: any, normal: any)
 	-- Collect affected cells.
 	local hits: { Hit } = {}
 	local blockedBy: Resources.Resource? = nil
+	local sealedTarget = false
 	for _, offset in Grid.sphereOffsets(tool.radius) do
 		local cx, d, cz = tx + offset[1], td - offset[2], tz + offset[3]
-		if Grid.inDigArea(cx, d, cz) then
+		if Anomalies.isSealed(cx, d, cz) then
+			-- The Counter's shell: no tool scratches it. Only its two doorways can be dug.
+			if offset[4] == 0 then
+				sealedTarget = true
+			end
+		elseif Grid.inDigArea(cx, d, cz) then
 			local key = Grid.key(cx, d, cz)
 			if not plot.dug[key] then
 				local resource = Resources.get(OreGeneration.resourceAt(plot.seed, cx, d, cz))
@@ -152,6 +159,17 @@ local function handleDig(player: Player, position: any, normal: any)
 	end
 
 	if #hits == 0 then
+		if sealedTarget then
+			StateService.notify(
+				player,
+				"info",
+				"La pala resbala: esta pared no se deja rayar. Suena hueca.",
+				"sealed",
+				4
+			)
+			FxService.broadcast(player, targetCenter, "stone", false, tool.id, nil, -1)
+			return
+		end
 		if blockedBy then
 			StateService.notify(
 				player,
