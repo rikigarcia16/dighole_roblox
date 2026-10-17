@@ -7,7 +7,7 @@ Studio, y no hay ninguna sesión de Claude en tu PC conectada a este trabajo. To
 
 - compilación Luau de todos los scripts;
 - análisis de tipos contra las definiciones de la API de Roblox;
-- 37 tests de lógica e integración (`tests/run.lua`) y comprobaciones estáticas (`tests/static_checks.lua`);
+- 49 tests de lógica e integración (`tests/run.lua`, iteración 4) y comprobaciones estáticas (`tests/static_checks.lua`);
 - mediciones de rendimiento en la VM de Luau (`tests/bench_generation.lua`, `tests/bench_width.lua`);
 - cortes renderizados del subsuelo generado (`tools/render`).
 
@@ -24,16 +24,16 @@ La física, la red, el aspecto visual, el audio y los DataStores **no se han eje
 | Geodas | **Estructura física nueva** | `Logic/Caves` (huecos), `CaveProps.geode`, `SpecialsService.openGeode` | Antes: solo un objeto de inventario |
 | Fósiles | **Nuevo en la iteración 3**, sin probar en Studio | `Config/Fossils`, `Logic/FossilBeds`, `Logic/Collection`, `CaveProps.fossil` | 7 especies con modelo físico, colección con profundidad y texto, sesgo de novedad |
 | Reliquias y artefactos | Parcial | `Config/Resources` (`find`) | Siguen siendo objetos vendibles; se convertirán en piezas narrativas (ver `DESIGN_MOBILITY_AND_MINES.md`) |
-| Anomalías únicas | No existe | — | |
-| Registro de descubrimientos | Parcial | `UI/InventoryUI` | Los fósiles guardan la profundidad del primer hallazgo; los minerales todavía no |
+| Anomalías únicas | **El Contador** (iteración 4), sin probar en Studio | `Logic/CounterPuzzle`, `AnomalyService`, `CounterRoomBuilder`, `CounterController` | Sala reservada en 136–141 m, enigma de 3 anillos, secuencia con el contador real |
+| Registro de descubrimientos | Parcial | `UI/InventoryUI`, `Config/Journal` | Fósiles con profundidad; diario con entradas que crecen (iteración 4); los minerales todavía no |
 | Notas e hitos de historia | Implementado (2 hitos y una nota) | `Config/Story`, `SpecialsService` | Solo texto: faltan estructuras, máquinas y grabaciones |
 | Misiones | Implementado (cadena fija de 12) | `Config/Quests`, `Logic/QuestLogic` | Sin misiones opcionales ni temporales |
 | Expediciones y equipamiento | No existe | — | Solo herramienta, mochila y batería |
 | Linterna / detector como equipo | No existe | — | La linterna de cabeza es automática y el "detector" es un resaltado gratuito |
-| Movilidad (cuerda, gancho, jetpack) | No existe | — | Solo teletransporte a la superficie |
+| Movilidad | **v1** (iteración 4), sin probar en Studio | `MobilityService`, `UI/MobilityUI`, `Config/Mobility`, `Util/MobilityRules` | Cuerda, estaciones del montacargas, baliza; retorno libre solo hasta 50 m. Gancho y jetpack pendientes |
 | Casa y garaje evolutivos | No existe | `WorldBuilder` | Construcción fija |
 | Multijugador | Parcial | `PlotService` | Parcelas separadas; el permiso de colaborador existe sin interfaz |
-| Guardado | Implementado, sin probar en Studio | `PlayerDataService` | Bloqueo de sesión, reintentos, versión 3 con migraciones desde v1 y v2 |
+| Guardado | Implementado, sin probar en Studio | `PlayerDataService` | Bloqueo de sesión, reintentos, **versión 4** con migraciones desde v1–v3; tests de sesión con DataStore simulado (iteración 4) |
 | Audio | Sin verificar | `Config/Sounds` | Cada sonido lleva `verified = false` y su propósito; prueba F7 en Studio (`SoundTestController`) |
 | Animaciones | Provisional | `EffectsController.swingOffset` | Rotación procedural del hombro, sin assets de Animator |
 
@@ -151,3 +151,102 @@ audio propio.
 | 16 | Alta | Evento remoto `FossilFound` usado pero no declarado: habría fallado en la primera extracción. | Corregido; `tests/static_checks.lua` lo impide en el futuro. |
 | 17 | Media | Fósil "Huella de una pala" en solo el 31 % de las parcelas: colección imposible para la mayoría (cada jugador cava una sola parcela). | Corregido con sesgo de novedad y rango ampliado: todas las especies en el 84–100 % de las parcelas. |
 | 18 | Media | Un ancho de 40 celdas multiplicaría por 6 la memoria de las cuevas cacheadas (~38 MB con la caché actual). | Documentado en la propuesta; no aplica mientras el ancho sea 16. |
+
+
+## 6. Iteración 4: El Contador, movilidad v1 y pruebas de sesión
+
+Tres niveles de verificación, separados a propósito:
+
+### (a) Compilación y comprobaciones automáticas, hechas
+- Los 66 scripts compilan (`luaucheck check`) y están formateados con `stylua`.
+- `tests/static_checks.lua`: 51 usos de eventos remotos, todos declarados (incluidos los 8 nuevos de
+  movilidad), y todos los sonidos reproducidos existen.
+- Análisis de tipos, archivo por archivo, de los scripts nuevos o tocados. Solo quedan avisos del
+  analizador sin el árbol de Rojo (`Key 'Shared' not found`, `pcall`), no errores reales.
+
+### (b) Tests en la VM de Luau, hechos (49 en total, 12 nuevos)
+- **Contador de bloques:** `stats.cellsDug` solo lo suma el servidor y sobrevive a un viaje de ida y
+  vuelta por el DataStore. Nunca se calcula a partir del agujero (perfil con 1 247 bloques y 3
+  celdas abiertas).
+- **Sala del Contador** en 40 parcelas: sellada, con dos accesos que alcanzan las galerías y nada
+  aleatorio dentro (ni cofres ni geodas).
+- **Enigma:** solución distinta por parcela, nunca empieza resuelto, los anillos correctos se
+  bloquean, se resuelve en 15 giros como mucho y el estado guardado se sanea.
+- **Diario:** entradas y párrafos según los descubrimientos; los números se rellenan.
+- **Perfil v3 → v4:** el Contador y la movilidad se sanean. Se descartan estaciones duplicadas,
+  desconocidas o con NaN y cuerdas infinitas o de más de 80 studs.
+- **Baliza:** gratis hasta 50 m, coste acotado, nunca más que las monedas que llevas, destino en la
+  estación más cercana por encima. **Estaciones:** una por zona, separación mínima, la del Contador
+  no se vende.
+- **Sesiones** (`PlayerDataService` real con un DataStore simulado que serializa como el de verdad
+  y varios «servidores»):
+  1. Guardar al salir y volver a entrar en otro servidor conserva el contador, el Contador, las
+     estaciones, las cuerdas, los rescates y los fósiles.
+  2. Un segundo servidor espera mientras otro tiene la sesión y carga después los datos más
+     recientes.
+  3. El bloqueo de un servidor caído caduca, y su autoguardado tardío **no** sobrescribe al nuevo
+     dueño.
+  4. Si el jugador sale **mientras se carga** su perfil, el bloqueo se libera.
+  5. Con el DataStore caído se juega con un perfil temporal que nunca sobrescribe los datos reales.
+
+### (c) Studio: visual, sonido, red y rendimiento. **Nada ejecutado todavía.**
+Sigue en pie la lista de la sección 5 (S1–S7, F1–F5, E1). Nuevas pruebas, en este orden.
+Preparación: `rojo serve`, publicar el lugar con **API Services activado** (si no, el guardado usa
+un perfil temporal y las pruebas G no sirven) y *Test → Start* con 1 jugador. Las pruebas C5 y M4
+necesitan un segundo jugador.
+
+**El Contador** (para llegar rápido: cava en vertical en el centro de la parcela hasta ~120 m)
+
+| # | Prueba | Qué debe pasar |
+|---|---|---|
+| C1 | Bajar de 80 a 130 m sin tocar la sala | Se oyen tres golpes y una pausa, apagados (sin agudos), cada vez más claros. Anota a qué profundidad empiezas a oírlos. |
+| C2 | Seguir una galería del sector 128–160 m | Termina a 1–2 celdas de una pared lisa. La pared no se raya: «La pala resbala... Suena hueca.» |
+| C3 | Abrir un acceso (oeste u este, a la altura de la galería) | Aviso «UNA SALA QUE NADIE EXCAVÓ», sonido, nueva entrada en *Mochila → Diario*. Dentro: los golpes cesan, se oye un zumbido. |
+| C4 | Mirar la sala | Suelo negro con líneas de luz, escalera invertida, marco de puerta, pilar flotante, máquina con tres anillos que oscilan, pantalla con glifos cambiantes. Anota si algo se ve mal a escala. |
+| C5 | Leer la placa (F) y girar las manivelas | Cada giro rota su anillo suavemente; el correcto encaja con un sonido y deja de oscilar. Un segundo jugador recibe «La máquina no reacciona a tu mano.». |
+| C6 | Completar la combinación | Se apaga la luz, tres golpes, cada anillo se ilumina, el número sube hasta tu total y aparece «Nos está contando.». Comprueba que el número coincide con `stats.cellsDug` (consola del servidor: `print(require(game.ServerScriptService.Server.Services.PlayerDataService).get(game.Players:GetPlayers()[1]).stats.cellsDug)`). |
+| C7 | Cavar 10 bloques más y volver a la sala | La pantalla muestra el número aumentado. |
+| C8 | Salir y volver a entrar | La sala sigue resuelta, los anillos quietos, el número en vivo, la entrada «Nos está contando» con el número del día en que la resolviste. |
+
+**Movilidad**
+
+| # | Prueba | Qué debe pasar |
+|---|---|---|
+| M1 | Pulsar R o «↑ Superficie» a 30 m y luego a 60 m | A 30 m subes. A 60 m el botón ya no está, aparece «Baliza», y R abre la baliza. Si se fuerza el evento, el servidor responde «usa la baliza o un montacargas». |
+| M2 | Comprar cuerdas (garaje → *Equipo*) | 25 monedas cada una, máximo 5; el contador «Cuerda ×n» aparece al bajar. |
+| M3 | Q al borde de una cámara de 5–20 m | Cuelga una cuerda hasta el suelo. Se puede bajar y **subir** trepando. En suelo plano: «Aquí no hace falta cuerda». Sobre un pozo de más de 20 m: «No llega al fondo». Contra una pared: «No hay espacio». |
+| M4 | Recoger la cuerda (F, desde arriba) | Vuelve al contador. Desde abajo no hay aviso para recogerla. Un segundo jugador no puede recoger las tuyas. |
+| M5 | Salir y volver a entrar | Las cuerdas colocadas siguen ahí. |
+| M6 | Entre 50 y 150 m | Aparece «[H] Instalar Estación de las Minas · ● 250». H la instala si tienes 250 monedas. Muy cerca de otra estación: «Demasiado cerca». |
+| M7 | En la superficie, F en el panel del torno «MONTACARGAS» | Menú con Superficie y tus estaciones. Elegir una: fundido a negro y apareces en la plataforma. Desde la plataforma, F → Superficie te sube. |
+| M8 | Resolver el Contador | Aparece la Estación del Contador en la sala y en el menú. |
+| M9 | Baliza a 70 m con la mochila cargada | El diálogo muestra destino, coste y «Conservas la mochila...». Activar: barra de 4 s. Moverte o cavar la cancela con un mensaje. Quieto: fundido, apareces en la estación de arriba o en la superficie, se descuentan las monedas y la mochila sigue igual. Con 0 monedas también funciona («el resto se perdona»). |
+| M10 | Menú de Roblox (Esc) | «Reiniciar personaje» está desactivado. |
+| M11 | Morir por debajo de una estación (en la consola del servidor: `game.Players:GetPlayers()[1].Character.Humanoid.Health = 0`) | Reapareces en la estación más cercana por encima, no en la superficie. |
+
+**Guardado real (G)** (necesita API Services, solo en un lugar publicado)
+
+| # | Prueba | Qué debe pasar |
+|---|---|---|
+| G1 | Jugar 5 min, salir y volver a entrar | Todo se conserva: monedas, contador, estaciones, cuerdas, colección, diario. |
+| G2 | Cerrar Studio a la fuerza (sin detener la prueba) y volver a entrar enseguida | Puede tardar unos segundos (bloqueo); nunca se pierden datos. Si te echa con «No pudimos cargar tus datos», espera y vuelve: no debe perderse nada. |
+| G3 | Perfil de la iteración 3 | Carga como v4 sin perder nada; Contador y movilidad vacíos. |
+
+**Rendimiento (anota los números reales)**: MicroProfiler en el servidor al revelar la sala
+(construcción del modelo) y al colocar o recoger cuerdas (`rebuildRopes` reconstruye todas las de
+la parcela, como mucho 12). Cuenta de piezas de la sala.
+
+### Nuevos hallazgos de esta iteración
+| # | Gravedad | Problema | Estado |
+|---|---|---|---|
+| 19 | Alta | Si el jugador salía **mientras** se cargaba su perfil, el bloqueo de sesión quedaba tomado hasta caducar (6 min): al volver a entrar enseguida, la carga esperaba y acababa echándolo. | Corregido en `PlayerDataService.load` y cubierto por un test de sesión. |
+| 20 | Media | En el repositorio había 6,6 MB de paquetes descargados por error en `src/client` desde la fase 1 (`.whl` y `luau-0.4.22.tar.gz`). Rojo los ignora, pero inflan el repositorio. | Eliminados del árbol (siguen en el historial). |
+| 21 | Baja | Morir devuelve gratis a una estación o a la superficie. Hoy casi no hay daño, así que no se puede abusar. | Documentado; revisar cuando haya peligros. |
+
+### Ensanchamiento del subsuelo
+**No se ha tocado**, por decisión tuya. Los números de `PROPOSAL_WIDE_UNDERGROUND.md` salen de la VM
+de Luau y son **orientativos**: no son rendimiento confirmado en Roblox. El siguiente paso es medir
+en Studio (MicroProfiler: `THNE.GenerateSlab` con 16 celdas, y el mismo benchmark en un servidor
+real) antes de diseñar la migración. Cualquier migración necesitará claves de celda versionadas,
+una copia del perfil anterior para poder volver atrás, verificación al cargar y un interruptor para
+desactivarla.

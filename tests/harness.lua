@@ -164,6 +164,23 @@ function H.module(serviceName, ...)
 	return requireNode(node)
 end
 
+-- Registers a plain mock as a service (DataStoreService, Players, ...).
+function H.service(name, value)
+	services[name] = value
+end
+
+-- Loads a module ignoring the cache: a second copy behaves like the same script on another server.
+function H.fresh(serviceName, ...)
+	local node = game:GetService(serviceName)
+	for _, part in { ... } do
+		node = node[part]
+	end
+	moduleCache[rawget(node, "__path")] = nil
+	local result = requireNode(node)
+	moduleCache[rawget(node, "__path")] = nil
+	return result
+end
+
 -- Tiny test framework ------------------------------------------------------------------------
 local passed, failed = 0, 0
 function H.test(name, fn)

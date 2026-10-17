@@ -1,11 +1,12 @@
 --!strict
--- Garage shop: tools and upgrades with previews, stats comparison and purchase confirmation.
+-- Garage shop: tools, upgrades and expedition gear with previews, stats comparison and purchase confirmation.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Tools = require(ReplicatedStorage.Shared.Config.Tools)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
+local Mobility = require(ReplicatedStorage.Shared.Config.Mobility)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Format = require(ReplicatedStorage.Shared.Util.Format)
 local Grid = require(ReplicatedStorage.Shared.Util.Grid)
@@ -269,6 +270,57 @@ function ShopUI.new(parent: Instance, deps: Deps)
 					button.Parent = c
 				end
 			end
+		elseif currentTab == "gear" then
+			grid.CellSize = UDim2.fromOffset(250, 200)
+			local rope = Mobility.Rope
+			local carried = if state.mobility then state.mobility.ropes else 0
+			local c = card(1)
+			Build.label({
+				Text = "Cuerda",
+				Size = UDim2.new(1, 0, 0, 26),
+				LayoutOrder = 1,
+				MaxTextSize = 22,
+				Parent = c,
+			})
+			Build.label({
+				Text = string.format(
+					"Cuélgala sobre un hueco abierto (máx. %d m) para bajar y volver a subir. Se recoge desde arriba (F).",
+					math.floor(rope.maxLength / 4)
+				),
+				Font = Theme.bodyFont,
+				TextColor3 = Theme.textDim,
+				Size = UDim2.new(1, 0, 0, 46),
+				LayoutOrder = 2,
+				MaxTextSize = 14,
+				TextWrapped = true,
+				Parent = c,
+			})
+			Build.label({
+				Text = string.format("Llevas <b>%d/%d</b> · tecla <b>Q</b> para colgarla", carried, rope.maxCarried),
+				RichText = true,
+				Font = Theme.bodyFont,
+				Size = UDim2.new(1, 0, 0, 22),
+				LayoutOrder = 3,
+				MaxTextSize = 16,
+				Parent = c,
+			})
+			local button
+			if carried >= rope.maxCarried then
+				button = Build.button("Llevas el máximo", Theme.panelLight, { AutoButtonColor = false })
+			else
+				local affordable = state.coins >= rope.price
+				button = Build.button(
+					"Comprar · ● " .. Format.number(rope.price),
+					if affordable then Theme.good else Theme.card
+				)
+				button.Activated:Connect(function()
+					deps.playUi("ui_click")
+					request("buyRope", "rope")
+				end)
+			end
+			button.Size = UDim2.new(1, 0, 0, 40)
+			button.LayoutOrder = 4
+			button.Parent = c
 		else
 			grid.CellSize = UDim2.fromOffset(250, 170)
 			for _, track in Upgrades.List do
@@ -348,9 +400,15 @@ function ShopUI.new(parent: Instance, deps: Deps)
 		render()
 	end)
 
+	local gearTab = modal:addTab("Equipo", 3, function()
+		currentTab = "gear"
+		render()
+	end)
+
 	local function highlightTabs()
 		toolsTab.BackgroundColor3 = if currentTab == "tools" then Theme.accent else Theme.card
 		upgradesTab.BackgroundColor3 = if currentTab == "upgrades" then Theme.accent else Theme.card
+		gearTab.BackgroundColor3 = if currentTab == "gear" then Theme.accent else Theme.card
 	end
 
 	local spinConnection: RBXScriptConnection? = nil
@@ -391,6 +449,7 @@ function ShopUI.new(parent: Instance, deps: Deps)
 	end
 	toolsTab.Activated:Connect(highlightTabs)
 	upgradesTab.Activated:Connect(highlightTabs)
+	gearTab.Activated:Connect(highlightTabs)
 	return api
 end
 

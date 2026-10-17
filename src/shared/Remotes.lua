@@ -17,6 +17,12 @@
 --   CounterSequence(model, count)                 play the Counter's reveal sequence
 --   FossilFound(speciesId, isNew, depth)          show the fossil card after an extraction
 --   ShowNote(noteId: string)                       open a story note (after server validation)
+--   LiftRide(seconds)                              fade out/in while the lift or beacon moves you
+--   RescueState(state, info)                       "channel" (seconds) | "cancelled" (reason) | "done"
+-- Mobility (Client -> Server)
+--   PlaceRope() / InstallStation() / RescueStart() / RescueCancel()
+--   RescueQuote() -> Quote?                        RemoteFunction: beacon price at the current spot
+--   LiftTravel(destination) -> { ok, message }     RemoteFunction: "surface" or an owned station id
 
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -34,8 +40,14 @@ local EVENTS = {
 	"SpecialFx",
 	"FossilFound",
 	"CounterSequence",
+	"PlaceRope",
+	"InstallStation",
+	"RescueStart",
+	"RescueCancel",
+	"LiftRide",
+	"RescueState",
 }
-local FUNCTIONS = { "Shop", "GetState" }
+local FUNCTIONS = { "Shop", "GetState", "RescueQuote", "LiftTravel" }
 
 local Remotes = {}
 

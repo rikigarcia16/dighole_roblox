@@ -1,5 +1,5 @@
 --!strict
--- Tool and upgrade purchases. Every request is validated on the server: ownership, price,
+-- Tool, upgrade and rope purchases. Every request is validated on the server: ownership, price,
 -- remaining levels and distance to a shop counter.
 
 local Players = game:GetService("Players")
@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Tools = require(ReplicatedStorage.Shared.Config.Tools)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
+local Mobility = require(ReplicatedStorage.Shared.Config.Mobility)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Format = require(ReplicatedStorage.Shared.Util.Format)
 local RateLimiter = require(ReplicatedStorage.Shared.Util.RateLimiter)
@@ -96,10 +97,29 @@ local function buyUpgrade(player: Player, profile: any, trackId: string): Result
 	}
 end
 
+-- Ropes are consumables: carried in a small stack, placed and picked up again in the hole.
+local function buyRope(player: Player, profile: any, _id: string): Result
+	local rope = Mobility.Rope
+	if profile.mobility.ropes >= rope.maxCarried then
+		return { ok = false, message = "Ya llevas " .. rope.maxCarried .. " cuerdas." }
+	end
+	if not nearShop(player) then
+		return { ok = false, message = "Vuelve al garaje para comprar." }
+	end
+	if profile.coins < rope.price then
+		return { ok = false, message = "Te faltan " .. Format.number(rope.price - profile.coins) .. " monedas." }
+	end
+	profile.coins -= rope.price
+	profile.mobility.ropes += 1
+	StateService.push(player)
+	return { ok = true, message = string.format("Cuerda comprada (%d/%d).", profile.mobility.ropes, rope.maxCarried) }
+end
+
 local actions: { [string]: (Player, any, string) -> Result } = {
 	buyTool = buyTool,
 	equipTool = equipTool,
 	buyUpgrade = buyUpgrade,
+	buyRope = buyRope,
 }
 
 function ShopService.start()

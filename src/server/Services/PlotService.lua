@@ -112,6 +112,30 @@ function PlotService.updateBoard(plot: Plot)
 	end
 end
 
+-- Moves the character to `target` after asking the client to stream that area in.
+function PlotService.teleportTo(player: Player, target: CFrame)
+	local character = player.Character
+	if not character then
+		return
+	end
+	pcall(function()
+		player:RequestStreamAroundAsync(target.Position, 5)
+	end)
+	if character.Parent then
+		character:PivotTo(target)
+		local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if root then
+			root.AssemblyLinearVelocity = Vector3.zero
+		end
+	end
+end
+
+-- Where a character appears after respawning (MobilityService: nearest station above the death).
+local respawnResolver: ((Player) -> CFrame?)? = nil
+function PlotService.setRespawnResolver(resolver: (Player) -> CFrame?)
+	respawnResolver = resolver
+end
+
 function PlotService.teleportToSurface(player: Player)
 	local plot = plotByPlayer[player]
 	local character = player.Character
@@ -281,7 +305,14 @@ function PlotService.start()
 		player.CharacterAdded:Connect(function()
 			local plot = plotByPlayer[player]
 			if plot and plot.ready then
-				task.defer(PlotService.teleportToSurface, player)
+				task.defer(function()
+					local target = respawnResolver and respawnResolver(player)
+					if target then
+						PlotService.teleportTo(player, target)
+					else
+						PlotService.teleportToSurface(player)
+					end
+				end)
 			end
 		end)
 	end

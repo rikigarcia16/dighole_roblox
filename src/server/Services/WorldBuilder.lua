@@ -239,6 +239,7 @@ export type PlotPoints = {
 	spawn: CFrame,
 	sell: Vector3,
 	shop: Vector3,
+	lift: Vector3,
 	depthLabel: TextLabel,
 	ownerLabel: TextLabel,
 }
@@ -604,6 +605,65 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 		sellPoint = at(sx - 2, 0, sz)
 	end
 
+	-- Lift winch (west rim of the hole): the surface end of the lift stations ---------------
+	local liftPoint: Vector3
+	do
+		local wx, wz = -HALF_DIG - CELL - 7, 16
+		for _, side in { -1, 1 } do
+			make(folder, {
+				name = "WinchPost",
+				size = Vector3.new(0.9, 12, 0.9),
+				cframe = CFrame.new(at(wx, 6, wz + side * 3)) * CFrame.Angles(side * math.rad(8), 0, 0),
+				color = Palette.darkWood,
+				material = Enum.Material.Wood,
+			})
+		end
+		make(folder, {
+			name = "WinchBeam",
+			size = Vector3.new(1, 1, 7.5),
+			cframe = CFrame.new(at(wx, 11.6, wz)),
+			color = Palette.metal,
+			material = Enum.Material.Metal,
+		})
+		make(folder, {
+			name = "WinchWheel",
+			shape = Enum.PartType.Cylinder,
+			size = Vector3.new(0.6, 4, 4),
+			cframe = CFrame.new(at(wx + 0.8, 10.4, wz)),
+			color = Color3.fromRGB(70, 70, 76),
+			material = Enum.Material.DiamondPlate,
+		})
+		make(folder, {
+			name = "WinchCable",
+			size = Vector3.new(0.15, 0.15, 12),
+			cframe = CFrame.lookAt(at(wx + 0.8, 10.4, wz), at(-HALF_DIG + 2, 0.2, wz)) * CFrame.new(0, 0, -6),
+			color = Color3.fromRGB(40, 40, 44),
+			material = Enum.Material.Metal,
+			collide = false,
+		})
+		local panel = make(folder, {
+			name = "LiftPanel",
+			size = Vector3.new(1.4, 3.2, 1),
+			cframe = CFrame.new(at(wx - 2.5, 1.6, wz - 4)),
+			color = Color3.fromRGB(200, 160, 60),
+			material = Enum.Material.Metal,
+		})
+		prompt(panel, "Lift", "Montacargas", "Viajar", 10)
+		label(
+			make(folder, {
+				name = "LiftSign",
+				size = Vector3.new(4, 1.4, 0.3),
+				cframe = CFrame.new(at(wx - 2.5, 4, wz - 4)) * CFrame.Angles(0, math.rad(90), 0),
+				color = Palette.sign,
+				material = Enum.Material.Wood,
+			}),
+			Enum.NormalId.Front,
+			"MONTACARGAS",
+			Palette.accent
+		)
+		liftPoint = at(wx - 2.5, 0, wz - 4)
+	end
+
 	-- Depth board (next to the hole) ------------------------------------------------------------
 	local depthLabel, ownerLabel
 	do
@@ -666,6 +726,7 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 			spawn = spawnCFrame,
 			sell = sellPoint,
 			shop = shopPoint,
+			lift = liftPoint,
 			depthLabel = depthLabel,
 			ownerLabel = ownerLabel,
 		}

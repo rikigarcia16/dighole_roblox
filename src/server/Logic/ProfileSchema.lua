@@ -9,6 +9,7 @@ local Resources = require(Shared.Config.Resources)
 local Quests = require(Shared.Config.Quests)
 local Story = require(Shared.Config.Story)
 local Fossils = require(Shared.Config.Fossils)
+local Mobility = require(Shared.Config.Mobility)
 
 local ProfileSchema = {}
 
@@ -212,15 +213,21 @@ function ProfileSchema.reconcile(data: any, seed: number): Profile
 		local mobility = profile.mobility
 		mobility.ropes = math.clamp(math.floor(finiteNonNegative(m.ropes, 0)), 0, 99)
 		mobility.rescues = math.floor(finiteNonNegative(m.rescues, 0))
+		local function finite(v: any): boolean
+			return type(v) == "number" and v == v and math.abs(v) < 1e7
+		end
 		local function cell(entry: any): boolean
-			return type(entry) == "table"
-				and type(entry.cx) == "number"
-				and type(entry.d) == "number"
-				and type(entry.cz) == "number"
+			return type(entry) == "table" and finite(entry.cx) and finite(entry.d) and finite(entry.cz)
 		end
 		if type(m.placedRopes) == "table" then
 			for _, rope in m.placedRopes do
-				if cell(rope) and type(rope.length) == "number" and #mobility.placedRopes < 24 then
+				if
+					cell(rope)
+					and finite(rope.length)
+					and rope.length > 0
+					and rope.length <= Mobility.Rope.maxLength
+					and #mobility.placedRopes < 24
+				then
 					table.insert(mobility.placedRopes, { cx = rope.cx, d = rope.d, cz = rope.cz, length = rope.length })
 				end
 			end
@@ -228,7 +235,13 @@ function ProfileSchema.reconcile(data: any, seed: number): Profile
 		if type(m.stations) == "table" then
 			local seen = {}
 			for _, station in m.stations do
-				if cell(station) and type(station.id) == "string" and #station.id <= 24 and not seen[station.id] then
+				-- unknown ids are dropped (a rollback to an older build must not crash on newer stations)
+				if
+					cell(station)
+					and type(station.id) == "string"
+					and Mobility.StationById[station.id]
+					and not seen[station.id]
+				then
 					seen[station.id] = true
 					table.insert(
 						mobility.stations,

@@ -111,11 +111,10 @@ local function load(player: Player): Session?
 			end)
 		end)
 
-		if not player.Parent then
-			return nil
-		end
-
 		if not ok then
+			if not player.Parent then
+				return nil
+			end
 			-- DataStore down or not enabled (Studio without API access). Play on a temporary
 			-- profile that is never written, so the stored data stays untouched.
 			warn("[PlayerData] could not load", player.Name, "- using a temporary profile:", err)
@@ -123,10 +122,15 @@ local function load(player: Player): Session?
 		end
 
 		if not lockedElsewhere then
+			-- Even if the player already left, return the session: onPlayerAdded releases the lock we
+			-- just took instead of leaving it to expire (which would block a quick rejoin).
 			local profile = ProfileSchema.reconcile(captured and captured.data, newSeed(player))
 			return { player = player, key = key, profile = profile, canSave = true, saving = false, released = false }
 		end
 
+		if not player.Parent then
+			return nil
+		end
 		-- Another server still holds the session (usually it is finishing its save). Wait and retry.
 		task.wait(attempt * 3)
 	end

@@ -27,6 +27,8 @@ local EquipmentService = require(script.Parent.EquipmentService)
 local StateService = require(script.Parent.StateService)
 local SpecialsService = require(script.Parent.SpecialsService)
 local FxService = require(script.Parent.FxService)
+local MobilityService = require(script.Parent.MobilityService)
+local Mobility = require(ReplicatedStorage.Shared.Config.Mobility)
 
 local DiggingService = {}
 
@@ -299,6 +301,7 @@ function DiggingService.start()
 	local profileEnd: () -> () = (debug :: any).profileend or function() end
 	Remotes.event("Dig").OnServerEvent:Connect(function(player, position, normal)
 		if limiter:allow(player) then
+			MobilityService.interrupt(player, "Has cavado: la baliza se ha cancelado.")
 			profileBegin("THNE.Dig")
 			local ok, err = pcall(handleDig, player, position, normal)
 			profileEnd()
@@ -318,6 +321,19 @@ function DiggingService.start()
 		local now = os.clock()
 		if lastReturn[player] and now - lastReturn[player] < GameConfig.ReturnToSurfaceCooldown then
 			StateService.notify(player, "info", "Espera un momento antes de volver a subir.", "return_cd", 2)
+			return
+		end
+		-- Deep down the way back is the lift or the beacon: the free return only covers the first metres.
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if root and Grid.depthMetersFromY(root.Position.Y - 3) > Mobility.FreeReturnDepth then
+			StateService.notify(
+				player,
+				"info",
+				"Demasiado hondo para subir sin más: usa la baliza o un montacargas.",
+				"return_deep",
+				3
+			)
 			return
 		end
 		lastReturn[player] = now

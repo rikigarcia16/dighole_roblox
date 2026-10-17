@@ -960,8 +960,19 @@ test("profile v3 data migrates to v4; counter and mobility sanitised", function(
 		anomalies = { counter = { found = true, solved = true, solvedCount = 812.7, rings = { 2, 9 } } },
 		mobility = {
 			ropes = 500,
-			stations = { { id = "s50", cx = 3, d = 50, cz = 4 }, { id = "s50", cx = 1, d = 1, cz = 1 }, { id = 5 } },
-			placedRopes = { { cx = 1, d = 60, cz = 2, length = 18 }, "bad" },
+			stations = {
+				{ id = "mines", cx = 3, d = 60, cz = 4 },
+				{ id = "mines", cx = 1, d = 1, cz = 1 },
+				{ id = 5 },
+				{ id = "from_a_newer_build", cx = 1, d = 1, cz = 1 },
+				{ id = "crystal", cx = 0 / 0, d = 200, cz = 1 },
+			},
+			placedRopes = {
+				{ cx = 1, d = 60, cz = 2, length = 18 },
+				"bad",
+				{ cx = 1, d = 60, cz = 2, length = math.huge },
+				{ cx = 1, d = 60, cz = 2, length = 5000 },
+			},
 		},
 	}, 1)
 	eq(r.version, 4)
@@ -969,10 +980,281 @@ test("profile v3 data migrates to v4; counter and mobility sanitised", function(
 	ok(r.anomalies.counter.solved and r.anomalies.counter.solvedCount == 812, "counter kept")
 	eq(#r.anomalies.counter.rings, 0, "invalid rings dropped (restarted from seed)")
 	eq(r.mobility.ropes, 99, "ropes clamped")
-	eq(#r.mobility.stations, 1, "duplicate / invalid stations dropped")
-	eq(#r.mobility.placedRopes, 1)
+	eq(#r.mobility.stations, 1, "duplicate, unknown, NaN stations dropped")
+	eq(#r.mobility.placedRopes, 1, "infinite / oversized ropes dropped")
 	dataStoreRoundTrip(r)
 end)
+
+test("rescue beacon: free near the surface, bounded cost, never more than the coins held", function()
+	local MobilityRules = H.module("ReplicatedStorage", "Shared", "Util", "MobilityRules")
+	local q = MobilityRules.quote(30, 500, 0, {})
+	ok(q.free and q.pay == 0 and q.destination == "surface", "free above 50 m")
+	q = MobilityRules.quote(60, 0, 1000, {})
+	eq(q.cost, 30, "0.5 per metre")
+	eq(q.pay, 30)
+	q = MobilityRules.quote(60, 0, 5, {})
+	ok(q.pay == 5 and q.waived == 25, "a poor player pays what they have; nobody is stuck")
+	q = MobilityRules.quote(55, 10, 1000, {})
+	ok(q.cost >= 10, "minimum cost")
+	-- huge backpacks are capped by depth so the beacon never becomes a tax on success
+	q = MobilityRules.quote(100, 1e7, 1e9, {})
+	eq(q.cost, 50 + 1.5 * 100, "max cost")
+	-- newcomers: shallow mines with a modest backpack cost little
+	ok(MobilityRules.rescueCost(70, 150) <= 45, "cheap for a new player: " .. MobilityRules.rescueCost(70, 150))
+	-- destinations: nearest station above, never one below
+	local stations = { { id = "mines", cx = 1, d = 60, cz = 1 }, { id = "counter", cx = 5, d = 141, cz = 5 } }
+	eq(MobilityRules.quote(140, 0, 99, stations).destination, "mines", "counter is not above 140")
+	eq(MobilityRules.quote(200, 0, 99, stations).destination, "counter")
+	eq(MobilityRules.quote(63, 0, 99, stations).destination, "surface", "station must be clearly above")
+end)
+
+test("lift stations: one per zone, spacing, the Counter's is granted not bought", function()
+	local MobilityRules = H.module("ReplicatedStorage", "Shared", "Util", "MobilityRules")
+	local def = MobilityRules.installable(40, {})
+	eq(def, nil, "nothing in the garden")
+	def = MobilityRules.installable(70, {})
+	ok(def and def.id == "mines", "mines station from 50 m")
+	local none, reason = MobilityRules.installable(90, { { id = "mines", cx = 1, d = 60, cz = 1 } })
+	ok(none == nil and reason and reason:find("Ya tienes"), "only one per zone")
+	def = MobilityRules.installable(140, {})
+	ok(def and def.id == "mines", "the Counter's station is never offered for purchase")
+	ok(not MobilityRules.farEnough(2, 61, 2, { { id = "mines", cx = 1, d = 60, cz = 1 } }), "too close")
+	ok(MobilityRules.farEnough(10, 70, 10, { { id = "mines", cx = 1, d = 60, cz = 1 } }), "far enough")
+end)
+
+print("Sessions (fake DataStore, several servers)")
+do
+	-- A DataStore that serialises every write (like the real one) and a scheduler where task.wait
+	-- parks the coroutine until the test resumes it, so "time" passes only when the test says so.
+	local records = {}
+	local failNext = 0
+	local onUpdate: ((string) -> ())? = nil
+	local fakeStore = {
+		UpdateAsync = function(_, key, transform)
+			if failNext > 0 then
+				failNext -= 1
+				error("DataStore request failed (simulated)")
+			end
+			if onUpdate then
+				onUpdate(key)
+			end
+			local current = records[key] and dataStoreRoundTrip(records[key], "record")
+			local result = transform(current)
+			if result ~= nil then
+				records[key] = dataStoreRoundTrip(result, "record")
+			end
+		end,
+	}
+	H.service("DataStoreService", {
+		GetDataStore = function()
+			return fakeStore
+		end,
+	})
+	H.service("RunService", {
+		IsStudio = function()
+			return false
+		end,
+		IsServer = function()
+			return true
+		end,
+	})
+	local parked = {}
+	H.globals.task = {
+		wait = function(seconds)
+			local co = coroutine.running()
+			table.insert(parked, { co = co, seconds = seconds or 0, job = H.game.JobId })
+			return coroutine.yield()
+		end,
+		spawn = function(f, ...)
+			local co = coroutine.create(f)
+			local okRun, err = coroutine.resume(co, ...)
+			if not okRun then
+				error(err, 0)
+			end
+			return co
+		end,
+	}
+	local function resumeParked(predicate)
+		local list = parked
+		parked = {}
+		for _, entry in list do
+			if predicate(entry) then
+				local okRun, err = coroutine.resume(entry.co)
+				if not okRun then
+					error(err, 0)
+				end
+			else
+				table.insert(parked, entry)
+			end
+		end
+	end
+	local function signal()
+		local handlers = {}
+		return {
+			Connect = function(_, fn)
+				table.insert(handlers, fn)
+			end,
+			fire = function(...)
+				for _, fn in handlers do
+					H.globals.task.spawn(fn, ...)
+				end
+			end,
+		}
+	end
+
+	-- One "server": its own Players service, JobId and copy of PlayerDataService.
+	local function server(jobId)
+		local players = { PlayerAdded = signal(), PlayerRemoving = signal() }
+		function players.GetPlayers()
+			return {}
+		end
+		H.service("Players", players)
+		local closers = {}
+		H.game.JobId = jobId
+		H.game.BindToClose = function(_, fn)
+			table.insert(closers, fn)
+		end
+		local service = H.fresh("ServerScriptService", "Server", "Services", "PlayerDataService")
+		service.start()
+		return { service = service, players = players, closers = closers, job = jobId }
+	end
+	local function newPlayer(userId)
+		return {
+			UserId = userId,
+			Name = "p" .. userId,
+			Parent = {},
+			Kick = function(self, message)
+				self.kicked = message
+			end,
+		}
+	end
+	local function join(srv, player)
+		player.Parent = {}
+		srv.players.PlayerAdded.fire(player)
+	end
+	local function leave(srv, player)
+		player.Parent = nil
+		srv.players.PlayerRemoving.fire(player)
+	end
+	local KEY = "player_77"
+	local isAutosave = function(entry)
+		return entry.seconds == GameConfig.AutosaveSeconds
+	end
+	local warnings = {}
+	_G.warn = function(...)
+		table.insert(warnings, table.concat({ ... }, " "))
+	end
+
+	test("session: save on leave, rejoin elsewhere keeps counter, Counter, mobility and finds", function()
+		local A = server("job-A")
+		local p = newPlayer(77)
+		join(A, p)
+		local profile = A.service.get(p)
+		ok(profile and A.service.isPersistent(p), "loaded with a session")
+		eq(records[KEY].lock.jobId, "job-A", "lock taken")
+		profile.stats.cellsDug = 3021
+		profile.coins = 140
+		profile.anomalies.counter.found = true
+		profile.anomalies.counter.solved = true
+		profile.anomalies.counter.solvedCount = 2990
+		profile.mobility.ropes = 3
+		table.insert(profile.mobility.stations, { id = "counter", cx = 7, d = 140, cz = 8 })
+		table.insert(profile.mobility.placedRopes, { cx = 4.5, d = 61.25, cz = 9, length = 33.5 })
+		profile.mobility.rescues = 2
+		profile.collection.fossils.eyeless_fish = { count = 1, firstDepth = 96 }
+		leave(A, p)
+		eq(records[KEY].lock, nil, "lock released on leave")
+		eq(A.service.get(p), nil, "session dropped")
+
+		local B = server("job-B")
+		join(B, p)
+		local again = B.service.get(p)
+		ok(again, "rejoined")
+		eq(again.stats.cellsDug, 3021, "block counter survives")
+		ok(again.anomalies.counter.solved and again.anomalies.counter.solvedCount == 2990, "Counter survives")
+		eq(again.mobility.ropes, 3)
+		eq(again.mobility.stations[1].id, "counter", "station survives")
+		eq(again.mobility.placedRopes[1].length, 33.5, "rope survives")
+		eq(again.mobility.rescues, 2)
+		eq(again.collection.fossils.eyeless_fish.count, 1, "finds survive")
+		-- B keeps the session for the next test
+		_G.__sessionB = { srv = B, player = p }
+	end)
+
+	test("session: a second server waits for the lock, then loads the newest data", function()
+		local B, p = _G.__sessionB.srv, _G.__sessionB.player
+		local C = server("job-C")
+		local pc = newPlayer(77)
+		join(C, pc) -- the player hops servers before B has saved
+		eq(C.service.get(pc), nil, "C must not load while B holds the session")
+		eq(records[KEY].lock.jobId, "job-B", "B's lock untouched")
+		B.service.get(p).stats.cellsDug = 3100 -- B keeps playing a moment
+		leave(B, p)
+		resumeParked(function(entry)
+			return not isAutosave(entry)
+		end)
+		local profile = C.service.get(pc)
+		ok(profile, "C loads once B released")
+		eq(profile.stats.cellsDug, 3100, "C sees B's final save")
+		eq(records[KEY].lock.jobId, "job-C")
+		_G.__sessionC = { srv = C, player = pc }
+	end)
+
+	test("session: a crashed server's lock expires; its late autosave never overwrites the new owner", function()
+		local C, pc = _G.__sessionC.srv, _G.__sessionC.player
+		C.service.get(pc).stats.cellsDug = 1 -- stale state on the crashed server
+		records[KEY].lock.time = os.time() - GameConfig.SessionLockTimeout - 5 -- C stopped refreshing
+		local D = server("job-D")
+		local pd = newPlayer(77)
+		join(D, pd)
+		local profile = D.service.get(pd)
+		ok(profile, "D takes over a stale lock")
+		eq(profile.stats.cellsDug, 3100)
+		profile.stats.cellsDug = 3200
+		-- C wakes up and autosaves: it lost the lock, so nothing is written
+		resumeParked(function(entry)
+			return isAutosave(entry) and entry.job == "job-C"
+		end)
+		eq(records[KEY].lock.jobId, "job-D", "lock still D's")
+		eq(records[KEY].data.stats.cellsDug, 3100, "C's stale profile was not written")
+		leave(D, pd)
+		eq(records[KEY].data.stats.cellsDug, 3200, "D's final save written")
+		eq(records[KEY].lock, nil)
+	end)
+
+	test("session: leaving while the profile loads releases the lock", function()
+		local E = server("job-E")
+		local p = newPlayer(77)
+		onUpdate = function()
+			p.Parent = nil -- the player closes the game during the request
+			onUpdate = nil
+		end
+		join(E, p)
+		eq(E.service.get(p), nil, "no session for a player who left")
+		eq(records[KEY].lock, nil, "lock not leaked: a quick rejoin is not blocked")
+		eq(records[KEY].data.stats.cellsDug, 3200, "data untouched")
+	end)
+
+	test("session: DataStore down gives a temporary profile that never overwrites real data", function()
+		local F = server("job-F")
+		local p = newPlayer(77)
+		failNext = 3
+		join(F, p)
+		resumeParked(function(entry)
+			return not isAutosave(entry)
+		end) -- retry backoff
+		resumeParked(function(entry)
+			return not isAutosave(entry)
+		end)
+		local profile = F.service.get(p)
+		ok(profile and not F.service.isPersistent(p), "temporary profile")
+		eq(profile.stats.cellsDug, 0)
+		leave(F, p)
+		eq(records[KEY].data.stats.cellsDug, 3200, "real data untouched")
+		eq(records[KEY].lock, nil)
+	end)
+	H.game.BindToClose = nil
+end
 
 print("Terrain writes (fake Terrain)")
 local Enum = H.Enum

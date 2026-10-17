@@ -23,6 +23,8 @@ local Theme = require(UI.Theme)
 local Story = require(ReplicatedStorage.Shared.Config.Story)
 local ShopUI = require(UI.ShopUI)
 local InventoryUI = require(UI.InventoryUI)
+local MobilityUI = require(UI.MobilityUI)
+local Mobility = require(ReplicatedStorage.Shared.Config.Mobility)
 
 local ClientState = require(script.Parent.ClientState)
 local DigController = require(script.Parent.DigController)
@@ -168,7 +170,7 @@ function UIController.start()
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, 12, 1, -12),
-		Size = UDim2.fromOffset(330, 54),
+		Size = UDim2.fromOffset(560, 54),
 		Parent = gui,
 		[Build.Children] = { Build.list(Enum.FillDirection.Horizontal, 8) },
 	})
@@ -486,6 +488,8 @@ function UIController.start()
 		gui,
 		{ getState = getState, playUi = EffectsController.playUi, openNote = openNote, openText = openText }
 	)
+	local mobility =
+		MobilityUI.new(gui, buttons, { getState = getState, notify = toast, playUi = EffectsController.playUi })
 
 	backpackButton.Activated:Connect(function()
 		EffectsController.playUi("ui_click")
@@ -506,6 +510,8 @@ function UIController.start()
 		elseif input.KeyCode == Enum.KeyCode.R or input.KeyCode == Enum.KeyCode.DPadUp then
 			if surfaceButton.Visible then
 				Remotes.event("ReturnToSurface"):FireServer()
+			elseif not mobility.freeReturn() then
+				mobility.openBeacon()
 			end
 		end
 	end)
@@ -631,6 +637,7 @@ function UIController.start()
 		updateObjective()
 		shop.refresh()
 		inventory.refresh()
+		mobility.refresh()
 	end
 	coinsLabel.Text = "● 0"
 	ClientState.changed:Connect(onState)
@@ -653,7 +660,8 @@ function UIController.start()
 	AmbienceController.depthChanged:Connect(function(depth: number, zone: Zones.Zone)
 		depthLabel.Text = string.format("↓ %s · %s", Format.depth(depth), zone.name)
 		depthLabel.TextColor3 = if depth > 3 then zone.accent:Lerp(Color3.new(1, 1, 1), 0.4) else Theme.text
-		surfaceButton.Visible = depth >= GameConfig.ReturnButtonMinDepth
+		surfaceButton.Visible = depth >= GameConfig.ReturnButtonMinDepth and depth <= Mobility.FreeReturnDepth
+		mobility.setDepth(depth)
 	end)
 	AmbienceController.zoneChanged:Connect(function(zone: Zones.Zone)
 		showBanner(zone, false)
