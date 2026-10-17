@@ -242,7 +242,6 @@ function ShopUI.new(parent: Instance, deps: Deps)
 						string.format("%.1f", 1 / tool.cooldown),
 						math.floor((1 / tool.cooldown - 1 / equipped.cooldown) * 10 + 0.5) / 10
 					)
-					statLine(stats, 4, "Consumo", tostring(tool.energyCost), -(tool.energyCost - equipped.energyCost))
 
 					local button
 					if state.equippedTool == tool.id then
@@ -273,6 +272,9 @@ function ShopUI.new(parent: Instance, deps: Deps)
 		else
 			grid.CellSize = UDim2.fromOffset(250, 170)
 			for _, track in Upgrades.List do
+				if track.hidden then
+					continue
+				end
 				local level = state.upgrades[track.id] or 1
 				local current = track.levels[level]
 				local nextLevel = track.levels[level + 1]

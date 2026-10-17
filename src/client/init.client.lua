@@ -10,6 +10,7 @@ local order = {
 	"DigController",
 	"DetectorController",
 	"UIController",
+	"SoundTestController",
 }
 
 for _, name in order do

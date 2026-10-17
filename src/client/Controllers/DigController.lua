@@ -18,6 +18,9 @@ local Tools = require(ReplicatedStorage.Shared.Config.Tools)
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Grid = require(ReplicatedStorage.Shared.Util.Grid)
+local HardnessView = require(ReplicatedStorage.Shared.Util.HardnessView)
+local Resources = require(ReplicatedStorage.Shared.Config.Resources)
+local DigFeel = require(ReplicatedStorage.Shared.Config.DigFeel)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 local ClientState = require(script.Parent.ClientState)
 local EffectsController = require(script.Parent.EffectsController)
@@ -53,6 +56,65 @@ selection.SurfaceTransparency = 0.85
 selection.Adornee = highlightPart
 selection.Parent = highlightPart
 
+-- Hardness indicator: a small bar of segments (one per remaining hit) above the aimed cell, or a
+-- lock with the power required when the tool cannot damage the material.
+local billboard = Instance.new("BillboardGui")
+billboard.Name = "Hardness"
+billboard.Size = UDim2.fromOffset(150, 34)
+billboard.StudsOffsetWorldSpace = Vector3.new(0, GameConfig.CellSize * 0.75, 0)
+billboard.AlwaysOnTop = true
+billboard.LightInfluence = 0
+billboard.MaxDistance = 40
+billboard.Adornee = highlightPart
+billboard.Parent = highlightPart
+
+local hardnessLabel = Instance.new("TextLabel")
+hardnessLabel.BackgroundTransparency = 1
+hardnessLabel.Size = UDim2.new(1, 0, 0, 16)
+hardnessLabel.Font = Enum.Font.GothamBold
+hardnessLabel.TextSize = 13
+hardnessLabel.TextColor3 = Color3.new(1, 1, 1)
+hardnessLabel.TextStrokeTransparency = 0.4
+hardnessLabel.Parent = billboard
+
+local segmentBar = Instance.new("Frame")
+segmentBar.BackgroundTransparency = 1
+segmentBar.Position = UDim2.fromOffset(0, 19)
+segmentBar.Size = UDim2.new(1, 0, 0, 10)
+segmentBar.Parent = billboard
+local segmentLayout = Instance.new("UIListLayout")
+segmentLayout.FillDirection = Enum.FillDirection.Horizontal
+segmentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+segmentLayout.Padding = UDim.new(0, 2)
+segmentLayout.Parent = segmentBar
+local segments: { Frame } = {}
+for i = 1, DigFeel.MaxHardnessSegments do
+	local seg = Instance.new("Frame")
+	seg.Size = UDim2.fromOffset(11, 8)
+	seg.BorderSizePixel = 0
+	seg.LayoutOrder = i
+	seg.Parent = segmentBar
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 2)
+	corner.Parent = seg
+	segments[i] = seg
+end
+
+-- Damage the server reported per cell ("<plot>:<x>:<d>:<z>" -> fraction), forgotten after a while.
+local progressCache: { [string]: { fraction: number, at: number } } = {}
+local PROGRESS_MEMORY = 20
+
+local function cellKey(info: PlotLocator.CellInfo): string
+	return string.format("%s:%d:%d:%d", info.folder.Name, info.cx, info.d, info.cz)
+end
+
+function DigController.reportProgress(position: Vector3, fraction: number)
+	local info = PlotLocator.cellAt(position)
+	if info then
+		progressCache[cellKey(info)] = { fraction = fraction, at = os.clock() }
+	end
+end
+
 local function currentTool(): Tools.Tool?
 	local data = ClientState.data
 	return data and Tools.get(data.equippedTool)
@@ -76,13 +138,13 @@ function DigController.setHeld(source: string, held: boolean)
 	holdSources[source] = held
 end
 
--- Returns the aimed surface point and normal within reach, or nil.
-local function computeTarget(reach: number): (Vector3?, Vector3?)
+-- Returns the aimed surface point, normal and terrain material within reach, or nil.
+local function computeTarget(reach: number): (Vector3?, Vector3?, Enum.Material?)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local camera = workspace.CurrentCamera
 	if not root or not camera then
-		return nil, nil
+		return nil, nil, nil
 	end
 
 	local screenPoint: Vector2
@@ -94,7 +156,7 @@ local function computeTarget(reach: number): (Vector3?, Vector3?)
 	local ray = camera:ViewportPointToRay(screenPoint.X, screenPoint.Y)
 	local result = workspace:Raycast(ray.Origin, ray.Direction * 400, rayParams)
 	if result and (result.Position - root.Position).Magnitude <= reach then
-		return result.Position, result.Normal
+		return result.Position, result.Normal, result.Material
 	end
 
 	-- Fallback: dig in front of / beneath the feet.
@@ -102,13 +164,15 @@ local function computeTarget(reach: number): (Vector3?, Vector3?)
 	local direction = (forward.Unit * 0.45 - Vector3.yAxis).Unit
 	local fallback = workspace:Raycast(root.Position, direction * reach, rayParams)
 	if fallback then
-		return fallback.Position, fallback.Normal
+		return fallback.Position, fallback.Normal, fallback.Material
 	end
-	return nil, nil
+	return nil, nil, nil
 end
 
-local function updateHighlight(position: Vector3?, normal: Vector3?)
-	if not position or not normal then
+local LOCKED = Color3.fromRGB(255, 80, 80)
+
+local function updateHighlight(position: Vector3?, normal: Vector3?, material: Enum.Material?, tool: Tools.Tool?)
+	if not position or not normal or not tool then
 		highlightPart.Parent = nil
 		return
 	end
@@ -118,13 +182,43 @@ local function updateHighlight(position: Vector3?, normal: Vector3?)
 		return
 	end
 	highlightPart.CFrame = CFrame.new(Grid.cellCenter(info.originX, info.originZ, info.cx, info.d, info.cz))
-	local color = if info.canDig then Color3.fromRGB(255, 255, 255) else Color3.fromRGB(255, 80, 80)
+
+	local resource = material and Resources.fromMaterial(material)
+	local cached: { fraction: number, at: number }? = progressCache[cellKey(info)]
+	if cached and os.clock() - cached.at > PROGRESS_MEMORY then
+		progressCache[cellKey(info)] = nil
+		cached = nil
+	end
+	local view = resource and HardnessView.compute(resource, tool.power, cached and cached.fraction)
+
+	local color = Color3.fromRGB(255, 255, 255)
+	if not info.canDig then
+		color = LOCKED
+		billboard.Enabled = false
+	elseif view then
+		billboard.Enabled = true
+		hardnessLabel.Text = if view.locked then "🔒 " .. view.label else view.label
+		hardnessLabel.TextColor3 = if view.locked then LOCKED else Color3.new(1, 1, 1)
+		-- white -> warm as the cell weakens
+		color = if view.locked
+			then LOCKED
+			else Color3.fromRGB(255, 255, 255):Lerp(Color3.fromRGB(255, 170, 60), view.fraction)
+		for i, seg in segments do
+			seg.Visible = not view.locked and i <= view.segments
+			seg.BackgroundColor3 = if i <= view.filled then Color3.fromRGB(70, 70, 70) else resource.color
+			seg.BackgroundTransparency = if i <= view.filled then 0.5 else 0
+		end
+	else
+		billboard.Enabled = false
+	end
 	selection.Color3 = color
 	selection.SurfaceColor3 = color
+	selection.SurfaceTransparency = if view and not view.locked then 0.92 - view.fraction * 0.25 else 0.85
 	highlightPart.Parent = workspace
 end
 
 function DigController.start()
+	EffectsController.progressReported:Connect(DigController.reportProgress)
 	UserInputService.LastInputTypeChanged:Connect(function(inputType)
 		if inputType == Enum.UserInputType.Touch or inputType.Name:find("Gamepad") then
 			aimMode = "center"
@@ -161,14 +255,35 @@ function DigController.start()
 		table.clear(holdSources)
 	end)
 
+	-- A swing: the animation and whoosh start now; the request, the hit sound and the dust happen
+	-- at the impact frame of the animation (DigFeel.Timing), aimed at what is under the cursor then.
+	-- The hit is predicted from the terrain material under the cursor, so it sounds instantly;
+	-- the server's answer only adds breaks and discoveries (EffectsController, DigFx).
+	local function strike(tool: Tools.Tool)
+		local position, normal, material = computeTarget(tool.reach)
+		if not position or not normal then
+			return
+		end
+		digEvent:FireServer(position, normal)
+		local resource = material and Resources.fromMaterial(material)
+		if resource then
+			if tool.power < resource.requiredPower then
+				EffectsController.bounce(position, resource)
+			else
+				EffectsController.impact(position, resource, normal)
+			end
+		end
+		DigController.dug:Fire()
+	end
+
 	RunService.RenderStepped:Connect(function()
 		local tool = currentTool()
 		if not tool or not holdingTool() then
-			updateHighlight(nil, nil)
+			updateHighlight(nil, nil, nil, nil)
 			return
 		end
-		local position, normal = computeTarget(tool.reach)
-		updateHighlight(position, normal)
+		local position, normal, material = computeTarget(tool.reach)
+		updateHighlight(position, normal, material, tool)
 
 		if not isHolding() or not position or not normal then
 			return
@@ -178,10 +293,15 @@ function DigController.start()
 			return
 		end
 		lastDig = now
-		digEvent:FireServer(position, normal)
 		EffectsController.swing(player.Character, tool.animation)
 		EffectsController.playAt(tool.sound, position)
-		DigController.dug:Fire()
+		local timing = DigFeel.Timing[tool.animation] or DigFeel.Timing.swing
+		local delay = timing.duration * timing.impact
+		if delay <= 0.01 then
+			strike(tool)
+		else
+			task.delay(delay, strike, tool)
+		end
 	end)
 end
 

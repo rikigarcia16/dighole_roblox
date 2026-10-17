@@ -13,12 +13,24 @@
 --   Collected(resourceId, amount, isNew)            item pickup popup
 --   Notify(kind: string, text: string)              toast message
 --   ZoneEntered(zoneId: string, firstTime: boolean)
+--   SpecialFx(player, position, kind, resourceId?)  geode / fossil / chest / cave moments
 --   ShowNote(noteId: string)                       open a story note (after server validation)
 
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local EVENTS = { "Dig", "ReturnToSurface", "Sell", "State", "DigFx", "Collected", "Notify", "ZoneEntered", "ShowNote" }
+local EVENTS = {
+	"Dig",
+	"ReturnToSurface",
+	"Sell",
+	"State",
+	"DigFx",
+	"Collected",
+	"Notify",
+	"ZoneEntered",
+	"ShowNote",
+	"SpecialFx",
+}
 local FUNCTIONS = { "Shop", "GetState" }
 
 local Remotes = {}

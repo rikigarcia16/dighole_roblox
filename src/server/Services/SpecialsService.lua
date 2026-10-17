@@ -357,6 +357,12 @@ function SpecialsService.onCellsBroken(player: Player, plot: any, broken: { { cx
 									end
 								end
 							end
+							FxService.special(
+								player,
+								Grid.cellCenter(plot.originX, plot.originZ, cx, d, cz),
+								"cave",
+								nil
+							)
 							StateService.notify(
 								player,
 								"discovery",
@@ -474,12 +480,10 @@ local function openChest(player: Player, plot: any, special: Special)
 			:Create(lid, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { CFrame = opened })
 			:Play()
 	end
-	FxService.broadcast(
+	FxService.special(
 		player,
 		special.model:GetPivot().Position + Vector3.new(0, 1.5, 0),
-		bonus and bonus.id or "coal",
-		true,
-		nil,
+		"chest",
 		bonus and bonus.id or nil
 	)
 end
@@ -557,7 +561,7 @@ local function openGeode(player: Player, plot: any, special: Special)
 		end
 		light(special.model.PrimaryPart or special.model, geodeColor(special.depth), 18, 1.6)
 	end
-	FxService.broadcast(player, center, crystal and crystal.id or "geode", true, nil, crystal and crystal.id or nil)
+	FxService.special(player, center, "geode", crystal and crystal.id or nil)
 end
 
 local function readLandmark(player: Player, special: Special)

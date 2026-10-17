@@ -5,6 +5,7 @@
 export type Level = { value: number, price: number }
 export type Track = {
 	id: string,
+	hidden: boolean?, -- not sold yet (kept in saves); see the battery note below
 	name: string,
 	description: string,
 	unit: string,
@@ -32,7 +33,9 @@ local list: { Track } = {
 		id = "battery",
 		name = "Batería",
 		unit = "⚡",
-		description = "Energía disponible antes de volver a recargar.",
+		description = "Alimenta detectores, linternas potentes y herramientas especiales.",
+		-- Hidden until special equipment consumes energy: ordinary digging no longer uses it.
+		hidden = true,
 		levels = {
 			{ value = 60, price = 0 },
 			{ value = 120, price = 120 },

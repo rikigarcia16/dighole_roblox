@@ -81,6 +81,74 @@ test("upgrade tracks start free and grow", function()
 	eq(Upgrades.valueAt("backpack", 999), 1200)
 end)
 
+test("dig feel: every material family has a complete preset with existing sounds", function()
+	local DigFeel = H.module("ReplicatedStorage", "Shared", "Config", "DigFeel")
+	local Sounds = H.module("ReplicatedStorage", "Shared", "Config", "Sounds")
+	for _, r in Resources.List do
+		ok(DigFeel.Presets[r.effect], r.id .. " uses unknown effect " .. r.effect)
+		ok(Sounds[r.sound], r.id .. " uses unknown sound " .. r.sound)
+	end
+	for name, p in DigFeel.Presets do
+		ok(Sounds[p.hitSound] and Sounds[p.breakSound], name .. " sounds")
+		ok(p.dust > 0 and p.breakDust > p.dust and p.debris > 0, name .. " break is fuller than a hit")
+	end
+	for _, t in Tools.List do
+		ok(DigFeel.Timing[t.animation], t.id .. " animation timing")
+		ok(Sounds[t.sound], t.id .. " sound")
+		local timing = DigFeel.Timing[t.animation]
+		ok(timing.duration * timing.impact < t.cooldown, t.id .. ": impact must land before the next swing")
+	end
+	for key, sdef in Sounds do
+		ok(sdef.id:find("^rbxasset://") or sdef.id:find("^rbxassetid://"), key .. " id format")
+		ok(sdef.pitchMin <= sdef.pitchMax and sdef.volume > 0 and sdef.volume <= 1, key .. " ranges")
+	end
+	for _, needed in
+		{
+			"too_hard",
+			"geode_open",
+			"fossil_extract",
+			"cave_open",
+			"discover_rare",
+			"discover_epic",
+			"discover_legendary",
+		}
+	do
+		ok(Sounds[needed], "missing sound " .. needed)
+	end
+end)
+
+test("hardness indicator: hits left, segments and locks", function()
+	local HardnessView = H.module("ReplicatedStorage", "Shared", "Util", "HardnessView")
+	local dirt = Resources.get("dirt") -- hardness 2
+	local v = HardnessView.compute(dirt, 1, 0)
+	eq(v.locked, false)
+	eq(v.totalHits, 2)
+	eq(v.hitsLeft, 2)
+	eq(v.segments, 2)
+	eq(v.filled, 0)
+	v = HardnessView.compute(dirt, 1, 0.5)
+	eq(v.hitsLeft, 1)
+	eq(v.filled, 1)
+	local slate = Resources.get("slate") -- requires power 2
+	v = HardnessView.compute(slate, 1, 0)
+	ok(v.locked and v.requiredPower == 2 and v.label:find("potencia 2"), "locked label")
+	v = HardnessView.compute(Resources.get("basalt"), 12, 0.5) -- 110 hardness / 12 = 10 hits
+	eq(v.totalHits, 10)
+	eq(v.hitsLeft, 5)
+	eq(v.segments, 10)
+	eq(v.filled, 5)
+	v = HardnessView.compute(Resources.get("core_matter"), 35, 0.25) -- 9 hits, capped segments
+	ok(v.segments <= 10 and v.filled <= v.segments, "segments capped")
+	v = HardnessView.compute(dirt, 5, 0) -- one hit
+	eq(v.hitsLeft, 1)
+	eq(v.label, dirt.name)
+end)
+
+test("battery is not sold while nothing consumes energy", function()
+	ok(Upgrades.ById.battery.hidden, "battery hidden")
+	ok(not Upgrades.ById.backpack.hidden, "backpack still sold")
+end)
+
 print("Util")
 local Hash = H.module("ReplicatedStorage", "Shared", "Util", "Hash")
 local Grid = H.module("ReplicatedStorage", "Shared", "Util", "Grid")

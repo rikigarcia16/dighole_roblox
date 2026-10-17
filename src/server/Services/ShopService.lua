@@ -70,8 +70,8 @@ end
 
 local function buyUpgrade(player: Player, profile: any, trackId: string): Result
 	local track = Upgrades.ById[trackId]
-	if not track then
-		return { ok = false, message = "Mejora desconocida." }
+	if not track or track.hidden then
+		return { ok = false, message = "Mejora no disponible." }
 	end
 	local current = profile.upgrades[trackId] or 1
 	local nextLevel = track.levels[current + 1]

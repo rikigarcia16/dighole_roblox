@@ -1,33 +1,73 @@
 --!strict
--- Sound ids. Only built-in `rbxasset://` sounds shipped with the Roblox client are used so the
--- project does not depend on third-party audio. Replace them with your own uploaded audio for release.
--- `pitch` ranges are randomised per play so repeated hits do not sound identical.
+-- Sound definitions. Only built-in `rbxasset://sounds/...` files shipped with the Roblox client are
+-- referenced, so the project depends on no third-party audio.
+--
+-- VERIFICATION STATUS: none of these paths has been played inside Roblox Studio yet (`verified =
+-- false`). Use the Studio-only sound test (F7, see SoundTestController) and update `verified`.
+-- A missing file never breaks the game: the Sound simply stays silent and a warning is printed.
+-- For release, replace them with your own uploaded audio (keep the keys, change `id`).
+--
+-- Pitch ranges are randomised per play so repeated hits never sound identical.
 
-export type SoundDef = { id: string, volume: number, pitchMin: number, pitchMax: number }
+export type SoundDef = {
+	id: string,
+	volume: number,
+	pitchMin: number,
+	pitchMax: number,
+	verified: boolean,
+	purpose: string,
+}
+
+local function def(id: string, volume: number, pitchMin: number, pitchMax: number, purpose: string): SoundDef
+	return { id = id, volume = volume, pitchMin = pitchMin, pitchMax = pitchMax, verified = false, purpose = purpose }
+end
+
+local THUD = "rbxasset://sounds/action_footsteps_plastic.mp3"
+local COLLIDE = "rbxasset://sounds/collide.wav"
+local PING = "rbxasset://sounds/electronicpingshort.wav"
+local SWOOSH = "rbxasset://sounds/swoosh.wav"
+local CLICK = "rbxasset://sounds/clickfast.wav"
+local BUTTON = "rbxasset://sounds/button.wav"
+local SPLASH = "rbxasset://sounds/impact_water.mp3"
 
 local Sounds: { [string]: SoundDef } = {
-	dig_soil = { id = "rbxasset://sounds/action_footsteps_plastic.mp3", volume = 0.7, pitchMin = 0.55, pitchMax = 0.7 },
-	dig_rock = { id = "rbxasset://sounds/collide.wav", volume = 0.6, pitchMin = 0.8, pitchMax = 1.0 },
-	dig_ore = { id = "rbxasset://sounds/collide.wav", volume = 0.7, pitchMin = 1.15, pitchMax = 1.35 },
-	dig_crystal = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.35, pitchMin = 1.4, pitchMax = 1.7 },
-	discover_rare = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.6, pitchMin = 1.0, pitchMax = 1.0 },
-	discover_epic = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.75, pitchMin = 0.8, pitchMax = 0.8 },
-	discover_legendary = {
-		id = "rbxasset://sounds/electronicpingshort.wav",
-		volume = 0.9,
-		pitchMin = 0.6,
-		pitchMax = 0.6,
-	},
-	swing_light = { id = "rbxasset://sounds/swoosh.wav", volume = 0.25, pitchMin = 1.2, pitchMax = 1.4 },
-	swing_heavy = { id = "rbxasset://sounds/swoosh.wav", volume = 0.3, pitchMin = 0.9, pitchMax = 1.05 },
-	drill = { id = "rbxasset://sounds/clickfast.wav", volume = 0.35, pitchMin = 0.7, pitchMax = 0.8 },
-	plasma = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.25, pitchMin = 2.0, pitchMax = 2.3 },
-	pickup = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.2, pitchMin = 1.8, pitchMax = 2.0 },
-	sell = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.5, pitchMin = 1.3, pitchMax = 1.3 },
-	purchase = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.5, pitchMin = 1.6, pitchMax = 1.6 },
-	ui_click = { id = "rbxasset://sounds/button.wav", volume = 0.4, pitchMin = 1, pitchMax = 1 },
-	error = { id = "rbxasset://sounds/button.wav", volume = 0.4, pitchMin = 0.6, pitchMax = 0.6 },
-	zone = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.6, pitchMin = 0.5, pitchMax = 0.5 },
+	-- Hits (every swing that lands): short and quiet, they repeat hundreds of times.
+	hit_soil = def(THUD, 0.55, 0.5, 0.62, "Golpe en tierra / césped"),
+	hit_rock = def(COLLIDE, 0.45, 0.72, 0.86, "Golpe en roca"),
+	hit_ore = def(COLLIDE, 0.5, 1.1, 1.25, "Golpe en mineral (metálico)"),
+	hit_crystal = def(PING, 0.22, 1.7, 2.0, "Golpe en cristal (tintineo)"),
+	hit_lava = def(COLLIDE, 0.45, 0.55, 0.65, "Golpe en basalto / obsidiana"),
+	hit_dense = def(COLLIDE, 0.5, 0.45, 0.55, "Golpe en roca abisal / núcleo (grave)"),
+	-- Breaks (the cell gives way): lower and fuller than the hit.
+	break_soil = def(THUD, 0.8, 0.38, 0.45, "Rotura de tierra"),
+	break_rock = def(COLLIDE, 0.7, 0.5, 0.6, "Rotura de roca"),
+	break_ore = def(COLLIDE, 0.75, 0.85, 0.95, "Rotura de veta de mineral"),
+	break_crystal = def(PING, 0.4, 1.2, 1.35, "Rotura de cristal"),
+	-- Tool swings.
+	swing_light = def(SWOOSH, 0.2, 1.2, 1.4, "Movimiento de pala"),
+	swing_heavy = def(SWOOSH, 0.25, 0.9, 1.05, "Movimiento de pico"),
+	drill = def(CLICK, 0.3, 0.7, 0.8, "Taladro"),
+	plasma = def(PING, 0.2, 2.0, 2.3, "Excavador de plasma"),
+	too_hard = def(COLLIDE, 0.5, 1.6, 1.7, "Rebote: material demasiado duro"),
+	-- Discoveries, by rarity: each tier must be clearly distinct from ordinary hits.
+	discover_rare = def(PING, 0.5, 1.0, 1.0, "Descubrimiento raro"),
+	discover_epic = def(PING, 0.65, 0.8, 0.8, "Descubrimiento épico"),
+	discover_legendary = def(PING, 0.85, 0.6, 0.6, "Descubrimiento legendario"),
+	geode_open = def(PING, 0.6, 1.35, 1.35, "Apertura de geoda"),
+	fossil_extract = def(THUD, 0.7, 0.8, 0.8, "Extracción de fósil"),
+	cave_open = def(SPLASH, 0.35, 0.5, 0.5, "Abrir una cueva (eco de aire)"),
+	-- UI.
+	pickup = def(PING, 0.18, 1.8, 2.0, "Recoger mineral"),
+	sell = def(PING, 0.5, 1.3, 1.3, "Venta"),
+	purchase = def(PING, 0.5, 1.6, 1.6, "Compra"),
+	ui_click = def(BUTTON, 0.4, 1, 1, "Botón"),
+	error = def(BUTTON, 0.4, 0.6, 0.6, "Error"),
+	zone = def(PING, 0.6, 0.5, 0.5, "Nueva zona"),
+	-- Kept for compatibility with older keys used in Resources.lua.
+	dig_soil = def(THUD, 0.55, 0.5, 0.62, "(alias) golpe en tierra"),
+	dig_rock = def(COLLIDE, 0.45, 0.72, 0.86, "(alias) golpe en roca"),
+	dig_ore = def(COLLIDE, 0.5, 1.1, 1.25, "(alias) golpe en mineral"),
+	dig_crystal = def(PING, 0.22, 1.7, 2.0, "(alias) golpe en cristal"),
 }
 
 return Sounds

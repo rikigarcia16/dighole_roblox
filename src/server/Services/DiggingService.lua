@@ -3,7 +3,7 @@
 --
 -- The client only says "I hit this point" (position + surface normal). The server decides
 -- everything else: which cell is hit, whether the player may dig there, tool cooldown, reach,
--- line of sight, energy, damage per cell, what breaks, what is collected and how the terrain
+-- line of sight, damage per cell, what breaks, what is collected and how the terrain
 -- changes. Terrain writes replicate to every client automatically, so all players see the same
 -- hole and collide with the same geometry.
 
@@ -23,7 +23,6 @@ local PlotService = require(script.Parent.PlotService)
 local TerrainChunkService = require(script.Parent.TerrainChunkService)
 local InventoryService = require(script.Parent.InventoryService)
 local EquipmentService = require(script.Parent.EquipmentService)
-local EnergyService = require(script.Parent.EnergyService)
 local StateService = require(script.Parent.StateService)
 local SpecialsService = require(script.Parent.SpecialsService)
 local FxService = require(script.Parent.FxService)
@@ -166,21 +165,13 @@ local function handleDig(player: Player, position: any, normal: any)
 				"too_hard",
 				3
 			)
-			FxService.broadcast(player, targetCenter, blockedBy.id, false, tool.id, nil)
+			FxService.broadcast(player, targetCenter, blockedBy.id, false, tool.id, nil, -1)
 		end
 		return
 	end
 
-	if not EnergyService.consume(player, tool.energyCost) then
-		StateService.notify(
-			player,
-			"error",
-			"¡Sin energía! Vuelve a la superficie para recargar la batería.",
-			"no_energy",
-			3
-		)
-		return
-	end
+	-- Design decision: ordinary digging never spends battery. The battery is reserved for special
+	-- equipment (detectors, lights, special tools) so it never forces a trip back to the surface.
 	lastHit[player] = now
 
 	-- Apply damage.
@@ -262,14 +253,24 @@ local function handleDig(player: Player, position: any, normal: any)
 		StateService.push(player)
 	end
 
+	-- Progress of the aimed cell (drives the client's hardness bar).
+	local targetKey = Grid.key(tx, td, tz)
+	local progress = 0
 	local targetResource = hits[1].resource
+	for _, hit in hits do
+		if hit.key == targetKey then
+			targetResource = hit.resource
+			progress = if plot.dug[targetKey] then 1 else (plot.damage[targetKey] or 0) / hit.resource.hardness
+		end
+	end
 	FxService.broadcast(
 		player,
 		targetCenter,
 		targetResource.id,
 		#broken > 0,
 		tool.id,
-		if best and Resources.isRareOrBetter(best) then best.id else nil
+		if best and Resources.isRareOrBetter(best) then best.id else nil,
+		progress
 	)
 end
 

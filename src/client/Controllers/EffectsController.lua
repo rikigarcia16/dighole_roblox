@@ -12,8 +12,14 @@ local Resources = require(ReplicatedStorage.Shared.Config.Resources)
 local Tools = require(ReplicatedStorage.Shared.Config.Tools)
 local Sounds = require(ReplicatedStorage.Shared.Config.Sounds)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local DigFeel = require(ReplicatedStorage.Shared.Config.DigFeel)
+local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 
 local EffectsController = {}
+-- (position, fraction) the server reported for the cell the local player hit
+EffectsController.progressReported = Signal.new()
+-- (resource) an epic/legendary discovery by the local player: UI shows a banner
+EffectsController.bigDiscovery = Signal.new()
 
 local localPlayer = Players.LocalPlayer
 local DEBRIS_POOL = 48
@@ -46,7 +52,8 @@ function EffectsController.swing(character: Model?, animation: string)
 	if not motor then
 		return
 	end
-	local duration = if animation == "drill" then 0.14 elseif animation == "chop" then 0.3 else 0.26
+	local timing = DigFeel.Timing[animation] or DigFeel.Timing.swing
+	local duration = timing.duration
 	swings[motor] = { motor = motor, start = os.clock(), duration = duration, kind = animation }
 end
 
@@ -89,18 +96,27 @@ local function makeDebrisPool()
 	end
 end
 
-local function spawnDebris(position: Vector3, resource: Resources.Resource, count: number)
+local function spawnDebris(
+	position: Vector3,
+	resource: Resources.Resource,
+	count: number,
+	preset: DigFeel.Preset,
+	direction: Vector3?
+)
+	-- Fragments fly out of the surface (along its normal when known), never collide and fade out.
+	local out = direction or Vector3.yAxis
 	for _ = 1, count do
 		local d = debris[debrisCursor]
 		debrisCursor = debrisCursor % DEBRIS_POOL + 1
-		local size = 0.35 + math.random() * 0.5
-		d.part.Size = Vector3.new(size, size, size)
+		local size = preset.debrisSize * (0.7 + math.random() * 0.6)
+		d.part.Size = Vector3.new(size, size * (0.6 + math.random() * 0.5), size)
 		d.part.Color = resource.color
-		d.part.Material = if resource.isOre then Enum.Material.SmoothPlastic else Enum.Material.Slate
+		d.part.Material = preset.debrisMaterial
 		d.part.Transparency = 0
 		d.part.CFrame =
-			CFrame.new(position + Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 2)
-		d.velocity = Vector3.new((math.random() - 0.5) * 18, 10 + math.random() * 12, (math.random() - 0.5) * 18)
+			CFrame.new(position + Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 1.5)
+		local spread = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 12
+		d.velocity = out * (8 + math.random() * 8) + spread + Vector3.new(0, 6, 0)
 		d.spin = CFrame.Angles(math.random() * 0.3, math.random() * 0.3, math.random() * 0.3)
 		d.ends = os.clock() + 0.55 + math.random() * 0.3
 		d.active = true
@@ -222,36 +238,93 @@ function EffectsController.playUi(soundKey: string)
 end
 
 -- Public effects ---------------------------------------------------------------------------------
-function EffectsController.hit(position: Vector3, resourceId: string, broke: boolean)
-	local resource = Resources.get(resourceId)
-	if not resource then
-		return
-	end
-	local e = nextEmitter(position)
-	e.dust.Color = ColorSequence.new(resource.color)
-	e.dust:Emit(if broke then 10 else 5)
-	if resource.isOre then
-		e.sparkle.Color = ColorSequence.new(resource.color)
-		e.sparkle:Emit(if broke then 6 else 2)
-	end
-	spawnDebris(position, resource, if broke then 6 else 2)
-	EffectsController.playAt(resource.sound, position)
+
+local function presetFor(resource: Resources.Resource): DigFeel.Preset
+	return DigFeel.Presets[resource.effect] or DigFeel.Presets[DigFeel.DefaultPreset]
 end
 
-function EffectsController.discovery(position: Vector3, resourceId: string)
+-- A tool landing on a material: discreet, it repeats hundreds of times.
+function EffectsController.impact(position: Vector3, resource: Resources.Resource, normal: Vector3?)
+	local preset = presetFor(resource)
+	local e = nextEmitter(position)
+	e.dust.Color = ColorSequence.new(resource.color)
+	e.dust:Emit(preset.dust)
+	if preset.sparkle then
+		e.sparkle.Color = ColorSequence.new(resource.color, Color3.new(1, 1, 1))
+		e.sparkle:Emit(2)
+	end
+	spawnDebris(position, resource, 1, preset, normal)
+	EffectsController.playAt(preset.hitSound, position)
+end
+
+-- The cell gives way: fuller sound, more dust, a burst of fragments in the material colour.
+function EffectsController.breakBurst(position: Vector3, resource: Resources.Resource)
+	local preset = presetFor(resource)
+	local e = nextEmitter(position)
+	e.dust.Color = ColorSequence.new(resource.color)
+	e.dust:Emit(preset.breakDust)
+	if preset.sparkle then
+		e.sparkle.Color = ColorSequence.new(resource.color, Color3.new(1, 1, 1))
+		e.sparkle:Emit(6)
+	end
+	spawnDebris(position, resource, preset.debris, preset, nil)
+	EffectsController.playAt(preset.breakSound, position)
+end
+
+-- The tool bounces off a material it cannot damage: a sharp spark, no dust.
+function EffectsController.bounce(position: Vector3, _resource: Resources.Resource)
+	local e = nextEmitter(position)
+	e.sparkle.Color = ColorSequence.new(Color3.fromRGB(255, 230, 160))
+	e.sparkle:Emit(4)
+	EffectsController.playAt("too_hard", position)
+end
+
+-- Discoveries escalate with rarity: rare = glint + chime; epic = + light flash + banner;
+-- legendary = + its own sound and a brief glow at the screen edges (UIController).
+function EffectsController.discovery(position: Vector3, resourceId: string, mine: boolean)
 	local resource = Resources.get(resourceId)
 	if not resource then
 		return
 	end
+	local order = Resources.Rarities[resource.rarity].order
 	local e = nextEmitter(position)
 	e.sparkle.Color = ColorSequence.new(resource.color, Color3.new(1, 1, 1))
-	e.sparkle:Emit(40)
-	e.light.Color = resource.color
-	e.light.Brightness = 4
-	TweenService
-		:Create(e.light, TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Brightness = 0 })
-		:Play()
-	EffectsController.playAt(resource.sound, position)
+	e.sparkle:Emit(if order >= 5 then 60 elseif order >= 4 then 40 else 20)
+	if order >= 4 then
+		e.light.Color = resource.color
+		e.light.Brightness = if order >= 5 then 6 else 3
+		TweenService
+			:Create(e.light, TweenInfo.new(1.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Brightness = 0 })
+			:Play()
+	end
+	local sound = if order >= 5 then "discover_legendary" elseif order >= 4 then "discover_epic" else "discover_rare"
+	EffectsController.playAt(sound, position)
+	if mine and order >= 4 then
+		EffectsController.bigDiscovery:Fire(resource)
+	end
+end
+
+-- Special moments sent by the server (SpecialFx).
+local SPECIAL_SOUNDS = {
+	geode = "geode_open",
+	fossil = "fossil_extract",
+	chest = "discover_rare",
+	cave = "cave_open",
+	landmark = "discover_epic",
+}
+
+function EffectsController.special(position: Vector3, kind: string, resourceId: string?)
+	local resource = resourceId and Resources.get(resourceId)
+	local color = if resource then resource.color else Color3.fromRGB(255, 230, 180)
+	if kind ~= "cave" then
+		local e = nextEmitter(position)
+		e.sparkle.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
+		e.sparkle:Emit(if kind == "geode" then 45 else 25)
+		e.light.Color = color
+		e.light.Brightness = 3
+		TweenService:Create(e.light, TweenInfo.new(1.2), { Brightness = 0 }):Play()
+	end
+	EffectsController.playAt(SPECIAL_SOUNDS[kind] or "discover_rare", position)
 end
 
 function EffectsController.start()
@@ -298,19 +371,42 @@ function EffectsController.start()
 			resourceId: string,
 			broke: boolean,
 			toolId: string?,
-			bestId: string?
+			bestId: string?,
+			progress: number?
 		)
-			-- toolId is nil for non-dig effects (e.g. opening a chest): no swing then.
+			local resource = Resources.get(resourceId)
 			local tool = toolId and Tools.get(toolId)
-			if player ~= localPlayer and tool then
-				EffectsController.swing(player.Character, tool.animation)
+			local mine = player == localPlayer
+			if mine then
+				-- The swing and the hit were already predicted locally (DigController).
+				if progress and progress >= 0 then
+					EffectsController.progressReported:Fire(position, if broke then 0 else progress)
+				end
+			else
+				if tool then
+					EffectsController.swing(player.Character, tool.animation)
+				end
+				if resource then
+					if progress and progress < 0 then
+						EffectsController.bounce(position, resource)
+					else
+						EffectsController.impact(position, resource, nil)
+					end
+				end
 			end
-			EffectsController.hit(position, resourceId, broke)
+			if broke and resource then
+				EffectsController.breakBurst(position, resource)
+			end
 			if bestId then
-				EffectsController.discovery(position, bestId)
+				EffectsController.discovery(position, bestId, mine)
 			end
 		end
 	)
+
+	Remotes.event("SpecialFx").OnClientEvent
+		:Connect(function(_player: Player, position: Vector3, kind: string, resourceId: string?)
+			EffectsController.special(position, kind, resourceId)
+		end)
 end
 
 return EffectsController

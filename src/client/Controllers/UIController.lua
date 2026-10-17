@@ -132,7 +132,9 @@ function UIController.start()
 	})
 	left:FindFirstChildOfClass("UIListLayout").VerticalAlignment = Enum.VerticalAlignment.Top
 	local _, backpackFill, backpackLabel = bar(left, "Backpack", 1, Theme.backpack)
-	local _, energyFill, energyLabel = bar(left, "Energy", 2, Theme.energy)
+	local energyFrame, energyFill, energyLabel = bar(left, "Energy", 2, Theme.energy)
+	-- Ordinary digging does not use energy; the bar returns with equipment that consumes it.
+	energyFrame.Visible = false
 	local toolFrame, toolLabel = pill(left, "Tool", UDim2.new(), Vector2.zero, UDim2.new(1, 0, 0, 30), Theme.text)
 	toolFrame.LayoutOrder = 3
 	local objective = Build("Frame", {
@@ -669,6 +671,51 @@ function UIController.start()
 		end
 	end)
 	Remotes.event("Notify").OnClientEvent:Connect(toast)
+
+	-- Epic / legendary discoveries: a short line under the zone banner; legendary also glows at the
+	-- screen edges for a moment. Rare finds stay in the world (glint + chime) to avoid UI spam.
+	local rareBanner = Build.label({
+		Name = "RareBanner",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.4),
+		Size = UDim2.fromOffset(520, 44),
+		MaxTextSize = 34,
+		TextTransparency = 1,
+		Parent = gui,
+	})
+	local rareStroke = Build.textStroke()
+	rareStroke.Parent = rareBanner
+	local edgeGlow = Build("Frame", {
+		Name = "EdgeGlow",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Active = false,
+		ZIndex = 0,
+		Parent = gui,
+	})
+	local edgeStroke = Instance.new("UIStroke")
+	edgeStroke.Thickness = 18
+	edgeStroke.Transparency = 1
+	edgeStroke.Parent = edgeGlow
+	local rareToken = 0
+	EffectsController.bigDiscovery:Connect(function(resource)
+		rareToken += 1
+		local token = rareToken
+		local rarity = Resources.Rarities[resource.rarity]
+		rareBanner.Text = string.format("¡%s! %s", string.upper(rarity.name), resource.name)
+		rareBanner.TextColor3 = rarity.color
+		rareBanner.TextTransparency = 0
+		if rarity.order >= 5 then
+			edgeStroke.Color = resource.color
+			edgeStroke.Transparency = 0.35
+			TweenService:Create(edgeStroke, TweenInfo.new(1.6, Enum.EasingStyle.Quad), { Transparency = 1 }):Play()
+		end
+		task.delay(2.2, function()
+			if token == rareToken then
+				TweenService:Create(rareBanner, TweenInfo.new(0.5), { TextTransparency = 1 }):Play()
+			end
+		end)
+	end)
 
 	DigController.dug:Connect(function()
 		if not hasDug then
