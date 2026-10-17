@@ -776,6 +776,58 @@ test("profile v2 data migrates to v3 with its collection sanitised", function()
 	eq(r.stats.fossilsExtracted, 0)
 end)
 
+-- DataStores store JSON: every table must be a pure array (1..n) or have only string keys, and
+-- numbers must be finite. This simulates a save + load through those rules.
+local function dataStoreRoundTrip(value, path)
+	path = path or "profile"
+	local t = type(value)
+	if t == "number" then
+		ok(value == value and value ~= math.huge and value ~= -math.huge, path .. " is not a finite number")
+		return value
+	elseif t == "string" or t == "boolean" then
+		return value
+	elseif t ~= "table" then
+		error(path .. " has a non-serialisable " .. t, 0)
+	end
+	local count, stringKeys, maxIndex = 0, 0, 0
+	for k in value do
+		count += 1
+		if type(k) == "string" then
+			stringKeys += 1
+		elseif type(k) == "number" and k == math.floor(k) and k >= 1 then
+			maxIndex = math.max(maxIndex, k)
+		else
+			error(path .. " has an invalid key " .. tostring(k), 0)
+		end
+	end
+	ok(stringKeys == 0 or stringKeys == count, path .. " mixes array and string keys")
+	ok(stringKeys > 0 or maxIndex == count, path .. " is a sparse array")
+	local copy = {}
+	for k, v in value do
+		copy[k] = dataStoreRoundTrip(v, path .. "." .. tostring(k))
+	end
+	return copy
+end
+
+test("block counter: server stat survives save and load, never derived from the hole", function()
+	local p = ProfileSchema.default(42)
+	p.stats.cellsDug = 1247
+	p.plot.dug = CellSet.encode({ [1] = true, [2] = true, [3] = true }) -- only 3 cells still open
+	p.collection.fossils.eyeless_fish = { count = 2, firstDepth = 93 }
+	p.quests.completed.dig_10 = true
+	table.insert(p.plot.openedChests, "s4_k1")
+	local loaded = ProfileSchema.reconcile(dataStoreRoundTrip(p), 1)
+	eq(loaded.stats.cellsDug, 1247, "counter preserved")
+	eq(loaded.collection.fossils.eyeless_fish.count, 2)
+	eq(loaded.plot.openedChests[1], "s4_k1")
+	-- a second round trip is stable
+	local again = ProfileSchema.reconcile(dataStoreRoundTrip(loaded), 1)
+	eq(again.stats.cellsDug, 1247)
+	-- the whole default and loaded profiles are DataStore-safe
+	dataStoreRoundTrip(ProfileSchema.default(7))
+	dataStoreRoundTrip(again)
+end)
+
 print("Terrain writes (fake Terrain)")
 local Enum = H.Enum
 do
