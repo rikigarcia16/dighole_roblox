@@ -9,6 +9,7 @@ local order = {
 	"AmbienceController",
 	"DigController",
 	"DetectorController",
+	"CounterController",
 	"UIController",
 	"SoundTestController",
 }

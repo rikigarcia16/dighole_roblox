@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Resources = require(ReplicatedStorage.Shared.Config.Resources)
 local Story = require(ReplicatedStorage.Shared.Config.Story)
+local JournalView = require(ReplicatedStorage.Shared.Util.JournalView)
 local Fossils = require(ReplicatedStorage.Shared.Config.Fossils)
 local Zones = require(ReplicatedStorage.Shared.Config.Zones)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -15,7 +16,12 @@ local Modal = require(script.Parent.Modal)
 
 local InventoryUI = {}
 
-type Deps = { getState: () -> any, playUi: (key: string) -> (), openNote: (noteId: string) -> () }
+type Deps = {
+	getState: () -> any,
+	playUi: (key: string) -> (),
+	openNote: (noteId: string) -> (),
+	openText: (title: string, body: string) -> (),
+}
 
 local function swatch(parent: Instance, resource: Resources.Resource, discovered: boolean): Frame
 	local frame = Build("Frame", {
@@ -186,6 +192,34 @@ function InventoryUI.new(parent: Instance, deps: Deps)
 			summary.Text = string.format("%d/%d especies", found, #Fossils.List)
 			footer.Text = "Los fósiles se extraen manteniendo F junto a ellos. Los repetidos dan fragmentos."
 		elseif currentTab == "journal" then
+			-- Discoveries that grow with later findings come first (the Counter...)
+			for order, entry in JournalView.entries(state) do
+				local r = row(-100 + order)
+				Build("Frame", {
+					Size = UDim2.fromOffset(40, 40),
+					BackgroundColor3 = Color3.fromRGB(30, 40, 58),
+					Parent = r,
+					[Build.Children] = { Build.corner(8), Build.stroke(Color3.fromRGB(90, 220, 235), 2) },
+				})
+				Build.label({
+					Text = string.format(
+						"<b>%s</b>\n%s",
+						entry.title,
+						(entry.body:sub(1, 70):gsub("\n.*", "")) .. "…"
+					),
+					RichText = true,
+					Font = Theme.bodyFont,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					Size = UDim2.new(1, -140, 1, 0),
+					MaxTextSize = 15,
+					Parent = r,
+				})
+				local readButton =
+					Build.button("Leer", Color3.fromRGB(60, 110, 140), { Size = UDim2.fromOffset(76, 38), Parent = r })
+				readButton.Activated:Connect(function()
+					deps.openText(entry.title, entry.body)
+				end)
+			end
 			local read = 0
 			for order, noteId in Story.NoteOrder do
 				local note = Story.Notes[noteId]

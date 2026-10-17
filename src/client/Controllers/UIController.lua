@@ -28,6 +28,7 @@ local ClientState = require(script.Parent.ClientState)
 local DigController = require(script.Parent.DigController)
 local AmbienceController = require(script.Parent.AmbienceController)
 local EffectsController = require(script.Parent.EffectsController)
+local CounterController = require(script.Parent.CounterController)
 
 local UIController = {}
 
@@ -462,15 +463,17 @@ function UIController.start()
 	noteClose.Activated:Connect(function()
 		note.Visible = false
 	end)
-	local function openNote(noteId: string)
-		local data = Story.Notes[noteId]
-		if not data then
-			return
-		end
-		noteTitle.Text = data.title
-		noteBody.Text = data.body
+	local function openText(title: string, body: string)
+		noteTitle.Text = title
+		noteBody.Text = body
 		note.Visible = true
 		EffectsController.playUi("ui_click")
+	end
+	local function openNote(noteId: string)
+		local data = Story.Notes[noteId]
+		if data then
+			openText(data.title, data.body)
+		end
 	end
 	Remotes.event("ShowNote").OnClientEvent:Connect(openNote)
 
@@ -479,8 +482,10 @@ function UIController.start()
 		return ClientState.data
 	end
 	local shop = ShopUI.new(gui, { getState = getState, notify = toast, playUi = EffectsController.playUi })
-	local inventory =
-		InventoryUI.new(gui, { getState = getState, playUi = EffectsController.playUi, openNote = openNote })
+	local inventory = InventoryUI.new(
+		gui,
+		{ getState = getState, playUi = EffectsController.playUi, openNote = openNote, openText = openText }
+	)
 
 	backpackButton.Activated:Connect(function()
 		EffectsController.playUi("ui_click")
@@ -785,6 +790,23 @@ function UIController.start()
 			end
 		end)
 	end)
+
+	-- Narrative lines (the Counter): calm, centred, no rarity colour.
+	local function showNarrative(text: string)
+		rareToken += 1
+		local token = rareToken
+		rareBanner.Text = text
+		rareBanner.TextColor3 = Color3.fromRGB(200, 232, 255)
+		rareBanner.TextTransparency = 1
+		TweenService:Create(rareBanner, TweenInfo.new(1.2), { TextTransparency = 0 }):Play()
+		task.delay(4, function()
+			if token == rareToken then
+				TweenService:Create(rareBanner, TweenInfo.new(1.2), { TextTransparency = 1 }):Play()
+			end
+		end)
+	end
+	EffectsController.narrative:Connect(showNarrative)
+	CounterController.narrative:Connect(showNarrative)
 
 	DigController.dug:Connect(function()
 		if not hasDug then

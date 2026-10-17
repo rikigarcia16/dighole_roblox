@@ -771,7 +771,7 @@ test("profile v2 data migrates to v3 with its collection sanitised", function()
 			fossils = { eyeless_fish = { count = 3, firstDepth = 80 }, fake = { count = 1 }, ringed_worm = "x" },
 		},
 	}, 1)
-	eq(r.version, 3)
+	eq(r.version, ProfileSchema.CURRENT_VERSION)
 	eq(r.inventory.fossil, 2, "old fossil items kept")
 	eq(r.collection.fossils.eyeless_fish.count, 3)
 	eq(r.collection.fossils.fake, nil)
@@ -878,6 +878,100 @@ test("counter room: sealed, two doorways, guided galleries, nothing random insid
 		not Anomalies.isSealed(Anomalies.CounterDoorways[1].x, room.d1, Anomalies.CounterDoorways[1].z0),
 		"doorway diggable"
 	)
+end)
+
+test("counter puzzle: per-plot solution, never starts solved, rings lock, solves in <= 15 turns", function()
+	local CounterPuzzle = H.module("ServerScriptService", "Server", "Logic", "CounterPuzzle")
+	local differentSolutions = {}
+	for seed = 1, 60 do
+		local solution = CounterPuzzle.solution(seed)
+		differentSolutions[table.concat(solution, ",")] = true
+		ok(not (solution[1] == solution[2] and solution[2] == solution[3]), "three identical glyphs")
+		local state = CounterPuzzle.initial(seed)
+		for ring = 1, 3 do
+			ok(not CounterPuzzle.isLocked(seed, state, ring), "ring starts unlocked")
+		end
+		local turns = 0
+		while not state.solved and turns < 40 do
+			for ring = 1, 3 do
+				local changed = CounterPuzzle.rotate(seed, state, ring)
+				if changed then
+					turns += 1
+				end
+			end
+		end
+		ok(state.solved and turns <= 15, "solved in " .. turns .. " turns")
+		local changed = CounterPuzzle.rotate(seed, state, 1)
+		ok(not changed, "nothing turns once solved")
+	end
+	local count = 0
+	for _ in differentSolutions do
+		count += 1
+	end
+	ok(count > 30, "solutions vary between plots: " .. count)
+	-- a locked ring cannot be turned away from its glyph
+	local seed = 11
+	local state = CounterPuzzle.initial(seed)
+	while not CounterPuzzle.isLocked(seed, state, 1) do
+		CounterPuzzle.rotate(seed, state, 1)
+	end
+	local before = state.rings[1]
+	ok(not CounterPuzzle.rotate(seed, state, 1) and state.rings[1] == before, "locked ring stays")
+	-- sanitize never un-solves and repairs garbage
+	eq(CounterPuzzle.sanitize(seed, { solved = true }).solved, true)
+	local repaired = CounterPuzzle.sanitize(seed, { rings = { 99, "x" } })
+	ok(#repaired.rings == 3 and repaired.rings[1] >= 1 and repaired.rings[1] <= 6, "repaired")
+	ok(not CounterPuzzle.rotate(seed, state, 4) and not CounterPuzzle.rotate(seed, state, 1.5), "invalid ring ignored")
+end)
+
+test("journal: entries and paragraphs follow discoveries, numbers are filled in", function()
+	local JournalView = H.module("ReplicatedStorage", "Shared", "Util", "JournalView")
+	local p = ProfileSchema.default(1)
+	eq(#JournalView.entries(p), 0, "nothing before finding the room")
+	p.anomalies.counter.found = true
+	local entries = JournalView.entries(p)
+	eq(#entries, 1)
+	ok(entries[1].body:find("se callo") or entries[1].body:find("se calló"), "unsolved text")
+	p.anomalies.counter.solved = true
+	p.anomalies.counter.solvedCount = 1247
+	p.stats.cellsDug = 1300
+	entries = JournalView.entries(p)
+	local solved
+	for _, e in entries do
+		if e.id == "counter_solved" then
+			solved = e
+		end
+	end
+	ok(solved and solved.body:find("1247") and solved.body:find("1300"), "numbers filled")
+	ok(not solved.body:find("huella"), "imprint paragraph hidden until the fossil is found")
+	p.collection.fossils.shovel_imprint = { count = 1, firstDepth = 120 }
+	for _, e in JournalView.entries(p) do
+		if e.id == "counter_solved" then
+			ok(e.body:find("huella"), "imprint paragraph appears")
+		end
+	end
+	ok(not JournalView.holds({ somethingNew = true }, p), "unknown conditions hide content")
+end)
+
+test("profile v3 data migrates to v4; counter and mobility sanitised", function()
+	local r = ProfileSchema.reconcile({
+		version = 3,
+		clues = { stone_tablet = true },
+		anomalies = { counter = { found = true, solved = true, solvedCount = 812.7, rings = { 2, 9 } } },
+		mobility = {
+			ropes = 500,
+			stations = { { id = "s50", cx = 3, d = 50, cz = 4 }, { id = "s50", cx = 1, d = 1, cz = 1 }, { id = 5 } },
+			placedRopes = { { cx = 1, d = 60, cz = 2, length = 18 }, "bad" },
+		},
+	}, 1)
+	eq(r.version, 4)
+	ok(r.clues.stone_tablet, "tablet clue kept")
+	ok(r.anomalies.counter.solved and r.anomalies.counter.solvedCount == 812, "counter kept")
+	eq(#r.anomalies.counter.rings, 0, "invalid rings dropped (restarted from seed)")
+	eq(r.mobility.ropes, 99, "ropes clamped")
+	eq(#r.mobility.stations, 1, "duplicate / invalid stations dropped")
+	eq(#r.mobility.placedRopes, 1)
+	dataStoreRoundTrip(r)
 end)
 
 print("Terrain writes (fake Terrain)")

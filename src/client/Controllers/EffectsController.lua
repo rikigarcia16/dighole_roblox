@@ -20,6 +20,8 @@ local EffectsController = {}
 EffectsController.progressReported = Signal.new()
 -- (resource) an epic/legendary discovery by the local player: UI shows a banner
 EffectsController.bigDiscovery = Signal.new()
+-- (text) a short centred line for narrative moments
+EffectsController.narrative = Signal.new()
 
 local localPlayer = Players.LocalPlayer
 local DEBRIS_POOL = 48
@@ -311,12 +313,17 @@ local SPECIAL_SOUNDS = {
 	chest = "discover_rare",
 	cave = "cave_open",
 	landmark = "discover_epic",
+	counter_found = "counter_found",
+	counter_lock = "counter_lock",
 }
 
 function EffectsController.special(position: Vector3, kind: string, resourceId: string?)
 	local resource = resourceId and Resources.get(resourceId)
 	local color = if resource then resource.color else Color3.fromRGB(255, 230, 180)
-	if kind ~= "cave" then
+	if kind == "counter_found" then
+		EffectsController.narrative:Fire("UNA SALA QUE NADIE EXCAVÓ")
+	end
+	if kind ~= "cave" and kind ~= "counter_found" then
 		local e = nextEmitter(position)
 		e.sparkle.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
 		e.sparkle:Emit(if kind == "geode" then 45 else 25)

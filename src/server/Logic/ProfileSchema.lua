@@ -12,7 +12,7 @@ local Fossils = require(Shared.Config.Fossils)
 
 local ProfileSchema = {}
 
-ProfileSchema.CURRENT_VERSION = 3
+ProfileSchema.CURRENT_VERSION = 4
 
 export type Profile = {
 	version: number,
@@ -25,6 +25,15 @@ export type Profile = {
 	zonesReached: { [string]: boolean },
 	clues: { [string]: boolean }, -- story notes read
 	collection: { fossils: { [string]: { count: number, firstDepth: number } } },
+	anomalies: {
+		counter: { found: boolean, solved: boolean, rings: { number }, solvedCount: number, solvedAt: number },
+	},
+	mobility: {
+		ropes: number, -- ropes carried
+		placedRopes: { { cx: number, d: number, cz: number, length: number } },
+		stations: { { id: string, cx: number, d: number, cz: number } },
+		rescues: number,
+	},
 	quests: { index: number, completed: { [string]: boolean } },
 	stats: {
 		cellsDug: number,
@@ -60,6 +69,8 @@ function ProfileSchema.default(seed: number): Profile
 		zonesReached = { garden = true },
 		clues = {},
 		collection = { fossils = {} },
+		anomalies = { counter = { found = false, solved = false, rings = {}, solvedCount = 0, solvedAt = 0 } },
+		mobility = { ropes = 0, placedRopes = {}, stations = {}, rescues = 0 },
 		quests = { index = 1, completed = {} },
 		stats = {
 			cellsDug = 0,
@@ -83,6 +94,9 @@ local migrations: { [number]: (any) -> () } = {
 	-- v2 -> v3: fossil collection added; the old "Fósil raro" find item became "Fragmento fósil"
 	-- (same id, still sellable), so inventories keep their items.
 	[2] = function(_data) end,
+	-- v3 -> v4: anomalies (the Counter) and mobility (ropes, lift stations, rescues). Players who
+	-- had already read the stone tablet keep the clue; its location simply moved into the room.
+	[3] = function(_data) end,
 }
 
 local function finiteNonNegative(value: any, fallback: number): number
@@ -169,6 +183,58 @@ function ProfileSchema.reconcile(data: any, seed: number): Profile
 					count = math.max(1, math.floor(finiteNonNegative(entry.count, 1))),
 					firstDepth = math.floor(finiteNonNegative(entry.firstDepth, 0)),
 				}
+			end
+		end
+	end
+
+	if type(data.anomalies) == "table" and type(data.anomalies.counter) == "table" then
+		local c = data.anomalies.counter
+		local counter = profile.anomalies.counter
+		counter.found = c.found == true
+		counter.solved = c.solved == true
+		counter.solvedCount = math.floor(finiteNonNegative(c.solvedCount, 0))
+		counter.solvedAt = math.floor(finiteNonNegative(c.solvedAt, 0))
+		if type(c.rings) == "table" then
+			for i = 1, 3 do
+				local v = c.rings[i]
+				if type(v) == "number" and v >= 1 and v <= 6 and v == math.floor(v) then
+					counter.rings[i] = v
+				else
+					table.clear(counter.rings) -- incomplete: AnomalyService restarts from the seed
+					break
+				end
+			end
+		end
+	end
+
+	if type(data.mobility) == "table" then
+		local m = data.mobility
+		local mobility = profile.mobility
+		mobility.ropes = math.clamp(math.floor(finiteNonNegative(m.ropes, 0)), 0, 99)
+		mobility.rescues = math.floor(finiteNonNegative(m.rescues, 0))
+		local function cell(entry: any): boolean
+			return type(entry) == "table"
+				and type(entry.cx) == "number"
+				and type(entry.d) == "number"
+				and type(entry.cz) == "number"
+		end
+		if type(m.placedRopes) == "table" then
+			for _, rope in m.placedRopes do
+				if cell(rope) and type(rope.length) == "number" and #mobility.placedRopes < 24 then
+					table.insert(mobility.placedRopes, { cx = rope.cx, d = rope.d, cz = rope.cz, length = rope.length })
+				end
+			end
+		end
+		if type(m.stations) == "table" then
+			local seen = {}
+			for _, station in m.stations do
+				if cell(station) and type(station.id) == "string" and #station.id <= 24 and not seen[station.id] then
+					seen[station.id] = true
+					table.insert(
+						mobility.stations,
+						{ id = station.id, cx = station.cx, d = station.d, cz = station.cz }
+					)
+				end
 			end
 		end
 	end

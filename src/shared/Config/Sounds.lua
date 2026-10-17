@@ -56,6 +56,12 @@ local Sounds: { [string]: SoundDef } = {
 	geode_open = def(PING, 0.6, 1.35, 1.35, "Apertura de geoda"),
 	fossil_extract = def(THUD, 0.7, 0.8, 0.8, "Extracción de fósil"),
 	cave_open = def(SPLASH, 0.35, 0.5, 0.5, "Abrir una cueva (eco de aire)"),
+	-- The Counter. NEEDS ORIGINAL AUDIO: a deep three-knock rhythm and a low hum are its identity;
+	-- these built-in placeholders only make the timing testable.
+	counter_knock = def(COLLIDE, 0.9, 0.32, 0.36, "El Contador: golpe del ritmo (placeholder)"),
+	counter_lock = def(PING, 0.5, 0.55, 0.55, "El Contador: un anillo encaja"),
+	counter_hum = def(CLICK, 0.12, 0.22, 0.22, "El Contador: zumbido de la sala (placeholder, en bucle)"),
+	counter_found = def(SPLASH, 0.5, 0.35, 0.35, "Entrar en la sala del Contador"),
 	-- UI.
 	pickup = def(PING, 0.18, 1.8, 2.0, "Recoger mineral"),
 	sell = def(PING, 0.5, 1.3, 1.3, "Venta"),

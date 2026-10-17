@@ -14,6 +14,7 @@
 --   Notify(kind: string, text: string)              toast message
 --   ZoneEntered(zoneId: string, firstTime: boolean)
 --   SpecialFx(player, position, kind, resourceId?)  geode / fossil / chest / cave moments
+--   CounterSequence(model, count)                 play the Counter's reveal sequence
 --   FossilFound(speciesId, isNew, depth)          show the fossil card after an extraction
 --   ShowNote(noteId: string)                       open a story note (after server validation)
 
@@ -32,6 +33,7 @@ local EVENTS = {
 	"ShowNote",
 	"SpecialFx",
 	"FossilFound",
+	"CounterSequence",
 }
 local FUNCTIONS = { "Shop", "GetState" }
 

@@ -13,6 +13,7 @@ local order = {
 	"ShopService",
 	"QuestService",
 	"SpecialsService",
+	"AnomalyService",
 	"DiggingService",
 }
 

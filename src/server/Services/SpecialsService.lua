@@ -67,6 +67,30 @@ type PlotState = {
 
 local states: { [any]: PlotState } = {}
 
+-- Hooks for structure services (AnomalyService) so this file does not grow with every structure.
+local sectorBuiltHooks: { (any, Caves.Sector, Folder) -> () } = {}
+local systemRevealedHooks: { (any, number, number, Player?) -> () } = {}
+
+-- Called once per plot sector after its decoration exists: (plot, sector, folder).
+function SpecialsService.onSectorBuilt(callback: (any, Caves.Sector, Folder) -> ())
+	table.insert(sectorBuiltHooks, callback)
+end
+
+-- Called when a cave system is revealed: (plot, sectorIndex, system, player). `player` is nil when
+-- the reveal comes from rebuilding a saved plot (no notification should be shown then).
+function SpecialsService.onSystemRevealed(callback: (any, number, number, Player?) -> ())
+	table.insert(systemRevealedHooks, callback)
+end
+
+local function fireHooks(list: { any }, ...: any)
+	for _, callback in list do
+		local ok, err = pcall(callback, ...)
+		if not ok then
+			warn("[SpecialsService] hook failed:", err)
+		end
+	end
+end
+
 local NEIGHBORS = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } }
 
 local part = CaveProps.part
@@ -175,7 +199,14 @@ local function reveal(special: Special)
 	special.model:SetAttribute("Revealed", true)
 end
 
-local function revealSystem(state: PlotState, key: string): boolean
+local function revealSystem(
+	state: PlotState,
+	key: string,
+	plot: any,
+	sectorIndex: number,
+	system: number,
+	player: Player?
+): boolean
 	if state.revealedSystems[key] then
 		return false
 	end
@@ -186,6 +217,7 @@ local function revealSystem(state: PlotState, key: string): boolean
 			reveal(special)
 		end
 	end
+	fireHooks(systemRevealedHooks, plot, sectorIndex, system, player)
 	return true
 end
 
@@ -270,6 +302,7 @@ end
 
 local function buildSector(plot: any, state: PlotState, sector: Caves.Sector)
 	CaveProps.decorate(plot, sector, state.folder)
+	fireHooks(sectorBuiltHooks, plot, sector, state.folder)
 	for _, spot in sector.spots do
 		local systemKey = Caves.systemKey(sector.index, spot.system)
 		if not state.opened[spot.id] then
@@ -300,7 +333,7 @@ local function buildSector(plot: any, state: PlotState, sector: Caves.Sector)
 	-- Systems the player already opened in an earlier session.
 	for system in sector.systems do
 		if systemExposed(plot, sector, system) then
-			revealSystem(state, Caves.systemKey(sector.index, system))
+			revealSystem(state, Caves.systemKey(sector.index, system), plot, sector.index, system, nil)
 		end
 	end
 end
@@ -376,7 +409,7 @@ function SpecialsService.onCellsBroken(player: Player, plot: any, broken: { { cx
 				if system > 0 then
 					local sectorIndex = d // SECTOR
 					local key = Caves.systemKey(sectorIndex, system)
-					if revealSystem(state, key) then
+					if revealSystem(state, key, plot, sectorIndex, system, player) then
 						local sector = Caves.sector(plot.seed, sectorIndex)
 						local info = sector.systems[system]
 						if info and info.hasCave then
@@ -405,7 +438,7 @@ function SpecialsService.onCellsBroken(player: Player, plot: any, broken: { { cx
 									then "¡Has abierto una cueva! Algo brilla en la oscuridad..."
 									else "¡Has abierto una cueva!"
 							)
-						else
+						elseif info and not info.counter then -- the Counter is presented by AnomalyService
 							StateService.notify(player, "discovery", "La roca suena hueca... ¡una geoda!")
 						end
 						StateService.push(player)
@@ -649,11 +682,9 @@ local function extractFossil(player: Player, plot: any, special: Special)
 	FxService.special(player, model:GetPivot().Position, "fossil", "fossil")
 end
 
-local function readLandmark(player: Player, special: Special)
-	local noteId = special.noteId
-	if not noteId or not special.revealed then
-		return
-	end
+-- Reads a story note: first time pays its reward and records the clue. Used by landmarks and by
+-- structures such as the Counter's tablet.
+function SpecialsService.readNote(player: Player, noteId: string)
 	local note = Story.Notes[noteId]
 	local profile = PlayerDataService.get(player)
 	if not note or not profile then
@@ -675,6 +706,12 @@ local function readLandmark(player: Player, special: Special)
 		StateService.push(player)
 	end
 	Remotes.event("ShowNote"):FireClient(player, noteId)
+end
+
+local function readLandmark(player: Player, special: Special)
+	if special.noteId and special.revealed then
+		SpecialsService.readNote(player, special.noteId)
+	end
 end
 
 function SpecialsService.start()
