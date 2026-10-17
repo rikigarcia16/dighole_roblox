@@ -8,10 +8,11 @@ local Upgrades = require(Shared.Config.Upgrades)
 local Resources = require(Shared.Config.Resources)
 local Quests = require(Shared.Config.Quests)
 local Story = require(Shared.Config.Story)
+local Fossils = require(Shared.Config.Fossils)
 
 local ProfileSchema = {}
 
-ProfileSchema.CURRENT_VERSION = 2
+ProfileSchema.CURRENT_VERSION = 3
 
 export type Profile = {
 	version: number,
@@ -23,6 +24,7 @@ export type Profile = {
 	discoveries: { [string]: number }, -- resourceId -> total ever collected
 	zonesReached: { [string]: boolean },
 	clues: { [string]: boolean }, -- story notes read
+	collection: { fossils: { [string]: { count: number, firstDepth: number } } },
 	quests: { index: number, completed: { [string]: boolean } },
 	stats: {
 		cellsDug: number,
@@ -33,6 +35,7 @@ export type Profile = {
 		chestsOpened: number,
 		findsFound: number,
 		geodesOpened: number,
+		fossilsExtracted: number,
 	},
 	plot: {
 		seed: number,
@@ -56,6 +59,7 @@ function ProfileSchema.default(seed: number): Profile
 		discoveries = {},
 		zonesReached = { garden = true },
 		clues = {},
+		collection = { fossils = {} },
 		quests = { index = 1, completed = {} },
 		stats = {
 			cellsDug = 0,
@@ -66,6 +70,7 @@ function ProfileSchema.default(seed: number): Profile
 			chestsOpened = 0,
 			findsFound = 0,
 			geodesOpened = 0,
+			fossilsExtracted = 0,
 		},
 		plot = { seed = seed, dug = {}, openedChests = {} },
 	}
@@ -75,6 +80,9 @@ local migrations: { [number]: (any) -> () } = {
 	-- v1 -> v2: quests, clues and chests were added. Their defaults come from reconcile; nothing to
 	-- convert. Kept as the template for future migrations.
 	[1] = function(_data) end,
+	-- v2 -> v3: fossil collection added; the old "Fósil raro" find item became "Fragmento fósil"
+	-- (same id, still sellable), so inventories keep their items.
+	[2] = function(_data) end,
 }
 
 local function finiteNonNegative(value: any, fallback: number): number
@@ -150,6 +158,17 @@ function ProfileSchema.reconcile(data: any, seed: number): Profile
 		for id, read in data.clues do
 			if read == true and Story.Notes[id] then
 				profile.clues[id] = true
+			end
+		end
+	end
+
+	if type(data.collection) == "table" and type(data.collection.fossils) == "table" then
+		for id, entry in data.collection.fossils do
+			if Fossils.get(id) and type(entry) == "table" then
+				profile.collection.fossils[id] = {
+					count = math.max(1, math.floor(finiteNonNegative(entry.count, 1))),
+					firstDepth = math.floor(finiteNonNegative(entry.firstDepth, 0)),
+				}
 			end
 		end
 	end

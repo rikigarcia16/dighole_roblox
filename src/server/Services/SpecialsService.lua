@@ -22,6 +22,9 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Format = require(ReplicatedStorage.Shared.Util.Format)
 local Grid = require(ReplicatedStorage.Shared.Util.Grid)
 local Caves = require(script.Parent.Parent.Logic.Caves)
+local FossilBeds = require(script.Parent.Parent.Logic.FossilBeds)
+local Collection = require(script.Parent.Parent.Logic.Collection)
+local Fossils = require(ReplicatedStorage.Shared.Config.Fossils)
 local OreGeneration = require(script.Parent.Parent.Logic.OreGeneration)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local PlotService = require(script.Parent.PlotService)
@@ -41,7 +44,7 @@ local SECTOR = Caves.SectorHeight
 local CHEST_COINS = { 40, 120, 380, 950, 2600, 6500, 14000 }
 
 type Special = {
-	kind: "chest" | "landmark" | "geode",
+	kind: "chest" | "landmark" | "geode" | "fossil",
 	key: string,
 	model: Model,
 	prompt: ProximityPrompt,
@@ -50,6 +53,7 @@ type Special = {
 	depth: number,
 	noteId: string?,
 	system: string?, -- key of the cave system that reveals it
+	speciesId: string?, -- fossils
 }
 
 type PlotState = {
@@ -313,6 +317,37 @@ local function onChunkGenerated(plot: any, d0: number, d1: number)
 			buildSector(plot, state, sector)
 		end
 	end
+	for _, bed in FossilBeds.bedsInRange(plot.seed, d0, d1) do
+		local key = "fossil:" .. bed.id
+		local species = Fossils.get(bed.speciesId)
+		if species and not state.specials[key] and not state.opened[bed.id] then
+			local model = CaveProps.fossil(plot, bed, species.model, state.folder)
+			local prompt = makePrompt(model.PrimaryPart :: BasePart, "Fossil", "Fósil", "Extraer")
+			prompt.HoldDuration = 2
+			CollectionService:AddTag(model, "THNE_Fossil")
+			local special: Special = {
+				kind = "fossil",
+				key = key,
+				model = model,
+				prompt = prompt,
+				revealed = false,
+				opened = false,
+				depth = bed.d,
+				noteId = nil,
+				system = nil,
+				speciesId = bed.speciesId,
+			}
+			register(state, special)
+			local second = if bed.alongX then { bed.cx + 1, bed.cz } else { bed.cx, bed.cz + 1 }
+			for _, c in { { bed.cx, bed.cz }, second } do
+				for _, n in NEIGHBORS do
+					if plot.dug[Grid.key(c[1] + n[1], bed.d + n[2], c[2] + n[3])] then
+						reveal(special)
+					end
+				end
+			end
+		end
+	end
 	for _, landmark in OreGeneration.landmarks(plot.seed) do
 		local key = "landmark:" .. landmark.id
 		if landmark.d >= d0 and landmark.d <= d1 and not state.specials[key] then
@@ -374,6 +409,14 @@ function SpecialsService.onCellsBroken(player: Player, plot: any, broken: { { cx
 							StateService.notify(player, "discovery", "La roca suena hueca... ¡una geoda!")
 						end
 						StateService.push(player)
+					end
+				end
+				local bed = FossilBeds.bedAt(plot.seed, cx, d, cz)
+				if bed then
+					local special = state.specials["fossil:" .. bed.id]
+					if special and not special.revealed then
+						reveal(special)
+						StateService.notify(player, "discovery", "Algo con forma de hueso asoma en la roca...")
 					end
 				end
 				local landmark = OreGeneration.landmarkAt(plot.seed, cx, d, cz)
@@ -564,6 +607,48 @@ local function openGeode(player: Player, plot: any, special: Special)
 	FxService.special(player, center, "geode", crystal and crystal.id or nil)
 end
 
+local function extractFossil(player: Player, plot: any, special: Special)
+	local speciesId = special.speciesId
+	local species = speciesId and Fossils.get(speciesId)
+	if not species then
+		return
+	end
+	local opener = claimOpen(player, plot, special)
+	if not opener then
+		return
+	end
+	opener.stats.fossilsExtracted += 1
+	local result = Collection.registerFossil(opener, species.id, special.depth)
+	if result and result.isNew then
+		StateService.notify(
+			player,
+			"find",
+			string.format("Nuevo fósil registrado: %s · +%s monedas", species.name, Format.number(result.reward))
+		)
+	elseif result and result.fragment then
+		InventoryService.collect(player, "fossil", 1, true)
+		StateService.notify(player, "find", species.name .. " (repetido): obtienes un Fragmento fósil")
+	end
+	StateService.push(player)
+	Remotes.event("FossilFound"):FireClient(player, species.id, result ~= nil and result.isNew, special.depth)
+
+	-- The bones lift out of the rock and fade.
+	for _, child in special.model:GetDescendants() do
+		if child:IsA("BasePart") then
+			local piece = child :: BasePart
+			TweenService:Create(piece, TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+				Position = piece.Position + Vector3.new(0, 1.5, 0),
+				Transparency = 1,
+			}):Play()
+		end
+	end
+	local model = special.model
+	task.delay(1.3, function()
+		model:Destroy()
+	end)
+	FxService.special(player, model:GetPivot().Position, "fossil", "fossil")
+end
+
 local function readLandmark(player: Player, special: Special)
 	local noteId = special.noteId
 	if not noteId or not special.revealed then
@@ -610,7 +695,7 @@ function SpecialsService.start()
 			end
 			return
 		end
-		if action ~= "Chest" and action ~= "Landmark" and action ~= "Geode" then
+		if action ~= "Chest" and action ~= "Landmark" and action ~= "Geode" and action ~= "Fossil" then
 			return
 		end
 		local plot, special = findSpecial(player, prompt)
@@ -621,6 +706,8 @@ function SpecialsService.start()
 			openChest(player, plot, special)
 		elseif special.kind == "geode" then
 			openGeode(player, plot, special)
+		elseif special.kind == "fossil" then
+			extractFossil(player, plot, special)
 		else
 			readLandmark(player, special)
 		end

@@ -13,6 +13,8 @@ export PATH="$PWD/tools/luaucheck/target/release:$PATH"
 
 luaucheck run tests/run.lua           # unit + integration tests
 luaucheck run tests/balance_sim.lua   # economy / progression simulation
+luaucheck run tests/static_checks.lua # remotes declared, sounds referenced exist
+luaucheck run tests/bench_generation.lua # generation cost in the Luau VM
 luaucheck check $(find src -name '*.lua')   # compile every script (syntax check)
 ```
 

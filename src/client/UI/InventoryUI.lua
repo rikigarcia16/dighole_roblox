@@ -5,6 +5,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Resources = require(ReplicatedStorage.Shared.Config.Resources)
 local Story = require(ReplicatedStorage.Shared.Config.Story)
+local Fossils = require(ReplicatedStorage.Shared.Config.Fossils)
+local Zones = require(ReplicatedStorage.Shared.Config.Zones)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Format = require(ReplicatedStorage.Shared.Util.Format)
 local Build = require(script.Parent.Build)
@@ -51,7 +53,7 @@ function InventoryUI.new(parent: Instance, deps: Deps)
 		CanvasSize = UDim2.new(),
 		Parent = modal.body,
 	})
-	Build("UIGridLayout", {
+	local grid = Build("UIGridLayout", {
 		CellSize = UDim2.new(0.5, -6, 0, 54),
 		CellPadding = UDim2.fromOffset(8, 8),
 		SortOrder = Enum.SortOrder.LayoutOrder,
@@ -93,6 +95,7 @@ function InventoryUI.new(parent: Instance, deps: Deps)
 			return
 		end
 
+		grid.CellSize = UDim2.new(0.5, -6, 0, 54)
 		if currentTab == "backpack" then
 			local total, items = 0, 0
 			for _, resource in Resources.List do
@@ -129,6 +132,59 @@ function InventoryUI.new(parent: Instance, deps: Deps)
 			footer.Text = if items == 0
 				then "Tu mochila está vacía. Cava para encontrar minerales."
 				else "Vende todo en el carro de la estación de venta, junto a tu agujero."
+		elseif currentTab == "fossils" then
+			grid.CellSize = UDim2.new(1, -6, 0, 78)
+			local owned = (state.collection and state.collection.fossils) or {}
+			local found = 0
+			for _, species in Fossils.List do
+				local entry = owned[species.id]
+				if entry then
+					found += 1
+				end
+				local rarity = Resources.Rarities[species.rarity]
+				local r = row(species.order)
+				Build("Frame", {
+					Size = UDim2.fromOffset(40, 40),
+					BackgroundColor3 = if entry then Color3.fromRGB(226, 214, 184) else Theme.panelLight,
+					Parent = r,
+					[Build.Children] = {
+						Build.corner(8),
+						Build.stroke(if entry then rarity.color else Theme.stroke, 2),
+					},
+				})
+				local text
+				if entry then
+					text = string.format(
+						'<b>%s</b>  <font color="#%s">%s</font> · %d m · x%d\n%s',
+						species.name,
+						rarity.color:ToHex(),
+						rarity.name,
+						entry.firstDepth,
+						entry.count,
+						species.lore
+					)
+				else
+					text = string.format(
+						"<b>???</b>\nSe han visto restos en %s (%d–%d m)",
+						Zones.at(species.minDepth).name,
+						species.minDepth,
+						species.maxDepth
+					)
+				end
+				Build.label({
+					Text = text,
+					RichText = true,
+					Font = Theme.bodyFont,
+					TextColor3 = if entry then Theme.text else Theme.textDim,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextWrapped = true,
+					Size = UDim2.new(1, -50, 1, 0),
+					MaxTextSize = 13,
+					Parent = r,
+				})
+			end
+			summary.Text = string.format("%d/%d especies", found, #Fossils.List)
+			footer.Text = "Los fósiles se extraen manteniendo F junto a ellos. Los repetidos dan fragmentos."
 		elseif currentTab == "journal" then
 			local read = 0
 			for order, noteId in Story.NoteOrder do
@@ -221,8 +277,9 @@ function InventoryUI.new(parent: Instance, deps: Deps)
 		end
 	end
 
-	local backpackTab, logTab, journalTab
+	local backpackTab, logTab, journalTab, fossilTab
 	local function highlightTabs()
+		fossilTab.BackgroundColor3 = if currentTab == "fossils" then Theme.accent else Theme.card
 		backpackTab.BackgroundColor3 = if currentTab == "backpack" then Theme.accent else Theme.card
 		logTab.BackgroundColor3 = if currentTab == "log" then Theme.accent else Theme.card
 		journalTab.BackgroundColor3 = if currentTab == "journal" then Theme.accent else Theme.card
@@ -237,7 +294,12 @@ function InventoryUI.new(parent: Instance, deps: Deps)
 		highlightTabs()
 		render()
 	end)
-	journalTab = modal:addTab("Diario", 3, function()
+	fossilTab = modal:addTab("Fósiles", 3, function()
+		currentTab = "fossils"
+		highlightTabs()
+		render()
+	end)
+	journalTab = modal:addTab("Diario", 4, function()
 		currentTab = "journal"
 		highlightTabs()
 		render()

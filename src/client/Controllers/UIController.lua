@@ -13,6 +13,7 @@ local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Resources = require(ReplicatedStorage.Shared.Config.Resources)
 local Tools = require(ReplicatedStorage.Shared.Config.Tools)
 local Zones = require(ReplicatedStorage.Shared.Config.Zones)
+local Fossils = require(ReplicatedStorage.Shared.Config.Fossils)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Format = require(ReplicatedStorage.Shared.Util.Format)
 
@@ -713,6 +714,74 @@ function UIController.start()
 		task.delay(2.2, function()
 			if token == rareToken then
 				TweenService:Create(rareBanner, TweenInfo.new(0.5), { TextTransparency = 1 }):Play()
+			end
+		end)
+	end)
+
+	-- Fossil card: shown after an extraction. It is the moment of curiosity, so it stays until the
+	-- player closes it (or 8 s), and it never blocks digging.
+	local card = Build("Frame", {
+		Name = "FossilCard",
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -16, 1, -170),
+		Size = UDim2.fromOffset(330, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.fromRGB(46, 42, 36),
+		BackgroundTransparency = 0.05,
+		Visible = false,
+		Parent = gui,
+		[Build.Children] = {
+			Build.corner(12),
+			Build.stroke(Color3.fromRGB(226, 214, 184), 2),
+			Build.padding(12),
+			Build.list(Enum.FillDirection.Vertical, 4),
+		},
+	})
+	local cardTitle = Build.label({ Size = UDim2.new(1, 0, 0, 26), MaxTextSize = 22, LayoutOrder = 1, Parent = card })
+	Build.textStroke().Parent = cardTitle
+	local cardMeta = Build.label({
+		Size = UDim2.new(1, 0, 0, 18),
+		Font = Theme.bodyFont,
+		MaxTextSize = 14,
+		TextColor3 = Theme.textDim,
+		LayoutOrder = 2,
+		RichText = true,
+		Parent = card,
+	})
+	local cardLore = Build.label({
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		Font = Enum.Font.Merriweather,
+		TextScaled = false,
+		TextSize = 15,
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Color3.fromRGB(240, 232, 210),
+		LayoutOrder = 3,
+		Parent = card,
+	})
+	local cardToken = 0
+	Remotes.event("FossilFound").OnClientEvent:Connect(function(speciesId: string, isNew: boolean, depth: number)
+		local species = Fossils.get(speciesId)
+		if not species then
+			return
+		end
+		cardToken += 1
+		local token = cardToken
+		local rarity = Resources.Rarities[species.rarity]
+		cardTitle.Text = species.name
+		cardTitle.TextColor3 = rarity.color
+		cardMeta.Text = string.format(
+			"%s · %d m · %s",
+			rarity.name,
+			math.floor(depth),
+			if isNew then "<b>nuevo en tu colección</b>" else "ya registrado"
+		)
+		cardLore.Text = species.lore
+		card.Visible = true
+		task.delay(8, function()
+			if token == cardToken then
+				card.Visible = false
 			end
 		end)
 	end)

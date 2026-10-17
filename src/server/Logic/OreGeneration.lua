@@ -17,6 +17,7 @@ local Zones = require(Shared.Config.Zones)
 local Resources = require(Shared.Config.Resources)
 local GameConfig = require(Shared.Config.GameConfig)
 local Caves = require(script.Parent.Caves)
+local FossilBeds = require(script.Parent.FossilBeds)
 
 local OreGeneration = {}
 
@@ -131,6 +132,9 @@ local function landmarkAt(seed: number, cx: number, d: number, cz: number): Land
 	return nil
 end
 OreGeneration.landmarkAt = landmarkAt
+FossilBeds.setLandmarkCheck(function(seed: number, cx: number, d: number, cz: number): boolean
+	return landmarkDepths[d] == true and landmarkAt(seed, cx, d, cz) ~= nil
+end)
 
 -- Cells -----------------------------------------------------------------------------------------
 
@@ -147,6 +151,9 @@ function OreGeneration.resourceAt(seed: number, cx: number, d: number, cz: numbe
 		end
 	end
 	if landmarkDepths[d] and landmarkAt(seed, cx, d, cz) then
+		return "air"
+	end
+	if FossilBeds.bedAt(seed, cx, d, cz) then
 		return "air"
 	end
 

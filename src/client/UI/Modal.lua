@@ -119,7 +119,7 @@ end
 
 function Modal.addTab(self: Modal, text: string, order: number, onSelect: () -> ()): TextButton
 	local tab = Build.button(text, Theme.card, {
-		Size = UDim2.new(0, 140, 1, 0),
+		Size = UDim2.new(0, 120, 1, 0),
 		LayoutOrder = order,
 		Parent = self.tabBar,
 	})

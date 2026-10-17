@@ -14,6 +14,7 @@
 --   Notify(kind: string, text: string)              toast message
 --   ZoneEntered(zoneId: string, firstTime: boolean)
 --   SpecialFx(player, position, kind, resourceId?)  geode / fossil / chest / cave moments
+--   FossilFound(speciesId, isNew, depth)          show the fossil card after an extraction
 --   ShowNote(noteId: string)                       open a story note (after server validation)
 
 local RunService = game:GetService("RunService")
@@ -30,6 +31,7 @@ local EVENTS = {
 	"ZoneEntered",
 	"ShowNote",
 	"SpecialFx",
+	"FossilFound",
 }
 local FUNCTIONS = { "Shop", "GetState" }
 

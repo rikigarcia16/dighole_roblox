@@ -50,6 +50,7 @@ function StateService.snapshot(player: Player): any?
 		maxDepth = profile.stats.maxDepth,
 		stats = profile.stats,
 		clues = profile.clues,
+		collection = profile.collection,
 		persistent = PlayerDataService.isPersistent(player),
 	}
 	for _, provider in snapshotProviders do

@@ -5,6 +5,7 @@ H.mount("ReplicatedStorage", "Shared", "src/shared")
 H.mount("ServerScriptService", "Server", "src/server")
 local OreGeneration = H.module("ServerScriptService", "Server", "Logic", "OreGeneration")
 local Resources = H.module("ReplicatedStorage", "Shared", "Config", "Resources")
+local FossilBeds = H.module("ServerScriptService", "Server", "Logic", "FossilBeds")
 
 local SEEDS = { 1234, 98765, 4242 }
 local D0, D1 = 40, 360
@@ -25,7 +26,7 @@ for _, seed in SEEDS do
 		for d = D0, D1 do
 			local row = {}
 			for z = -1, N do
-				table.insert(row, code(OreGeneration.resourceAt(seed, x, d, z)))
+				table.insert(row, if FossilBeds.bedAt(seed, x, d, z) then "f" else code(OreGeneration.resourceAt(seed, x, d, z)))
 			end
 			print(table.concat(row))
 		end
@@ -38,7 +39,7 @@ for _, seed in SEEDS do
 		for x = -1, N do
 			local row = {}
 			for z = -1, N do
-				table.insert(row, code(OreGeneration.resourceAt(seed, x, d, z)))
+				table.insert(row, if FossilBeds.bedAt(seed, x, d, z) then "f" else code(OreGeneration.resourceAt(seed, x, d, z)))
 			end
 			table.insert(rows, table.concat(row))
 		end

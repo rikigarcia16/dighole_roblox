@@ -385,6 +385,8 @@ test("profile defaults and reconcile sanitises bad data", function()
 end)
 
 local Caves = H.module("ServerScriptService", "Server", "Logic", "Caves")
+local FossilBeds = H.module("ServerScriptService", "Server", "Logic", "FossilBeds")
+local Fossils = H.module("ReplicatedStorage", "Shared", "Config", "Fossils")
 
 test("caves: only inside the dig area, never above the first cave depth, deterministic", function()
 	for _, seed in { 1, 2, 3 } do
@@ -398,7 +400,9 @@ test("caves: only inside the dig area, never above the first cave depth, determi
 							"open cell in the border ring at " .. x .. "," .. d .. "," .. z
 						)
 						ok(
-							d >= Caves.FirstDepth or OreGeneration.landmarkAt(seed, x, d, z),
+							d >= Caves.FirstDepth
+								or OreGeneration.landmarkAt(seed, x, d, z)
+								or FossilBeds.bedAt(seed, x, d, z),
 							"open cell above the caves at " .. d
 						)
 					end
@@ -664,7 +668,7 @@ end)
 test("profile v1 data migrates to v2", function()
 	local r =
 		ProfileSchema.reconcile({ version = 1, coins = 10, stats = { cellsDug = 4 }, plot = { seed = 3, dug = {} } }, 1)
-	eq(r.version, 2)
+	eq(r.version, ProfileSchema.CURRENT_VERSION)
 	eq(r.coins, 10)
 	eq(r.quests.index, 1)
 	eq(r.stats.cavesFound, 0)
@@ -677,6 +681,99 @@ test("profile v1 data migrates to v2", function()
 	ok(bad.quests.index <= 13, "quest index clamped")
 	ok(bad.clues.miner_box and not bad.clues.fake, "clues sanitised")
 	eq(#bad.plot.openedChests, 1, "chest keys sanitised")
+end)
+
+test("fossils: sealed two-cell pockets in rock, species valid for their depth", function()
+	local beds, species = 0, {}
+	for seed = 1, 40 do
+		for _, bed in FossilBeds.bedsInRange(seed, 0, 420) do
+			beds += 1
+			species[bed.speciesId] = (species[bed.speciesId] or 0) + 1
+			local s = Fossils.get(bed.speciesId)
+			ok(s and bed.d >= s.minDepth and bed.d < s.maxDepth, bed.speciesId .. " outside its depth at " .. bed.d)
+			local second = if bed.alongX then { bed.cx + 1, bed.d, bed.cz } else { bed.cx, bed.d, bed.cz + 1 }
+			for _, c in { { bed.cx, bed.d, bed.cz }, second } do
+				ok(c[1] >= 1 and c[1] <= 14 and c[3] >= 1 and c[3] <= 14, "pocket away from the border")
+				eq(OreGeneration.resourceAt(seed, c[1], c[2], c[3]), "air", "pocket is open")
+				eq(FossilBeds.bedAt(seed, c[1], c[2], c[3]), bed, "bedAt finds the bed")
+			end
+			-- every neighbour that is not the pocket itself is solid rock (sealed until dug into)
+			for _, c in { { bed.cx, bed.d, bed.cz }, second } do
+				for _, n in { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } } do
+					local x, d, z = c[1] + n[1], c[2] + n[2], c[3] + n[3]
+					if not FossilBeds.bedAt(seed, x, d, z) then
+						local id = OreGeneration.resourceAt(seed, x, d, z)
+						ok(
+							id ~= "air" and id ~= "water",
+							"fossil pocket touches open space at " .. x .. "," .. d .. "," .. z
+						)
+					end
+				end
+			end
+		end
+	end
+	local perPlot = beds / 40
+	ok(perPlot > 12 and perPlot < 30, "fossils per plot (0-420 m): " .. perPlot)
+	for _, s in Fossils.List do
+		ok((species[s.id] or 0) > 0, s.id .. " never appears in 40 plots")
+	end
+	-- every species must be collectable in most plots (each player only digs their own plot)
+	local coverage = {}
+	for seed = 1, 100 do
+		local here = {}
+		for _, bed in FossilBeds.bedsInRange(seed + 500, 0, 420) do
+			here[bed.speciesId] = true
+		end
+		for id in here do
+			coverage[id] = (coverage[id] or 0) + 1
+		end
+	end
+	local parts = {}
+	for _, s in Fossils.List do
+		table.insert(parts, string.format("%s %d%%", s.id, coverage[s.id] or 0))
+		ok((coverage[s.id] or 0) >= 60, s.id .. " only in " .. tostring(coverage[s.id]) .. "% of plots")
+	end
+	print(
+		string.format(
+			"       %.1f fossils per plot down to 420 m; plots with each species: %s",
+			perPlot,
+			table.concat(parts, ", ")
+		)
+	)
+end)
+
+test("fossil collection: first registration pays once, repeats give fragments", function()
+	local Collection = H.module("ServerScriptService", "Server", "Logic", "Collection")
+	local p = ProfileSchema.default(1)
+	local r = Collection.registerFossil(p, "eyeless_fish", 93.6)
+	ok(r and r.isNew and r.reward == Fossils.get("eyeless_fish").reward and not r.fragment, "first")
+	eq(p.coins, r.reward)
+	eq(p.collection.fossils.eyeless_fish.firstDepth, 93)
+	local again = Collection.registerFossil(p, "eyeless_fish", 120)
+	ok(again and not again.isNew and again.reward == 0 and again.fragment, "repeat")
+	eq(p.coins, r.reward, "no second reward")
+	eq(p.collection.fossils.eyeless_fish.count, 2)
+	eq(p.collection.fossils.eyeless_fish.firstDepth, 93, "first depth kept")
+	eq(Collection.registerFossil(p, "not_a_species", 1), nil)
+	local found, total = Collection.progress(p)
+	eq(found, 1)
+	eq(total, #Fossils.List)
+end)
+
+test("profile v2 data migrates to v3 with its collection sanitised", function()
+	local r = ProfileSchema.reconcile({
+		version = 2,
+		inventory = { fossil = 2 },
+		collection = {
+			fossils = { eyeless_fish = { count = 3, firstDepth = 80 }, fake = { count = 1 }, ringed_worm = "x" },
+		},
+	}, 1)
+	eq(r.version, 3)
+	eq(r.inventory.fossil, 2, "old fossil items kept")
+	eq(r.collection.fossils.eyeless_fish.count, 3)
+	eq(r.collection.fossils.fake, nil)
+	eq(r.collection.fossils.ringed_worm, nil)
+	eq(r.stats.fossilsExtracted, 0)
 end)
 
 print("Terrain writes (fake Terrain)")

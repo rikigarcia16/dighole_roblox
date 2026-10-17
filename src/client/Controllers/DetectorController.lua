@@ -60,7 +60,11 @@ function DetectorController.start()
 					end
 				end
 				for tag, color in
-					{ THNE_Chest = Color3.fromRGB(255, 205, 60), THNE_Geode = Color3.fromRGB(190, 140, 255) }
+					{
+						THNE_Chest = Color3.fromRGB(255, 205, 60),
+						THNE_Geode = Color3.fromRGB(190, 140, 255),
+						THNE_Fossil = Color3.fromRGB(235, 225, 195),
+					}
 				do
 					for _, instance in CollectionService:GetTagged(tag) do
 						if instance:IsA("Model") then

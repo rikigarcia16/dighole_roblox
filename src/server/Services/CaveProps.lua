@@ -480,4 +480,151 @@ function CaveProps.geode(plot: Plot, spot: Caves.Spot, crystalColor: Color3, par
 	return model
 end
 
+-- Fossil ----------------------------------------------------------------------------------------
+-- Bones lie in a two-cell pocket (8 x 4 x 4 studs), along the pocket's axis. Each species has its
+-- own silhouette so the collection reads at a glance.
+
+local BONE = Color3.fromRGB(226, 214, 184)
+local BONE_DARK = Color3.fromRGB(176, 162, 132)
+
+function CaveProps.fossil(
+	plot: Plot,
+	bed: { cx: number, d: number, cz: number, alongX: boolean },
+	model: string,
+	parent: Instance
+): Model
+	local a = Grid.cellCenter(plot.originX, plot.originZ, bed.cx, bed.d, bed.cz)
+	local b = if bed.alongX
+		then Grid.cellCenter(plot.originX, plot.originZ, bed.cx + 1, bed.d, bed.cz)
+		else Grid.cellCenter(plot.originX, plot.originZ, bed.cx, bed.d, bed.cz + 1)
+	local mid = (a + b) / 2
+	local floorY = mid.Y - CELL / 2
+	-- local frame: +Z runs along the pocket, Y up, origin on the floor at the middle
+	local frame = CFrame.lookAt(Vector3.new(mid.X, floorY, mid.Z), Vector3.new(b.X, floorY, b.Z))
+	local m = Instance.new("Model")
+	m.Name = "Fossil_" .. model
+	local function bone(name: string, size: Vector3, offset: CFrame, color: Color3?, shape: Enum.PartType?): Part
+		local p = part(m, name, size, frame * offset, color or BONE, Enum.Material.Limestone, shape)
+		p.CanCollide = false
+		return p
+	end
+
+	if model == "shell" then
+		for i = -2, 2 do
+			bone(
+				"Plate",
+				Vector3.new(2.2 - math.abs(i) * 0.25, 0.7, 0.9),
+				CFrame.new(0, 0.5, i * 0.85) * CFrame.Angles(0.15, 0, 0)
+			)
+		end
+		bone("Head", Vector3.new(1.2, 0.6, 0.9), CFrame.new(0, 0.45, -2.4), BONE_DARK)
+		for _, side in { -1, 1 } do
+			for k = -1, 1 do
+				bone(
+					"Leg",
+					Vector3.new(1.2, 0.15, 0.15),
+					CFrame.new(side * 1.5, 0.3, k * 0.9) * CFrame.Angles(0, side * 0.4, side * 0.3)
+				)
+			end
+		end
+	elseif model == "coil" then
+		for i = 0, 13 do
+			local t = i / 13 * math.pi * 3.2
+			local r = 0.5 + i * 0.09
+			bone(
+				"Ring",
+				Vector3.new(0.55, 0.55, 0.55),
+				CFrame.new(math.cos(t) * r, 0.35, math.sin(t) * r),
+				nil,
+				Enum.PartType.Ball
+			)
+		end
+	elseif model == "fish" or model == "crystal" then
+		bone("Spine", Vector3.new(0.3, 0.3, 5.6), CFrame.new(0, 0.6, 0))
+		for i = -2, 2 do
+			for _, side in { -1, 1 } do
+				bone(
+					"Rib",
+					Vector3.new(0.15, 1.3 - math.abs(i) * 0.15, 0.15),
+					CFrame.new(side * 0.35, 0.6, i * 0.85) * CFrame.Angles(0, 0, side * 0.9)
+				)
+			end
+		end
+		bone("Skull", Vector3.new(1.1, 1, 1.3), CFrame.new(0, 0.7, -3.1), BONE_DARK)
+		local tail = part(
+			m,
+			"Tail",
+			Vector3.new(0.15, 1.4, 1.2),
+			frame * CFrame.new(0, 0.7, 3.2),
+			BONE,
+			Enum.Material.Limestone,
+			Enum.PartType.Wedge
+		)
+		tail.CanCollide = false
+		if model == "crystal" then
+			for i = 1, 5 do
+				local shard = part(
+					m,
+					"Crystal",
+					Vector3.new(0.35, 0.9 + (i % 3) * 0.4, 0.35),
+					frame
+						* CFrame.new((i % 2 - 0.5) * 0.8, 1.2, -2.2 + i * 0.9)
+						* CFrame.Angles(0.3, i, (i % 2 - 0.5) * 0.8),
+					Color3.fromRGB(110, 200, 255),
+					Enum.Material.Neon
+				)
+				shard.CanCollide = false
+			end
+		end
+	elseif model == "mole" then
+		bone("Spine", Vector3.new(0.35, 0.35, 3.6), CFrame.new(0, 0.6, 0.4))
+		bone("Skull", Vector3.new(1.2, 1, 1.5), CFrame.new(0, 0.7, -1.9), BONE_DARK, Enum.PartType.Ball)
+		bone("Snout", Vector3.new(0.5, 0.45, 0.9), CFrame.new(0, 0.6, -2.8), BONE_DARK)
+		for _, side in { -1, 1 } do
+			for k = -1, 1 do -- six legs
+				bone(
+					"Leg",
+					Vector3.new(1.4, 0.2, 0.2),
+					CFrame.new(side * 0.9, 0.35, k * 1.1 + 0.3) * CFrame.Angles(0, side * 0.5, 0)
+				)
+				bone("Claw", Vector3.new(0.5, 0.15, 0.4), CFrame.new(side * 1.6, 0.25, k * 1.1 + 0.1))
+			end
+		end
+	elseif model == "wing" then
+		bone("Root", Vector3.new(0.4, 0.4, 1.4), CFrame.new(0, 0.5, -2.6))
+		for i = 1, 6 do
+			local angle = -0.75 + i * 0.25
+			bone(
+				"Feather",
+				Vector3.new(0.18, 0.12, 4.2 - math.abs(i - 3.5) * 0.4),
+				CFrame.new(0, 0.4, -2.4) * CFrame.Angles(0, angle, 0) * CFrame.new(0, 0, 2.1)
+			)
+		end
+	else -- "imprint": a slab of darker rock with the silhouette of a shovel pressed into it
+		local slab = part(
+			m,
+			"Slab",
+			Vector3.new(2.6, 0.6, 6.6),
+			frame * CFrame.new(0, 0.3, 0),
+			Color3.fromRGB(96, 90, 92),
+			Enum.Material.Slate
+		)
+		slab.CanCollide = false
+		local mark = Color3.fromRGB(150, 140, 130)
+		bone("Handle", Vector3.new(0.3, 0.05, 3.4), CFrame.new(0, 0.62, 1.2), mark)
+		bone("Grip", Vector3.new(0.9, 0.05, 0.25), CFrame.new(0, 0.62, 2.9), mark)
+		bone("Blade", Vector3.new(1.3, 0.05, 1.5), CFrame.new(0, 0.62, -1.3), mark)
+		bone("Tip", Vector3.new(0.7, 0.05, 0.5), CFrame.new(0, 0.62, -2.25), mark)
+	end
+
+	-- the first part is the pivot used for distance checks and effects
+	local pivot =
+		part(m, "Pivot", Vector3.new(0.2, 0.2, 0.2), frame * CFrame.new(0, 0.6, 0), BONE, Enum.Material.Limestone)
+	pivot.Transparency = 1
+	pivot.CanCollide = false
+	m.PrimaryPart = pivot
+	m.Parent = parent
+	return m
+end
+
 return CaveProps
