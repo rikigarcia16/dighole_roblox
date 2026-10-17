@@ -38,6 +38,7 @@ type Machine = {
 	lastKnock: number,
 	sequence: boolean,
 	scramble: number,
+	counted: number?, -- number shown by the sequence, kept until the server confirms Solved
 }
 
 local machines: { [Model]: Machine } = {}
@@ -188,8 +189,9 @@ local function update(machine: Machine, dt: number, now: number, rootPosition: V
 	-- Display: noise until the machine speaks, then the number, always current.
 	local display = displayOf(model)
 	if display and not machine.sequence then
-		if solved then
-			display.Text = formatCount((model:GetAttribute("Count") :: number?) or 0)
+		if solved or machine.counted then
+			-- the client sequence can end a moment before the server sets Solved: keep the number
+			display.Text = formatCount((model:GetAttribute("Count") :: number?) or machine.counted or 0)
 		elseif revealed and now - machine.scramble > 0.15 then
 			machine.scramble = now
 			local glyphs = {}
@@ -240,6 +242,7 @@ local function playSequence(model: Model, count: number)
 		end
 		display.Text = formatCount(count)
 	end
+	machine.counted = count
 	if light then
 		light.Brightness = 3
 		TweenService:Create(light, TweenInfo.new(1.5), { Brightness = 1.2 }):Play()

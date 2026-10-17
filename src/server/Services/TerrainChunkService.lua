@@ -192,7 +192,9 @@ function TerrainChunkService.requestDepth(plot: PlotTerrain, targetDepth: number
 	end
 	if not workerRunning then
 		workerRunning = true -- set before spawning so a deferred start cannot launch two workers
-		task.spawn(runWorker)
+		-- Deferred, not spawned: task.spawn would run the first slabs inside the caller (the Dig
+		-- handler), which is exactly what the background queue exists to avoid.
+		task.defer(runWorker)
 	end
 end
 

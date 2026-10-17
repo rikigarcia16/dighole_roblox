@@ -189,7 +189,15 @@ Tres niveles de verificación, separados a propósito:
   4. Si el jugador sale **mientras se carga** su perfil, el bloqueo se libera.
   5. Con el DataStore caído se juega con un perfil temporal que nunca sobrescribe los datos reales.
 
-### (c) Studio: visual, sonido, red y rendimiento. **Nada ejecutado todavía.**
+### (c) Studio: visual, sonido, red y rendimiento. **Primera pasada hecha: ver `STUDIO_REPORT_1.md`.**
+
+**Verificado en Studio (2026-10-17, 1 jugador, lugar sin publicar):** arranque sin errores; tiempos
+reales de `GenerateSlab` (mediana 2,5 ms, máx. 4,6 ms) y de la sala (2,6 ms, 273 piezas); S3, S7, F1, F2,
+C2, C3, **C6 (el número coincide con `cellsDug`)**, C7, M2, M6, M7, M8, M9, M10, M11. Parciales: S1, S2, F3, E1,
+C1, C5, M1, M3, M4. Sin probar: lo que necesita guardado real (G1–G3, F4, F5, C8, M5), dos jugadores
+(S6, y la parte multijugador de C5 y M4) y lo solo audiovisual. `swoosh.wav` no carga.
+Fallos 22–25 abajo.
+
 Sigue en pie la lista de la sección 5 (S1–S7, F1–F5, E1). Nuevas pruebas, en este orden.
 Preparación: `rojo serve`, publicar el lugar con **API Services activado** (si no, el guardado usa
 un perfil temporal y las pruebas G no sirven) y *Test → Start* con 1 jugador. Las pruebas C5 y M4
@@ -242,6 +250,10 @@ la parcela, como mucho 12). Cuenta de piezas de la sala.
 | 19 | Alta | Si el jugador salía **mientras** se cargaba su perfil, el bloqueo de sesión quedaba tomado hasta caducar (6 min): al volver a entrar enseguida, la carga esperaba y acababa echándolo. | Corregido en `PlayerDataService.load` y cubierto por un test de sesión. |
 | 20 | Media | En el repositorio había 6,6 MB de paquetes descargados por error en `src/client` desde la fase 1 (`.whl` y `luau-0.4.22.tar.gz`). Rojo los ignora, pero inflan el repositorio. | Eliminados del árbol (siguen en el historial). |
 | 21 | Baja | Morir devuelve gratis a una estación o a la superficie. Hoy casi no hay daño, así que no se puede abusar. | Documentado; revisar cuando haya peligros. |
+| 22 | Media | (Studio) La generación de sectores ocurría dentro de `THNE.Dig` (`task.spawn` ejecuta en el acto). | Corregido con `task.defer`; **verificado en Studio** (0 de 7 sectores dentro del golpe). |
+| 23 | Alta | (Studio) La llegada a la Estación del Contador queda medio dentro de la pared; al caminar se atraviesa el terreno y se cae ~45 m. | Corregido (llegada al centro de la plataforma); pendiente de volver a probar en Studio. |
+| 24 | Alta | (Studio) Con terreno suave, golpes en esquinas o en el fondo de un pozo se ignoraban en silencio: se podía quedar atascado cavando hacia abajo. | Corregido (celda vecina más cercana al impacto); pendiente de volver a probar en Studio. |
+| 25 | Baja | (Studio) Parpadeo de glifos al terminar la secuencia del Contador. | Corregido; pendiente de volver a probar en Studio. |
 
 ### Ensanchamiento del subsuelo
 **No se ha tocado**, por decisión tuya. Los números de `PROPOSAL_WIDE_UNDERGROUND.md` salen de la VM

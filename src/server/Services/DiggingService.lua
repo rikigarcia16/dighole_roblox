@@ -106,16 +106,38 @@ local function handleDig(player: Player, position: any, normal: any)
 	end
 
 	-- Resolve the target cell: the first solid, diggable cell just behind the hit surface.
+	local function diggable(cx: number, d: number, cz: number): boolean
+		return Grid.inDigArea(cx, d, cz)
+			and not plot.dug[Grid.key(cx, d, cz)]
+			and Resources.get(OreGeneration.resourceAt(plot.seed, cx, d, cz)) ~= nil -- not air / water
+	end
 	local tx, td, tz
 	for _, depthIn in PROBE_DEPTHS do
 		local cx, d, cz = Grid.worldToCell(plot.originX, plot.originZ, position - unitNormal * depthIn)
-		if
-			Grid.inDigArea(cx, d, cz)
-			and not plot.dug[Grid.key(cx, d, cz)]
-			and Resources.get(OreGeneration.resourceAt(plot.seed, cx, d, cz)) ~= nil -- not air / water
-		then
+		if diggable(cx, d, cz) then
 			tx, td, tz = cx, d, cz
 			break
+		end
+	end
+	if not tx then
+		-- Smooth terrain bulges into empty cells, so in corners and at the bottom of a shaft the hit
+		-- surface (and its tilted normal) can sit inside an already open cell. Take the diggable
+		-- neighbour closest to the hit point instead of ignoring the swing.
+		local hx, hd, hz = Grid.worldToCell(plot.originX, plot.originZ, position)
+		local best = math.huge
+		for dx = -1, 1 do
+			for dd = -1, 1 do
+				for dz = -1, 1 do
+					local cx, d, cz = hx + dx, hd + dd, hz + dz
+					if diggable(cx, d, cz) then
+						local distance = (Grid.cellCenter(plot.originX, plot.originZ, cx, d, cz) - position).Magnitude
+						if distance < best then
+							best = distance
+							tx, td, tz = cx, d, cz
+						end
+					end
+				end
+			end
 		end
 	end
 	if not tx then

@@ -77,6 +77,13 @@ local function stationFloor(plot: any, station: MobilityRules.Station): CFrame
 	return CFrame.new(center.X, center.Y - CELL / 2, center.Z)
 end
 
+-- Where a lift ride, the beacon or a respawn leaves the player: the centre of the platform. Any
+-- horizontal offset can land half inside a wall (the Counter's station sits against the room's
+-- shell), and walking from there drops the character through the terrain.
+local function stationArrival(plot: any, station: MobilityRules.Station): CFrame
+	return stationFloor(plot, station) * CFrame.new(0, 4, 0)
+end
+
 -- Station model ---------------------------------------------------------------------------------
 -- Timber platform with steel edges, a winch frame whose cable disappears into the rock above, a
 -- lantern and a sign with the depth: the same visual language as the surface winch.
@@ -322,7 +329,7 @@ local function travel(player: Player, destination: string): (boolean, string)
 	else
 		for _, station in profile.mobility.stations do
 			if station.id == destination then
-				target = stationFloor(plot, station) * CFrame.new(0, 4, 2)
+				target = stationArrival(plot, station)
 			end
 		end
 	end
@@ -447,7 +454,7 @@ local function destinationCFrame(player: Player, destination: string): CFrame?
 	if destination ~= "surface" then
 		for _, station in profile.mobility.stations do
 			if station.id == destination then
-				return stationFloor(plot, station) * CFrame.new(0, 4, 2)
+				return stationArrival(plot, station)
 			end
 		end
 	end
