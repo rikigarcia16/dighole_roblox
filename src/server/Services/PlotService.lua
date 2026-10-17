@@ -183,7 +183,6 @@ local function claim(player: Player, profile: any)
 	TerrainChunkService.ensureDepth(
 		p,
 		math.max(GameConfig.InitialChunks * GameConfig.ChunkDepth, p.deepestDug + GameConfig.GenerateAheadCells),
-		true,
 		function()
 			return plotByPlayer[player] == p
 		end

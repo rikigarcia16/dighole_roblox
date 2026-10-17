@@ -105,6 +105,53 @@ test("hash is deterministic, in range and well distributed", function()
 	ok(Hash.int(1, -5, -1000, -3) >= 0, "negative coords")
 end)
 
+test("hash: neighbouring cells, axes and salts are independent", function()
+	local function corr(f)
+		local n, sx, sy, sxx, syy, sxy = 20000, 0, 0, 0, 0, 0
+		for i = 1, n do
+			local a, b = f(i)
+			sx += a
+			sy += b
+			sxx += a * a
+			syy += b * b
+			sxy += a * b
+		end
+		local cov = sxy / n - (sx / n) * (sy / n)
+		return cov / math.sqrt((sxx / n - (sx / n) ^ 2) * (syy / n - (sy / n) ^ 2))
+	end
+	local cases = {
+		x = function(i)
+			return Hash.unit(3, i, 50, 7), Hash.unit(3, i + 1, 50, 7)
+		end,
+		y = function(i)
+			return Hash.unit(3, 5, i, 7), Hash.unit(3, 5, i + 1, 7)
+		end,
+		z = function(i)
+			return Hash.unit(3, 5, 50, i), Hash.unit(3, 5, 50, i + 1)
+		end,
+		salt = function(i)
+			return Hash.unit(3, i % 97, i // 97, 7, 11), Hash.unit(3, i % 97, i // 97, 7, 23)
+		end,
+		seed = function(i)
+			return Hash.unit(i, 1, 2, 3), Hash.unit(i + 1, 1, 2, 3)
+		end,
+	}
+	for name, f in cases do
+		local c = corr(f)
+		ok(math.abs(c) < 0.03, name .. " correlation " .. c)
+	end
+	-- pairs of consecutive values fill a 10x10 grid evenly
+	local grid, n = {}, 50000
+	for i = 1, n do
+		local a, b = Hash.unit(9, i, 0, 0), Hash.unit(9, i + 1, 0, 0)
+		local k = math.floor(a * 10) * 10 + math.floor(b * 10)
+		grid[k] = (grid[k] or 0) + 1
+	end
+	for k = 0, 99 do
+		ok(math.abs((grid[k] or 0) - n / 100) < n / 100 * 0.25, "pair cell " .. k .. " skewed")
+	end
+end)
+
 test("grid round trips world positions and keys", function()
 	local ox, oz = 1024, -512
 	for _, c in { { 0, 0, 0 }, { 15, 3, 7 }, { 8, 1999, 15 }, { -1, 4, 16 } } do
@@ -457,51 +504,102 @@ do
 	plot.dug[GridM.key(3, 5, 7)] = true
 	plot.damage[GridM.key(4, 5, 7)] = 2 -- half of stone/dirt hardness at most
 
-	test("chunk generation writes region-aligned voxel arrays", function()
+	-- Finds the write that contains a cell and returns its material/occupancy there.
+	local function voxelAt(cx, d, cz)
+		local center = GridM.cellCenter(plot.originX, plot.originZ, cx, d, cz)
+		for i = #writes, 1, -1 do
+			local w = writes[i]
+			local r = w.region
+			if
+				center.X > r.min.X
+				and center.X < r.max.X
+				and center.Y > r.min.Y
+				and center.Y < r.max.Y
+				and center.Z > r.min.Z
+				and center.Z < r.max.Z
+			then
+				local ix = math.floor((center.X - r.min.X) / 4) + 1
+				local iy = math.floor((center.Y - r.min.Y) / 4) + 1
+				local iz = math.floor((center.Z - r.min.Z) / 4) + 1
+				return w.materials[ix][iy][iz], w.occupancies[ix][iy][iz]
+			end
+		end
+		return nil, nil
+	end
+
+	test("generation writes region-aligned voxel arrays in slabs", function()
 		TerrainChunkService.ensureDepth(plot, 20)
-		eq(plot.generatedDepth, 32, "two chunks")
-		eq(#writes, 2)
+		eq(plot.generatedDepth, 20, "five slabs of four layers")
+		eq(#writes, 5)
 		local w = writes[1]
 		eq(w.resolution, 4)
 		local n = GameConfig.PlotDigCells + 2
 		eq(#w.materials, n, "x size")
-		eq(#w.materials[1], GameConfig.ChunkDepth, "y size")
+		eq(#w.materials[1], 4, "y size")
 		eq(#w.materials[1][1], n, "z size")
 		local size = w.region.max - w.region.min
 		eq(size.X, n * 4)
-		eq(size.Y, GameConfig.ChunkDepth * 4)
+		eq(size.Y, 4 * 4)
 		eq(size.Z, n * 4)
 		eq(w.region.max.Y, 0, "top at surface")
 		eq(w.region.min.X, 396, "border ring included")
-		for _, v in { w.region.min.X, w.region.min.Y, w.region.min.Z } do
-			eq(v % 4, 0, "grid aligned")
+		for _, write in writes do
+			for _, v in { write.region.min.X, write.region.min.Y, write.region.min.Z } do
+				eq(v % 4, 0, "grid aligned")
+			end
 		end
+		eq(writes[2].region.max.Y, writes[1].region.min.Y, "slabs are contiguous")
 	end)
 
 	test("voxel array orientation matches cell coordinates", function()
-		local w = writes[1]
-		local function at(cx, d, cz)
-			-- ix = cx + 2 (ring at -1), iy counts up from the deepest layer of the chunk, iz = cz + 2
-			local iy = (GameConfig.ChunkDepth - 1 - d) + 1
-			return w.materials[cx + 2][iy][cz + 2], w.occupancies[cx + 2][iy][cz + 2]
-		end
-		local m, o = at(3, 5, 7)
+		-- iy = 1 must be the deepest layer of each slab: check against the explicit index too
+		local w = writes[2] -- layers 4..7
+		local explicit = w.materials[3 + 2][(7 - 5) + 1][7 + 2]
+		eq(explicit, Enum.Material.Air, "dug cell (3,5,7) via explicit index")
+		local m, o = voxelAt(3, 5, 7)
 		eq(m, Enum.Material.Air, "dug cell is air")
 		eq(o, 0)
-		local m2, o2 = at(4, 5, 7)
+		local m2, o2 = voxelAt(4, 5, 7)
 		local r = Resources.get(OreGeneration.resourceAt(99, 4, 5, 7))
 		eq(m2, r.terrainMaterial, "damaged cell keeps material")
 		ok(o2 < 1 and o2 >= GameConfig.MinOccupancyWhileDamaged, "damaged cell shrinks: " .. o2)
-		local m3 = at(0, 0, 0)
-		eq(m3, Enum.Material.Grass, "top layer is grass")
-		local m4 = at(-1, 9, 4)
-		eq(m4, Resources.get(OreGeneration.resourceAt(99, -1, 9, 4)).terrainMaterial, "border ring solid")
-		-- world position of a cell centre must fall inside the voxel the array assigns to it
-		local center = GridM.cellCenter(plot.originX, plot.originZ, 3, 5, 7)
-		local ix = math.floor((center.X - w.region.min.X) / 4) + 1
-		local iy = math.floor((center.Y - w.region.min.Y) / 4) + 1
-		local iz = math.floor((center.Z - w.region.min.Z) / 4) + 1
-		eq(w.materials[ix][iy][iz], Enum.Material.Air, "world->array mapping")
+		eq(voxelAt(0, 0, 0), Enum.Material.Grass, "top layer is grass")
+		eq(
+			voxelAt(-1, 9, 4),
+			Resources.get(OreGeneration.resourceAt(99, -1, 9, 4)).terrainMaterial,
+			"border ring solid"
+		)
+	end)
+
+	test("background generation stays ahead and stops when the owner changes", function()
+		local spawned = {}
+		H.globals.task.spawn = function(f)
+			table.insert(spawned, f)
+		end
+		local owner = {}
+		local p2 = { originX = 0, originZ = 0, seed = 5, dug = {}, damage = {}, generatedDepth = 0, owner = owner }
+		TerrainChunkService.requestDepth(p2, 40)
+		eq(p2.generatedDepth, 0, "nothing generated inside the request (no work on the dig path)")
+		eq(#spawned, 1, "worker started")
+		TerrainChunkService.requestDepth(p2, 48)
+		eq(#spawned, 1, "one worker only")
+		spawned[1]()
+		eq(p2.generatedDepth, 48, "worker reached the highest requested depth")
+
+		-- owner leaves mid-way: the worker must drop the request
+		local p3 = { originX = 0, originZ = 0, seed = 6, dug = {}, damage = {}, generatedDepth = 0, owner = owner }
+		local steps = 0
+		H.globals.task.wait = function()
+			steps += 1
+			if steps == 2 then
+				p3.owner = nil
+			end
+		end
+		table.clear(spawned)
+		TerrainChunkService.requestDepth(p3, 400)
+		spawned[1]()
+		ok(p3.generatedDepth < 400, "generation stopped after the owner left (" .. p3.generatedDepth .. ")")
+		H.globals.task.wait = function() end
 	end)
 
 	test("writeBox clamps to the plot and rewrites only the box", function()

@@ -101,31 +101,32 @@ Node.__index = function(self, key)
 	return child
 end
 
+-- Injected names become locals of the module (see `loadwrapped` in tools/luaucheck), not a
+-- setfenv environment: setfenv would disable Luau's fast paths and distort benchmarks.
+local HEADER = "local script, require, game, Vector3, Color3, Enum, workspace, Region3, CFrame, task, Random = ...;"
+
+local function tryLoadWrapped(path)
+	local ok, fn = pcall(loadwrapped, path, HEADER)
+	if ok then
+		return fn
+	end
+	local message = tostring(fn)
+	if not message:find("os error 2") then
+		error(fn, 0)
+	end
+	return nil
+end
+
 local function requireNode(node)
 	local path = rawget(node, "__path")
 	if moduleCache[path] ~= nil then
 		return moduleCache[path]
 	end
-	local fn = tryLoad(path .. ".lua")
-	local scriptNode = node
-	if not fn then
-		fn = tryLoad(path .. "/init.lua")
-	end
+	local fn = tryLoadWrapped(path .. ".lua") or tryLoadWrapped(path .. "/init.lua")
 	assert(fn, "module not found: " .. path)
-	local env = setmetatable(
-		{ script = scriptNode, require = requireNode, game = H.game, Vector3 = Vector3, Color3 = Color3, Enum = Enum },
-		{
-			__index = function(_, k)
-				local v = H.globals[k]
-				if v ~= nil then
-					return v
-				end
-				return _G[k]
-			end,
-		}
-	)
-	setfenv(fn, env)
-	local result = fn()
+	local g = H.globals
+	local result =
+		fn(node, requireNode, H.game, Vector3, Color3, Enum, g.workspace, g.Region3, g.CFrame, g.task, g.Random)
 	moduleCache[path] = result
 	return result
 end

@@ -23,8 +23,8 @@ local TerrainChunkService = {}
 
 local chunkCallbacks: { (any, number, number) -> () } = {}
 
--- Called with (plot, firstDepth, lastDepth) after each generated chunk (used to place cave props,
--- chests and story objects).
+-- Called with (plot, firstDepth, lastDepth) after each generated slab of layers (used to place
+-- cave props, chests and story objects).
 function TerrainChunkService.onChunkGenerated(callback: (any, number, number) -> ())
 	table.insert(chunkCallbacks, callback)
 end
@@ -107,39 +107,88 @@ function TerrainChunkService.writeBox(
 	Terrain:WriteVoxels(Region3.new(min, max), CELL, materials, occupancies)
 end
 
--- Generates layer chunks until `targetDepth` cells exist below the surface. When yielding between
--- chunks, `stillValid` is checked before every chunk so a generation whose owner left stops
--- instead of writing over a plot that is being cleared or reassigned.
-function TerrainChunkService.ensureDepth(
-	plot: PlotTerrain,
-	targetDepth: number,
-	yieldBetweenChunks: boolean?,
-	stillValid: (() -> boolean)?
-)
-	targetDepth = math.min(targetDepth, GameConfig.MaxDepthCells + 1)
-	while plot.generatedDepth < targetDepth do
-		if stillValid and not stillValid() then
-			return
-		end
-		local d0 = plot.generatedDepth
-		local d1 = d0 + GameConfig.ChunkDepth - 1
-		TerrainChunkService.writeBox(plot, -1, N, d0, d1, -1, N)
-		plot.generatedDepth = d1 + 1
-		for _, callback in chunkCallbacks do
-			local ok, err = pcall(callback, plot, d0, d1)
-			if not ok then
-				warn("[TerrainChunkService] chunk callback failed:", err)
-			end
-		end
-		if yieldBetweenChunks then
-			task.wait()
+-- Generation happens in slabs of SLAB layers (~5 ms each in the Luau VM, see
+-- tests/bench_generation.lua). Callbacks receive the depth range of each generated slab.
+local SLAB = 4
+local BACKGROUND_BUDGET_SECONDS = 0.004
+
+local function generateSlab(plot: PlotTerrain)
+	local d0 = plot.generatedDepth
+	local d1 = math.min(d0 + SLAB - 1, GameConfig.MaxDepthCells)
+	TerrainChunkService.writeBox(plot, -1, N, d0, d1, -1, N)
+	plot.generatedDepth = d1 + 1
+	for _, callback in chunkCallbacks do
+		local ok, err = pcall(callback, plot, d0, d1)
+		if not ok then
+			warn("[TerrainChunkService] chunk callback failed:", err)
 		end
 	end
 end
 
--- Keeps GenerateAheadCells of solid ground below a newly dug depth.
+-- Generates terrain until `targetDepth` cells exist below the surface, yielding between slabs.
+-- `stillValid` is checked before every slab so a generation whose owner left stops instead of
+-- writing over a plot that is being cleared or reassigned.
+function TerrainChunkService.ensureDepth(plot: PlotTerrain, targetDepth: number, stillValid: (() -> boolean)?)
+	targetDepth = math.min(targetDepth, GameConfig.MaxDepthCells + 1)
+	local sliceStart = os.clock()
+	while plot.generatedDepth < targetDepth do
+		if stillValid and not stillValid() then
+			return
+		end
+		generateSlab(plot)
+		if os.clock() - sliceStart > BACKGROUND_BUDGET_SECONDS * 3 then
+			task.wait()
+			sliceStart = os.clock()
+		end
+	end
+end
+
+-- Background queue: digging must never wait for generation. Requests are served a few slabs per
+-- frame within BACKGROUND_BUDGET_SECONDS; GenerateAheadCells keeps the queue far ahead of players.
+type Request = { target: number, owner: any }
+local queue: { [any]: Request } = {}
+local workerRunning = false
+
+local function runWorker()
+	while next(queue) do
+		local frameStart = os.clock()
+		repeat
+			local worked = false
+			for plot, request in queue do
+				if plot.owner ~= request.owner or plot.generatedDepth >= request.target then
+					queue[plot] = nil
+				else
+					generateSlab(plot)
+					worked = true
+				end
+			end
+		until not worked or os.clock() - frameStart > BACKGROUND_BUDGET_SECONDS
+		task.wait()
+	end
+	workerRunning = false
+end
+
+function TerrainChunkService.requestDepth(plot: PlotTerrain, targetDepth: number)
+	targetDepth = math.min(targetDepth, GameConfig.MaxDepthCells + 1)
+	if plot.generatedDepth >= targetDepth then
+		return
+	end
+	local owner = (plot :: any).owner
+	local existing = queue[plot]
+	if existing and existing.owner == owner then
+		existing.target = math.max(existing.target, targetDepth)
+	else
+		queue[plot] = { target = targetDepth, owner = owner }
+	end
+	if not workerRunning then
+		workerRunning = true -- set before spawning so a deferred start cannot launch two workers
+		task.spawn(runWorker)
+	end
+end
+
+-- Keeps GenerateAheadCells of solid ground below a newly dug depth (in the background).
 function TerrainChunkService.onDugTo(plot: PlotTerrain, depth: number)
-	TerrainChunkService.ensureDepth(plot, depth + GameConfig.GenerateAheadCells)
+	TerrainChunkService.requestDepth(plot, depth + GameConfig.GenerateAheadCells)
 end
 
 -- Fills the flat ground slab (grass over dirt) covering a world-space rectangle.
@@ -161,6 +210,7 @@ end
 
 -- Removes everything generated for a plot and restores the flat slab over its dig area.
 function TerrainChunkService.clear(plot: PlotTerrain)
+	queue[plot] = nil
 	local minX, maxX = plot.originX - CELL, plot.originX + (N + 1) * CELL
 	local minZ, maxZ = plot.originZ - CELL, plot.originZ + (N + 1) * CELL
 	local depth = plot.generatedDepth
