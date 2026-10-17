@@ -264,8 +264,25 @@ local function removeTemplateBaseplate()
 	end
 end
 
+-- Surface: a clear, warm afternoon so the first minutes read as "garden in the sun" and the first
+-- metres underground feel like leaving it (the client grades each layer, AmbienceController).
+local function applySurfaceLighting()
+	local Lighting = game:GetService("Lighting")
+	Lighting.ClockTime = 14.6
+	Lighting.GeographicLatitude = 35
+	Lighting.Brightness = 2.4
+	Lighting.Ambient = Color3.fromRGB(110, 104, 98)
+	Lighting.OutdoorAmbient = Color3.fromRGB(150, 146, 140)
+	Lighting.EnvironmentDiffuseScale = 0.5
+	Lighting.EnvironmentSpecularScale = 0.4
+	Lighting.ShadowSoftness = 0.25
+	Lighting.FogColor = Color3.fromRGB(190, 210, 230)
+	Lighting.FogEnd = 1400
+end
+
 function PlotService.start()
 	removeTemplateBaseplate()
+	applySurfaceLighting()
 	worldFolder = Instance.new("Folder")
 	worldFolder.Name = "World"
 	worldFolder.Parent = workspace

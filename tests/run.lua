@@ -999,6 +999,45 @@ test("profile v3 data migrates to v4; counter and mobility sanitised", function(
 	dataStoreRoundTrip(r)
 end)
 
+test("zone look: every zone has an art direction, layers blend at boundaries and darken with depth", function()
+	local Visuals = H.module("ReplicatedStorage", "Shared", "Config", "Visuals")
+	local ZoneLook = H.module("ReplicatedStorage", "Shared", "Util", "ZoneLook")
+	local function close(a, b, eps)
+		return math.abs(a - b) <= (eps or 1e-6)
+	end
+	local function sameColor(a, b, eps)
+		return close(a.R, b.R, eps) and close(a.G, b.G, eps) and close(a.B, b.B, eps)
+	end
+	for _, zone in Zones.List do
+		ok(Visuals.Zones[zone.id], "art direction for " .. zone.id)
+		local air = Visuals.Zones[zone.id].air
+		ok(air.rate > 0 and air.rate <= 20, zone.id .. ": particle budget")
+		ok(air.glow >= 0 and air.glow <= 1, zone.id .. ": glow range")
+	end
+	-- continuous across every boundary: just above and just below look (almost) the same
+	for i = 1, #Zones.List - 1 do
+		local boundary = Zones.List[i].maxDepth
+		local above, below = ZoneLook.at(boundary - 0.01), ZoneLook.at(boundary + 0.01)
+		ok(close(above.fogEnd, below.fogEnd, 2), "fog continuous at " .. boundary .. " m")
+		ok(sameColor(above.ambient, below.ambient, 0.01), "ambient continuous at " .. boundary .. " m")
+		ok(close(above.saturation, below.saturation, 0.01), "grade continuous at " .. boundary .. " m")
+		-- and far from a boundary it is the zone's own look
+		local mid = (Zones.List[i].minDepth + boundary) / 2
+		eq(ZoneLook.at(mid).zoneId, Zones.List[i].id)
+		eq(ZoneLook.at(mid).bloom, Visuals.Zones[Zones.List[i].id].bloom, "own look mid-zone")
+	end
+	-- deeper inside a zone is darker and the fog closer
+	local top, bottom = ZoneLook.at(60), ZoneLook.at(140)
+	ok(bottom.fogEnd < top.fogEnd, "fog closes with depth")
+	ok(bottom.ambient.R < top.ambient.R, "ambient darkens with depth")
+	-- the quality scale never turns the world off and never exceeds full
+	for level = 0, 10 do
+		local s = Visuals.qualityScale(level)
+		ok(s > 0 and s <= 1, "quality scale " .. level)
+	end
+	ok(Visuals.qualityScale(1) < Visuals.qualityScale(10), "low quality spends less")
+end)
+
 test("discovery bonus: first find pays, structure rewards (fossil fragment, geode) never do", function()
 	local InventoryLogic = H.module("ServerScriptService", "Server", "Logic", "Inventory")
 	local copper = Resources.get("copper")
