@@ -288,3 +288,23 @@ de la plantilla ya se elimina sola: la consola debe avisar `removing the templat
 | V14 | Fósil repetido | Ya no da +225 monedas («Nuevo descubrimiento: Fragmento fósil» no debe aparecer con monedas). |
 | V15 | Cuerda desde la boca | De pie en el borde del agujero, Q cuelga la cuerda hacia el interior. |
 | V16 | Consola | Sin avisos de `swoosh.wav`. |
+
+
+## 8. Iteración 6: equipo, tutorial, ajustes y descarga de decoración. Pruebas de Studio
+
+Verificado **solo en la VM** (59 tests, compilación, comprobaciones estáticas con 62 usos de
+eventos remotos). Para probar el equipo sin jugar horas, date monedas en la consola del servidor
+durante la prueba (no en el repositorio).
+
+| # | Prueba | Qué debe pasar |
+|---|---|---|
+| W1 | Partida nueva | Abajo aparece «Apunta al suelo del agujero y mantén pulsado...». Tras cavar: «Cada bloque roto va a tu mochila...». Con 10 bloques: «Sube (R) y véndelos» y un «▼ VENDER» que flota sobre tu carro. Tras vender: «Reúne 100 monedas...» y luego «▼ GARAJE». A 25 m desaparece. Sal y vuelve a entrar: no reaparece. |
+| W2 | ⚙ → Bajo, sacudida No; salir y entrar | Los ajustes se conservan (necesita guardado real). |
+| W3 | Garaje → Equipo | Tres tarjetas (Linterna 400, Detector 1 500, Gancho 2 500). Comprar una: aparece su botón en la columna derecha y la barra «Batería». |
+| W4 | Linterna (L) en una cámara oscura | La cámara se ilumina; la batería baja (unos 100 s con la batería básica); al vaciarse se apaga con aviso. Un segundo jugador ve la luz. |
+| W5 | Detector (G) cerca de una geoda oculta | Mensaje «Resonancia: una geoda, muy cerca.» y una flecha luminosa violeta hacia ella. Sin nada cerca: «Silencio». Pulsar dos veces seguidas: «se está recargando». |
+| W6 | Detector entre 100 y 128 m sin haber encontrado El Contador | «algo que no es roca», con una flecha cian hacia la sala. |
+| W7 | Gancho (T) apuntando a una pared de una cámara a menos de 40 studs | Una cuerda visible y un tirón hasta la pared, con un pequeño impulso hacia arriba. Apuntando fuera del agujero, al aire o demasiado lejos: mensaje y nada más. **Comprueba que no atraviesa roca ni deja al personaje dentro del terreno.** |
+| W8 | Batería | Se recarga en la superficie y quieto junto a una estación tuya; cavar no la gasta nunca. |
+| W9 | Descarga de decoración | Baja a 300 m y espera 5 s: `#workspace.World:GetDescendants()` baja respecto a V8, porque los sectores de 64–200 m dejan de tener decoración. Vuelve en el montacargas a las Minas: los raíles y faroles reaparecen en unos 4 s, en el mismo sitio. |
+| W10 | MicroProfiler al volver con el montacargas | La reconstrucción de la decoración no debe dar tirones (anota los ms). |

@@ -180,7 +180,7 @@ local Quests: { Quest } = {
 	{
 		id = "geodes_3",
 		title = "Abre 3 geodas",
-		hint = "Cada geoda guarda cristales distintos según su profundidad.",
+		hint = "El detector de resonancia del garaje (G) señala las que siguen ocultas.",
 		kind = "stat",
 		key = "geodesOpened",
 		target = 3,
@@ -189,7 +189,7 @@ local Quests: { Quest } = {
 	{
 		id = "depth_250",
 		title = "Alcanza 250 metros",
-		hint = "Busca el corazón de cristal de una cámara grande.",
+		hint = "Las cámaras grandes guardan un corazón de cristal. El gancho (T) llega a lo alto.",
 		kind = "depth",
 		target = 250,
 		reward = 1200,

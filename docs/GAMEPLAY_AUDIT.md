@@ -174,14 +174,26 @@ pruebas de Studio.
   se guardan.
 - G3: abrir el menú del montacargas cierra la nota, la tienda y la mochila.
 
-## 9. Problemas abiertos
+## 9. Iteración 6: lo que quedaba
 
-| # | Problema | Siguiente paso |
+| # | Problema | Estado |
 |---|---|---|
-| A1 | **Nada de las iteraciones 4 y 5 se ha visto en Studio** (aspecto, escala, coste real) | Lista de pruebas V1–V12 en `docs/AUDIT.md`, sección 7 |
-| A2 | La decoración de los sectores no se descarga nunca (P2-12) | Medir piezas a 300 y 1000 m; si hace falta, descargar los sectores lejanos del dueño |
-| A3 | Audio: todos los sonidos son internos y genéricos; el gesto usa un clic provisional | Subir audio propio (golpe por material, ritmo del Contador, zumbido) |
-| A4 | Los ajustes no se guardan | Campo `settings` en el perfil, con la misma estrategia aditiva que `exhibit` |
-| A5 | Pruebas con dos jugadores y guardado real (G1–G3) | Lugar publicado con API Services |
-| A6 | Equipo con batería, gancho y expediciones (diseño en `DESIGN_MOBILITY_AND_MINES.md`) | Después de validar en Studio lo actual |
-| A7 | No hay tutorial guiado: solo las primeras misiones | Indicaciones contextuales en los 5 primeros minutos (apuntar, golpear, vender, comprar) |
+| A1 | Nada de las iteraciones 4–6 se ha visto en Studio | **Abierto.** Lista exacta en `docs/AUDIT.md`, secciones 7 y 8 |
+| A2 | La decoración no se descargaba nunca | **Hecho** (`d285b53`). `Logic/DecorStreaming`: solo los sectores a 2 o menos (64 m) de un jugador conservan la decoración, que se reconstruye de forma determinista al volver. Cofres, geodas, fósiles y El Contador no se descargan. Test [VM] |
+| A3 | Audio propio | **Abierto.** No puedo crear ni subir audio a Roblox desde aquí. Los sonidos siguen siendo internos; ya cargan todos (el gesto usa un clic provisional) |
+| A4 | Los ajustes no se guardaban | **Hecho** (`3dfb05a`). `profile.settings`, validado en el servidor (`ProfileSchema.applySettings`), con limitación de frecuencia; no reenvía el estado completo. Test [VM] |
+| A5 | Dos jugadores y guardado real | **Abierto** (necesita un lugar publicado) |
+| A6 | Equipo con batería y gancho | **Hecho** (`8c34db2`). Linterna potente, detector de resonancia y gancho; la batería vuelve a la tienda y se recarga en la superficie y junto a las estaciones. **Cavar sigue sin gastar batería.** Expediciones: **no**; con el equipo actual el banco de expedición no añade decisiones nuevas, y lo dejo hasta ver cómo se juega |
+| A7 | Sin tutorial | **Hecho** (`3dfb05a`). `Util/TutorialLogic`: los pasos se deducen del estado real y terminan para siempre a 25 m, con marcadores sobre el carro y el garaje. Test [VM] |
+
+Mejoras añadidas al cerrar:
+- Las pistas de las misiones de geodas y de 250 m mencionan el detector y el gancho.
+- La barra de energía se llama ahora «Batería» y solo aparece si llevas equipo que la usa.
+- Los botones de equipo van en una columna a la derecha para que la barra inferior no se salga de
+  la pantalla en el móvil.
+
+**Riesgo conocido de guardado (aditivo):** `collection.exhibit`, `settings` y `gear` son campos
+nuevos sin cambio de versión. Las partidas antiguas cargan con valores por defecto. Si se vuelve a
+publicar una versión anterior del juego, esa versión los descartará al guardar: se perderían el
+equipo comprado, la vitrina y los ajustes. Antes de volver a una versión anterior hay que
+desplegar una que los conserve.

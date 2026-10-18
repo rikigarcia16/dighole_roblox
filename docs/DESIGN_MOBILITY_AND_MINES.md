@@ -130,3 +130,17 @@ inicial de la semilla. La sala se reconstruye al generar el sector y recuerda si
   del equipo con batería.
 - No se ha visto nunca la sala renderizada en Roblox. Escala, iluminación y legibilidad de la placa
   están sin validar.
+
+---
+
+## D. Iteración 6: equipo y gancho (implementado, sin probar en Studio)
+
+| Equipo | Regla | Dónde |
+|---|---|---|
+| **Gancho** (2 500) | Mecánico, sin batería. Alcance de 40 studs y espera de 1,6 s entre usos. El servidor exige roca a menos de 4 studs del punto apuntado, en línea recta desde la cabeza y dentro de tu propio agujero. El cliente tira de su personaje durante 1 s como máximo, con una cuerda visible y un pequeño impulso hacia arriba para subir a un saliente. Sirve para cruzar pozos y llegar a galerías altas; nunca atraviesa roca. | `GearService.hook`, `UI/GearUI` |
+| **Linterna potente** (400) | Gasta 0,6 de batería por segundo encendida. Luz de 60 studs con sombras, visible para todos. Se apaga sola al vaciarse. | `GearService` |
+| **Detector de resonancia** (1 500) | 12 de batería por pulso y 2,5 s de espera. Señala el hallazgo oculto más cercano a menos de 30 m (cofre, geoda, fósil o El Contador sin descubrir) con una dirección y una distancia aproximada (muy cerca / cerca / lejos), nunca la posición exacta. | `Logic/Resonance`, `GearService.pulse` |
+| **Batería** | Vuelve a la tienda. **Cavar no la gasta nunca.** Se recarga en la superficie y a menos de 14 studs de una estación propia. | `EnergyService.addRechargeSource` |
+
+Decisión: el **gancho motorizado** y la **mochila propulsora** quedan pendientes. Se añadirán
+cuando el gancho básico se haya probado en Studio y se sepa si la física del tirón se siente bien.
