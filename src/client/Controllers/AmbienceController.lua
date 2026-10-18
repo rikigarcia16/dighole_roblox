@@ -241,7 +241,8 @@ function AmbienceController.start()
 					lastDepth = math.floor(depth)
 					AmbienceController.depthChanged:Fire(depth, Zones.at(depth))
 				end
-				if lamp == nil or lamp.Parent == nil then
+				-- respawned: the lamp belongs to the old head (destroyed or merely parented to nil)
+				if lamp == nil or lamp.Parent ~= character:FindFirstChild("Head") then
 					wasUnderground = not (depth > UNDERGROUND_DEPTH) -- respawned: force the lamp update
 				end
 				step(depth, grade, bloom, atmosphere)

@@ -181,6 +181,8 @@ function GearService.start()
 			for player in lampOn do
 				if not player.Parent then
 					lampOn[player] = nil
+				elseif not head(player) then
+					continue -- respawning: no light, so no drain
 				elseif not EnergyService.consume(player, Gear.Lamp.drainPerSecond * dt) then
 					setLamp(player, false)
 					StateService.notify(player, "info", "La linterna se ha quedado sin batería.", "lamp_empty", 3)

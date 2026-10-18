@@ -1173,6 +1173,36 @@ test("tutorial: each hint follows what the player has done and ends for good", f
 	eq(TutorialLogic.step(nil), nil)
 end)
 
+test("corrupted saves cannot hang the load: dug runs, inventory and seed are sanitised", function()
+	local CellSetM = H.module("ReplicatedStorage", "Shared", "Util", "CellSet")
+	-- a huge / infinite run used to make CellSet.decode loop (practically) forever
+	local start = os.clock()
+	local set = CellSetM.decode({ 5, math.huge, 3, 2 })
+	ok(os.clock() - start < 0.5, "decode returned")
+	eq(next(set), nil, "bad run stops decoding")
+	eq(next(CellSetM.decode({ "x", 3 })), nil, "non-number gap")
+	local good = CellSetM.encode({ [10] = true, [11] = true, [40] = true })
+	local decoded = CellSetM.decode(good)
+	ok(decoded[10] and decoded[11] and decoded[40] and not decoded[12], "valid data unchanged")
+	local r = ProfileSchema.reconcile({
+		version = 4,
+		inventory = { copper = math.huge, iron = 0 / 0, stone = 3.7 },
+		plot = { seed = math.huge, dug = { 10, 2, 28, 1, 5, 1e12, 1, 1 } },
+	}, 77)
+	eq(r.inventory.copper, nil, "infinite count dropped")
+	eq(r.inventory.iron, nil, "NaN count dropped")
+	eq(r.inventory.stone, 3)
+	ok(r.plot.seed ~= math.huge, "infinite seed replaced")
+	eq(#r.plot.dug, 4, "dug kept up to the first bad pair")
+	local kept = CellSetM.decode(r.plot.dug)
+	ok(kept[10] and kept[11] and kept[40], "the valid part of the hole survives")
+	-- a normal hole is untouched by the sanitiser
+	local p = ProfileSchema.default(3)
+	p.plot.dug = CellSetM.encode({ [0] = true, [1] = true, [300] = true })
+	local again = ProfileSchema.reconcile(dataStoreRoundTrip(p), 1)
+	eq(table.concat(again.plot.dug, ","), table.concat(p.plot.dug, ","), "valid hole identical")
+end)
+
 test("settings: validated from the client and from saves, defaults for old saves", function()
 	local p = ProfileSchema.default(1)
 	eq(p.settings.effects, 0)

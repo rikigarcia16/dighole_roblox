@@ -11,6 +11,7 @@ local Story = require(Shared.Config.Story)
 local Fossils = require(Shared.Config.Fossils)
 local Mobility = require(Shared.Config.Mobility)
 local Gear = require(Shared.Config.Gear)
+local CellSet = require(Shared.Util.CellSet)
 
 local ProfileSchema = {}
 
@@ -176,8 +177,9 @@ function ProfileSchema.reconcile(data: any, seed: number): Profile
 
 	if type(data.inventory) == "table" then
 		for id, count in data.inventory do
-			if Resources.get(id) and type(count) == "number" and count > 0 then
-				profile.inventory[id] = math.floor(count)
+			local n = math.floor(finiteNonNegative(count, 0))
+			if Resources.get(id) and n > 0 then
+				profile.inventory[id] = n
 			end
 		end
 	end
@@ -322,11 +324,32 @@ function ProfileSchema.reconcile(data: any, seed: number): Profile
 	end
 
 	if type(data.plot) == "table" then
-		if type(data.plot.seed) == "number" then
-			profile.plot.seed = data.plot.seed
+		local seed = data.plot.seed
+		if type(seed) == "number" and seed == seed and math.abs(seed) < 2 ^ 31 then
+			profile.plot.seed = seed
 		end
 		if type(data.plot.dug) == "table" then
-			profile.plot.dug = data.plot.dug
+			-- run-length pairs of finite integers; stop at the first bad pair (CellSet also guards)
+			local clean = {}
+			local raw = data.plot.dug
+			for i = 1, #raw - 1, 2 do
+				local gap, run = raw[i], raw[i + 1]
+				if
+					type(gap) ~= "number"
+					or type(run) ~= "number"
+					or gap ~= math.floor(gap)
+					or run ~= math.floor(run)
+					or gap < 0
+					or gap > CellSet.MaxKey
+					or run < 1
+					or run > CellSet.MaxRun
+				then
+					break
+				end
+				table.insert(clean, gap)
+				table.insert(clean, run)
+			end
+			profile.plot.dug = clean
 		end
 		if type(data.plot.openedChests) == "table" then
 			for _, key in data.plot.openedChests do

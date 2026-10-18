@@ -27,6 +27,9 @@ function CellSet.encode(set: { [number]: boolean }): { number }
 	return out
 end
 
+CellSet.MaxKey = 2 ^ 40 -- far above any Grid.key
+CellSet.MaxRun = 1000000 -- longest run of consecutive cells accepted when decoding
+
 function CellSet.decode(encoded: { number }?): { [number]: boolean }
 	local set = {}
 	if type(encoded) ~= "table" then
@@ -34,9 +37,13 @@ function CellSet.decode(encoded: { number }?): { [number]: boolean }
 	end
 	local cursor = 0
 	for i = 1, #encoded - 1, 2 do
-		local start = cursor + encoded[i]
-		local length = encoded[i + 1]
-		if type(start) ~= "number" or type(length) ~= "number" or length < 1 then
+		local gap, length = encoded[i], encoded[i + 1]
+		if type(gap) ~= "number" or type(length) ~= "number" then
+			break
+		end
+		local start = cursor + gap
+		-- a corrupted save must never make this loop run forever (inf / NaN / absurd runs)
+		if start ~= start or math.abs(start) > CellSet.MaxKey or not (length >= 1 and length <= CellSet.MaxRun) then
 			break
 		end
 		for key = start, start + length - 1 do

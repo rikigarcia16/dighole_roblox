@@ -133,6 +133,7 @@ function StateService.start()
 		pending[player] = nil
 		lastNotify[player] = nil
 		limiter:forget(player)
+		settingsLimiter:forget(player)
 	end)
 end
 

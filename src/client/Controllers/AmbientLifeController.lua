@@ -5,7 +5,8 @@
 --   THNE_Spin     the Core's floating shards: turn and bob
 --   falling dust  every few seconds a little dust trickles from the ceiling above the player
 --
--- Only objects within ACTIVE_RANGE of the camera are touched, at most MAX_PER_STEP per frame, and
+-- Only objects within ACTIVE_RANGE of the camera are animated (at most MAX_ACTIVE, list refreshed
+-- every 0.5 s), and
 -- dust follows the graphics quality (AmbienceController.effectsScale).
 
 local CollectionService = game:GetService("CollectionService")
@@ -22,7 +23,7 @@ local AmbientLifeController = {}
 
 local player = Players.LocalPlayer
 local ACTIVE_RANGE = 140
-local MAX_PER_STEP = 60
+local MAX_ACTIVE = 80 -- most objects animated at once (the nearest ones within range)
 
 type Living = { part: BasePart, kind: string, light: PointLight?, base: number, cframe: CFrame, phase: number }
 
@@ -145,23 +146,33 @@ function AmbientLifeController.start()
 		CollectionService:GetInstanceRemovedSignal(kind):Connect(unregister)
 	end
 
-	-- round-robin over the living objects so the per-frame cost stays flat however many exist
-	local cursor = 1
-	RunService.RenderStepped:Connect(function()
-		local camera = workspace.CurrentCamera
-		if not camera or #living == 0 then
-			return
-		end
-		local eye = camera.CFrame.Position
-		local now = os.clock()
-		local count = math.min(MAX_PER_STEP, #living)
-		for _ = 1, count do
-			if cursor > #living then
-				cursor = 1
+	-- Every 0.5 s keep only what is near the camera; those few are animated every frame, so a
+	-- nearby lantern never stutters however many tagged objects the place holds.
+	local active: { Living } = {}
+	task.spawn(function()
+		while true do
+			local camera = workspace.CurrentCamera
+			local nextActive = {}
+			if camera then
+				local eye = camera.CFrame.Position
+				for _, entry in living do
+					if
+						#nextActive < MAX_ACTIVE
+						and entry.part.Parent
+						and (entry.part.Position - eye).Magnitude < ACTIVE_RANGE
+					then
+						table.insert(nextActive, entry)
+					end
+				end
 			end
-			local entry = living[cursor]
-			cursor += 1
-			if entry.part.Parent and (entry.part.Position - eye).Magnitude < ACTIVE_RANGE then
+			active = nextActive
+			task.wait(0.5)
+		end
+	end)
+	RunService.RenderStepped:Connect(function()
+		local now = os.clock()
+		for _, entry in active do
+			if entry.part.Parent then
 				animate(entry, now)
 			end
 		end

@@ -197,3 +197,20 @@ nuevos sin cambio de versión. Las partidas antiguas cargan con valores por defe
 publicar una versión anterior del juego, esa versión los descartará al guardar: se perderían el
 equipo comprado, la vitrina y los ajustes. Antes de volver a una versión anterior hay que
 desplegar una que los conserve.
+
+### Revisión independiente del código nuevo
+Sin hallazgos críticos ni altos: la seguridad de los eventos remotos, la duplicación y la
+propiedad de las parcelas están bien. Corregido lo que encontró, y algo más grave que salió al
+revisarlo:
+- **Carga que podía colgarse:** una partida corrupta con una longitud infinita o enorme en
+  `plot.dug` hacía que `CellSet.decode` no terminara nunca. Ahora `decode` y la reconciliación del
+  perfil cortan en el primer par no válido y conservan la parte buena del agujero. También se
+  descartan las cantidades infinitas o NaN del inventario y una semilla no válida. Test [VM].
+- El limitador de `SaveSettings` ya se libera al salir el jugador.
+- La linterna deja de gastar batería mientras el personaje reaparece.
+- La lámpara de cabeza vuelve tras reaparecer aunque el personaje antiguo no se destruya.
+- La animación ambiental mantiene una lista de los objetos cercanos (como máximo 80, recalculada
+  cada 0,5 s) y los anima en cada fotograma: así no tartamudea aunque el lugar tenga miles de
+  objetos con etiqueta.
+- Comprobado: `PlotService.onReady` se lanza después de cargar el perfil, así que la vitrina
+  siempre se reconstruye.
