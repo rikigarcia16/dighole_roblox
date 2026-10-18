@@ -214,3 +214,28 @@ revisarlo:
   objetos con etiqueta.
 - Comprobado: `PlotService.onReady` se lanza después de cargar el perfil, así que la vitrina
   siempre se reconstruye.
+
+## 10. Informe de Studio 2
+
+Primera vez que las iteraciones 4–6 se ejecutan en Studio (`docs/STUDIO_REPORT_2.md`).
+
+**Qué estaba mal y está arreglado** [Studio salvo donde se indica]:
+- El hierro se generaba como césped (material `Granite` inexistente en terreno). Test nuevo de
+  materiales [pendiente de pasar en la VM: no había `luaucheck`].
+- Texto «Label» fijo en pantalla; sin forma de subir entre 2 y 8 m (justo cuando el tutorial lo
+  pide); palancas del Contador con el indicador equivocado; cuerda desde el borde demasiado
+  exigente; panel ⚙ encima de la Mochila; recarga de decoración en un fotograma.
+- Rendimiento: 447 → 237 piezas por parcela vacía (valla). Al empezar, 1 928 piezas en total.
+- Aspecto: Cristal y Abismo menos oscuros.
+- Gancho: agarre de 1,5 s en la pared [parcial: probar en una cámara grande].
+
+**Problemas abiertos:**
+
+| # | Problema | Siguiente paso |
+|---|---|---|
+| A8 | Cavar con E/mando/táctil desde el borde de un hueco no hace nada (el rayo central cae lejos) | Fallback hacia el suelo bajo los pies |
+| A9 | FPS reales en calidad Baja/Alta sin medir | El usuario, con la ventana activa (Ctrl+Shift+F5) |
+| A10 | Interfaz en móvil sin revisar | *Test → Device* en Studio |
+| A11 | Escenas de cueva (V4–V7), sensación de herramientas (V9), transiciones (V2) sin ver | El usuario, con las capturas del informe |
+| A12 | Dos jugadores y guardado real | Lugar publicado (lista en el informe, §6) |
+| A13 | `luaucheck` no ejecutado en esta tanda | Pasar `tests/run.lua` y `tests/static_checks.lua` |

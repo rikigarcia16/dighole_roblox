@@ -67,3 +67,12 @@ cada 0,5 s y animada en cada fotograma.
 **Sin verificar en Studio:** aspecto, escala y piezas reales por sector (contarlas con
 `#workspace.World:GetDescendants()` tras bajar 300 m), y el coste por fotograma de la animación
 ambiental.
+
+## Ajustes tras ver el juego en Studio (informe 2)
+
+- **Cuevas de Cristal:** con ambiente (60, 60, 110) se veían casi negras a 200 m incluso con la
+  linterna. Ahora (92, 94, 150) y niebla (40, 40, 92): se lee azul violeta sin linterna. Capturas
+  de antes y después en `STUDIO_REPORT_2.md`.
+- **Abismo:** ambiente (24, 40, 52) → (34, 56, 70). Sigue siendo la capa más oscura, pero no negra.
+- **Hierro:** `Granite` no existe como material de terreno (Roblox lo cambiaba por césped). Usa
+  `WoodPlanks` coloreado; para un aspecto propio hará falta un `MaterialVariant` con textura propia.

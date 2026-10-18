@@ -81,7 +81,7 @@ La física, la red, el aspecto visual, el audio y los DataStores **no se han eje
 | Límite | Consecuencia | Cómo se trabaja con él |
 |---|---|---|
 | Vóxel mínimo de 4 studs | Los detalles finos (raíces, vetas finas) no pueden ser terreno | Detalles con piezas dentro de huecos (geodas, hitos, decoración) |
-| 22 materiales de terreno con color global; **21 ya en uso** | No se pueden añadir más recursos visibles como terreno | Nuevos hallazgos como estructuras con piezas. Hay `MaterialVariant`, pero sigue siendo uno por material |
+| 22 materiales de terreno con color global (incluida el agua); **los 22 ya en uso**. `Granite` no es material de terreno (Roblox escribe `Grass`): el hierro usa `WoodPlanks` desde el informe 2 | No se pueden añadir más recursos visibles como terreno | Nuevos hallazgos como estructuras con piezas. Hay `MaterialVariant`, pero sigue siendo uno por material |
 | Terreno suave | Aspecto redondeado, no cúbico | Es el aspecto elegido; el daño parcial reduce la ocupación |
 | Agua de terreno estática | No fluye | Pozas contenidas por roca, comprobadas por test |
 | Coste de `WriteVoxels` por golpe y su replicación | Golpes con radio grande cuestan más | Una sola escritura de la caja mínima (~1,4 ms con radio 3) |
@@ -266,8 +266,12 @@ desactivarla.
 
 ## 7. Iteración 5: aspecto, escenas, progresión y vitrina. Pruebas de Studio
 
+**Studio (informe 2, `STUDIO_REPORT_2.md`):** OK en V8, V10, V11, V16; V13 y V15 fallaban y están
+arreglados y verificados; parciales V1 y V12; sin probar V2–V7, V9 y V14 (visual o pendiente) y V3
+(FPS no medible desde el MCP).
+
 Verificado **solo en la VM** (55 tests, compilación, comprobaciones estáticas). Nada de esta
-sección se ha ejecutado en Studio. Preparación: `rojo serve` y *Play* con 1 jugador. La Baseplate
+sección se había ejecutado en Studio antes del informe 2. Preparación: `rojo serve` y *Play* con 1 jugador. La Baseplate
 de la plantilla ya se elimina sola: la consola debe avisar `removing the template Baseplate`.
 
 | # | Prueba | Qué debe pasar |
@@ -291,6 +295,9 @@ de la plantilla ya se elimina sola: la consola debe avisar `removing the templat
 
 
 ## 8. Iteración 6: equipo, tutorial, ajustes y descarga de decoración. Pruebas de Studio
+
+**Studio (informe 2):** OK en W3, W6, W8, W9 y W10 (mejorado); parciales W1 (R a 3 m arreglado), W4,
+W5 y W7 (agarre añadido); W2 necesita guardado real.
 
 Verificado **solo en la VM** (59 tests, compilación, comprobaciones estáticas con 62 usos de
 eventos remotos). Para probar el equipo sin jugar horas, date monedas en la consola del servidor
