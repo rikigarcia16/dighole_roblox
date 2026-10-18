@@ -116,6 +116,33 @@ DigFeel.Timing = {
 	drill = { duration = 0.14, impact = 0 },
 } :: { [string]: Timing }
 
+-- How each tool FEELS when it lands, so an upgrade is noticed on the very next hit:
+--   weight : scales dust and fragments and lowers the pitch (heavier tools sound deeper)
+--   spark  : colour of the glints the tool itself throws (nil = none: wooden/rusty tools)
+--   shake  : camera punch in degrees for the local player (0 = none); kept small
+--   glow   : the hit point flashes in the spark colour (energy tools)
+export type ToolFeel = { weight: number, spark: Color3?, shake: number, glow: boolean }
+
+local STEEL = Color3.fromRGB(255, 236, 190)
+local HOT = Color3.fromRGB(255, 150, 60)
+DigFeel.ToolFeel = {
+	rusty_shovel = { weight = 0.7, spark = nil, shake = 0, glow = false },
+	reinforced_shovel = { weight = 0.85, spark = nil, shake = 0.15, glow = false },
+	steel_shovel = { weight = 1, spark = STEEL, shake = 0.2, glow = false },
+	miner_pick = { weight = 1.15, spark = STEEL, shake = 0.3, glow = false },
+	industrial_pick = { weight = 1.3, spark = STEEL, shake = 0.4, glow = false },
+	portable_drill = { weight = 1.35, spark = HOT, shake = 0.25, glow = false },
+	advanced_drill = { weight = 1.45, spark = HOT, shake = 0.3, glow = false },
+	plasma_digger = { weight = 1.5, spark = Color3.fromRGB(110, 230, 255), shake = 0.3, glow = true },
+	abyss_borer = { weight = 1.6, spark = Color3.fromRGB(60, 255, 215), shake = 0.45, glow = true },
+	ancestral_tool = { weight = 1.75, spark = Color3.fromRGB(235, 250, 255), shake = 0.5, glow = true },
+} :: { [string]: ToolFeel }
+DigFeel.DefaultToolFeel = { weight = 1, spark = nil, shake = 0, glow = false } :: ToolFeel
+
+function DigFeel.toolFeel(toolId: string?): ToolFeel
+	return (toolId and DigFeel.ToolFeel[toolId]) or DigFeel.DefaultToolFeel
+end
+
 -- Highest number of segments drawn on the hardness bar (more hits than this show a percentage).
 DigFeel.MaxHardnessSegments = 10
 

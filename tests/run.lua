@@ -117,6 +117,21 @@ test("dig feel: every material family has a complete preset with existing sounds
 	end
 end)
 
+test("tool feel: every tool has its own weight, heavier tools feel heavier, punches stay small", function()
+	local DigFeel = H.module("ReplicatedStorage", "Shared", "Config", "DigFeel")
+	local previous = 0
+	for _, tool in Tools.List do
+		local feel = DigFeel.ToolFeel[tool.id]
+		ok(feel, tool.id .. " has no feel")
+		ok(feel.weight >= previous, tool.id .. ": weight must not drop with a better tool")
+		previous = feel.weight
+		ok(feel.shake >= 0 and feel.shake <= 0.6, tool.id .. ": camera punch too strong")
+		ok(not feel.glow or feel.spark, tool.id .. ": glow needs a colour")
+	end
+	eq(DigFeel.toolFeel(nil).weight, 1, "unknown tool falls back")
+	ok(DigFeel.ToolFeel.rusty_shovel.spark == nil, "the rusty shovel throws no sparks")
+end)
+
 test("hardness indicator: hits left, segments and locks", function()
 	local HardnessView = H.module("ReplicatedStorage", "Shared", "Util", "HardnessView")
 	local dirt = Resources.get("dirt") -- hardness 2

@@ -206,7 +206,7 @@ local function makeSoundPool()
 	end
 end
 
-function EffectsController.playAt(soundKey: string, position: Vector3)
+function EffectsController.playAt(soundKey: string, position: Vector3, pitchScale: number?)
 	local def = Sounds[soundKey]
 	if not def then
 		return
@@ -216,8 +216,23 @@ function EffectsController.playAt(soundKey: string, position: Vector3)
 	entry.part.Position = position
 	entry.sound.SoundId = def.id
 	entry.sound.Volume = def.volume
-	entry.sound.PlaybackSpeed = def.pitchMin + math.random() * (def.pitchMax - def.pitchMin)
+	entry.sound.PlaybackSpeed = (def.pitchMin + math.random() * (def.pitchMax - def.pitchMin)) * (pitchScale or 1)
 	entry.sound:Play()
+end
+
+-- Camera punch for the local player's own hits (DigFeel.ToolFeel.shake). Decays in ~0.15 s.
+local shakeAmount = 0
+local shakeEnabled = true
+function EffectsController.setCameraShake(enabled: boolean)
+	shakeEnabled = enabled
+	if not enabled then
+		shakeAmount = 0
+	end
+end
+local function punch(degrees: number)
+	if shakeEnabled and degrees > 0 then
+		shakeAmount = math.max(shakeAmount, degrees)
+	end
 end
 
 local uiSounds: { [string]: Sound } = {}
@@ -246,17 +261,42 @@ local function presetFor(resource: Resources.Resource): DigFeel.Preset
 end
 
 -- A tool landing on a material: discreet, it repeats hundreds of times.
-function EffectsController.impact(position: Vector3, resource: Resources.Resource, normal: Vector3?)
+-- `toolId` gives each tool its own weight, glints and (for the local player, `mine`) camera punch.
+function EffectsController.impact(
+	position: Vector3,
+	resource: Resources.Resource,
+	normal: Vector3?,
+	toolId: string?,
+	mine: boolean?
+)
 	local preset = presetFor(resource)
+	local feel = DigFeel.toolFeel(toolId)
 	local e = nextEmitter(position)
 	e.dust.Color = ColorSequence.new(resource.color)
-	e.dust:Emit(preset.dust)
+	e.dust:Emit(math.max(1, math.floor(preset.dust * feel.weight + 0.5)))
 	if preset.sparkle then
 		e.sparkle.Color = ColorSequence.new(resource.color, Color3.new(1, 1, 1))
 		e.sparkle:Emit(2)
 	end
-	spawnDebris(position, resource, 1, preset, normal)
-	EffectsController.playAt(preset.hitSound, position)
+	if feel.spark then
+		-- the tool's own metal (or energy) throws glints on hard material
+		local count = if resource.effect == "soil" then 0 else math.floor(feel.weight * 2)
+		if count > 0 then
+			e.sparkle.Color = ColorSequence.new(feel.spark)
+			e.sparkle:Emit(count)
+		end
+	end
+	if feel.glow then
+		e.light.Color = feel.spark or Color3.new(1, 1, 1)
+		e.light.Brightness = 1.6
+		TweenService:Create(e.light, TweenInfo.new(0.18), { Brightness = 0 }):Play()
+	end
+	spawnDebris(position, resource, if feel.weight >= 1.3 then 2 else 1, preset, normal)
+	-- small random detune on top of the preset range: no two hits sound identical
+	EffectsController.playAt(preset.hitSound, position, (1 / feel.weight ^ 0.35) * (0.97 + math.random() * 0.06))
+	if mine then
+		punch(feel.shake)
+	end
 end
 
 -- The cell gives way: fuller sound, more dust, a burst of fragments in the material colour.
@@ -340,6 +380,21 @@ function EffectsController.start()
 	makeEmitterPool()
 	makeSoundPool()
 
+	-- after the camera scripts: a tiny rotation that decays fast (the default camera recomputes its
+	-- CFrame every frame, so nothing accumulates)
+	RunService:BindToRenderStep("THNE_HitPunch", Enum.RenderPriority.Camera.Value + 1, function(dt: number)
+		if shakeAmount > 0.01 then
+			local camera = workspace.CurrentCamera
+			if camera then
+				local a = math.rad(shakeAmount)
+				camera.CFrame *= CFrame.Angles((math.random() - 0.5) * a, (math.random() - 0.5) * a, 0)
+			end
+			shakeAmount *= math.exp(-dt * 25)
+		else
+			shakeAmount = 0
+		end
+	end)
+
 	RunService.Stepped:Connect(function()
 		local now = os.clock()
 		for motor, s in swings do
@@ -397,7 +452,7 @@ function EffectsController.start()
 					if progress and progress < 0 then
 						EffectsController.bounce(position, resource)
 					else
-						EffectsController.impact(position, resource, nil)
+						EffectsController.impact(position, resource, nil, toolId, false)
 					end
 				end
 			end

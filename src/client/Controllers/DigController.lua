@@ -270,7 +270,7 @@ function DigController.start()
 			if tool.power < resource.requiredPower then
 				EffectsController.bounce(position, resource)
 			else
-				EffectsController.impact(position, resource, normal)
+				EffectsController.impact(position, resource, normal, tool.id, true)
 			end
 		end
 		DigController.dug:Fire()

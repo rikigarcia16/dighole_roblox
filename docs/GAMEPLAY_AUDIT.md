@@ -161,3 +161,27 @@ pruebas de Studio.
   `exhibit` y lo perdería al guardar. Las piezas ya expuestas no vuelven a la mochila.
 - **Studio pendiente:** la vitrina con las piezas girando, el botón «Vender» de una pieza y el
   aviso al vender cuando solo se llevan piezas conservadas.
+
+### Bloque 5: identidad de cada herramienta y ajustes
+- `DigFeel.ToolFeel`: cada herramienta tiene su peso (polvo, fragmentos y un sonido más grave),
+  sus chispas (ninguna con la pala oxidada, metálicas con acero y picos, calientes con los
+  taladros, de energía con plasma, la perforadora abisal y la herramienta ancestral), un destello
+  en el punto de impacto con las de energía y una sacudida de cámara pequeña (≤ 0,5°) solo en los
+  golpes propios. Cada golpe lleva además una variación aleatoria de tono del ±3 %. Test: el peso
+  no baja nunca al mejorar de herramienta [VM].
+- Ajustes (⚙, arriba a la derecha): calidad de efectos (Auto/Bajo/Medio/Alto, que escala las
+  partículas, el bloom y el polvo) y sacudida de cámara (Sí/No). **Solo para la sesión:** todavía no
+  se guardan.
+- G3: abrir el menú del montacargas cierra la nota, la tienda y la mochila.
+
+## 9. Problemas abiertos
+
+| # | Problema | Siguiente paso |
+|---|---|---|
+| A1 | **Nada de las iteraciones 4 y 5 se ha visto en Studio** (aspecto, escala, coste real) | Lista de pruebas V1–V12 en `docs/AUDIT.md`, sección 7 |
+| A2 | La decoración de los sectores no se descarga nunca (P2-12) | Medir piezas a 300 y 1000 m; si hace falta, descargar los sectores lejanos del dueño |
+| A3 | Audio: todos los sonidos son internos y genéricos; el gesto usa un clic provisional | Subir audio propio (golpe por material, ritmo del Contador, zumbido) |
+| A4 | Los ajustes no se guardan | Campo `settings` en el perfil, con la misma estrategia aditiva que `exhibit` |
+| A5 | Pruebas con dos jugadores y guardado real (G1–G3) | Lugar publicado con API Services |
+| A6 | Equipo con batería, gancho y expediciones (diseño en `DESIGN_MOBILITY_AND_MINES.md`) | Después de validar en Studio lo actual |
+| A7 | No hay tutorial guiado: solo las primeras misiones | Indicaciones contextuales en los 5 primeros minutos (apuntar, golpear, vender, comprar) |

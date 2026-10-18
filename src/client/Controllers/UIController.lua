@@ -488,8 +488,84 @@ function UIController.start()
 		gui,
 		{ getState = getState, playUi = EffectsController.playUi, openNote = openNote, openText = openText }
 	)
-	local mobility =
-		MobilityUI.new(gui, buttons, { getState = getState, notify = toast, playUi = EffectsController.playUi })
+	local mobility = MobilityUI.new(gui, buttons, {
+		getState = getState,
+		notify = toast,
+		playUi = EffectsController.playUi,
+		-- an open note must not stay behind the lift menu (Studio test 1)
+		closeOverlays = function()
+			note.Visible = false
+			shop.close()
+			inventory.close()
+		end,
+	})
+
+	-- Settings: effects quality and camera punch (session only; see docs/GAMEPLAY_AUDIT.md) -------------
+	local settingsButton = Build.button("⚙", Theme.card, {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -12, 0, 10),
+		Size = UDim2.fromOffset(46, 46),
+		Parent = gui,
+	})
+	local settings = Build("Frame", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -12, 0, 64),
+		Size = UDim2.fromOffset(260, 150),
+		BackgroundColor3 = Theme.panel,
+		Visible = false,
+		ZIndex = 45,
+		Parent = gui,
+		[Build.Children] = { Build.corner(12), Build.stroke(Theme.stroke, 2), Build.padding(10) },
+	})
+	Build.label({
+		Text = "Efectos visuales",
+		Size = UDim2.new(1, 0, 0, 22),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		MaxTextSize = 18,
+		ZIndex = 46,
+		Parent = settings,
+	})
+	local qualities = { { "Auto", nil }, { "Bajo", 0.3 }, { "Medio", 0.65 }, { "Alto", 1 } } :: { { any } }
+	local qualityButtons: { TextButton } = {}
+	local currentQuality = 1
+	local function paintQuality()
+		for i, b in qualityButtons do
+			b.BackgroundColor3 = if i == currentQuality then Theme.accent else Theme.card
+		end
+	end
+	for i, q in qualities do
+		local b = Build.button(q[1], Theme.card, {
+			Position = UDim2.new((i - 1) / 4, 2, 0, 28),
+			Size = UDim2.new(0.25, -4, 0, 36),
+			ZIndex = 46,
+			Parent = settings,
+		})
+		b.Activated:Connect(function()
+			currentQuality = i
+			AmbienceController.setEffectsScale(q[2])
+			EffectsController.playUi("ui_click")
+			paintQuality()
+		end)
+		qualityButtons[i] = b
+	end
+	paintQuality()
+	local shakeOn = true
+	local shakeButton = Build.button("Sacudida al golpear: Sí", Theme.card, {
+		Position = UDim2.new(0, 0, 0, 80),
+		Size = UDim2.new(1, 0, 0, 36),
+		ZIndex = 46,
+		Parent = settings,
+	})
+	shakeButton.Activated:Connect(function()
+		shakeOn = not shakeOn
+		EffectsController.setCameraShake(shakeOn)
+		shakeButton.Text = "Sacudida al golpear: " .. (if shakeOn then "Sí" else "No")
+		EffectsController.playUi("ui_click")
+	end)
+	settingsButton.Activated:Connect(function()
+		settings.Visible = not settings.Visible
+		EffectsController.playUi("ui_click")
+	end)
 
 	backpackButton.Activated:Connect(function()
 		EffectsController.playUi("ui_click")

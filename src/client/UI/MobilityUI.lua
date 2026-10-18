@@ -26,6 +26,7 @@ type Deps = {
 	getState: () -> any,
 	notify: (kind: string, text: string) -> (),
 	playUi: (key: string) -> (),
+	closeOverlays: (() -> ())?, -- notes / other panels that would sit on top of a mobility dialog
 }
 
 local function dialog(parent: Instance, height: number): (Frame, TextLabel, TextLabel)
@@ -305,6 +306,9 @@ function MobilityUI.new(gui: ScreenGui, buttons: Frame, deps: Deps)
 	end
 
 	local function openLift()
+		if deps.closeOverlays then
+			deps.closeOverlays()
+		end
 		local state = deps.getState()
 		for _, child in liftList:GetChildren() do
 			if child:IsA("TextButton") then

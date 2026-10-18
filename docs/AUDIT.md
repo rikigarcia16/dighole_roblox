@@ -262,3 +262,29 @@ en Studio (MicroProfiler: `THNE.GenerateSlab` con 16 celdas, y el mismo benchmar
 real) antes de diseñar la migración. Cualquier migración necesitará claves de celda versionadas,
 una copia del perfil anterior para poder volver atrás, verificación al cargar y un interruptor para
 desactivarla.
+
+
+## 7. Iteración 5: aspecto, escenas, progresión y vitrina. Pruebas de Studio
+
+Verificado **solo en la VM** (55 tests, compilación, comprobaciones estáticas). Nada de esta
+sección se ha ejecutado en Studio. Preparación: `rojo serve` y *Play* con 1 jugador. La Baseplate
+de la plantilla ya se elimina sola: la consola debe avisar `removing the template Baseplate`.
+
+| # | Prueba | Qué debe pasar |
+|---|---|---|
+| V1 | Bajar cavando de 0 a 160 m | La luz cambia poco a poco: sepia y polvo marrón cayendo en las Minas; hacia los 150 m, paso suave al azul violeta con chispas que suben. No debe haber cortes bruscos. |
+| V2 | Cerca de los límites de capa (50, 150, 350 m) | Mezcla gradual a lo largo de unos 12 m. |
+| V3 | ⚙ → Bajo / Alto | Con Bajo hay claramente menos partículas en el aire y menos polvo. Anota los FPS en los dos casos (Ctrl+Shift+F5). |
+| V4 | Galerías de las Minas (64–150 m) | Raíles en las galerías llanas, una vagoneta en algún fondo de saco y, en alguna cámara, el campamento de E. con su farol parpadeando y la tabla «E.». |
+| V5 | Galerías que llevan al Contador | Flechas de tiza en el suelo apuntando hacia la sala. |
+| V6 | Cámaras de 150–350 m | Cristales colgando del techo; en las cámaras grandes, un corazón de cristal que late. |
+| V7 | Cualquier cámara | Estalactitas y estalagmitas. Comprueba que nada flota ni queda enterrado del todo y que **cavar alrededor de una escena no la deja colgando de forma rara** (es decoración, no terreno). |
+| V8 | Contar piezas | Tras bajar a 300 m: `print(#workspace.World:GetDescendants())` en la consola del servidor. Anota el número. |
+| V9 | Golpear piedra con la pala oxidada y luego con el pico minero | El pico suena más grave, levanta más polvo, suelta chispas y sacude un poco la cámara. Con ⚙ → Sacudida «No» deja de sacudir. |
+| V10 | Llevar una reliquia (o el fragmento antiguo) y vender | «Vendido por X · conservas 1 pieza(s)»; la pieza sigue en la mochila con «se conserva» y su botón «Vender» funciona junto al carro. |
+| V11 | F en la vitrina de la casa | «Expuesto en la vitrina: ...»; la pieza aparece girando dentro. Sal y vuelve a entrar: sigue expuesta. |
+| V12 | Misiones | Con una partida que ya había terminado la cadena antigua, la siguiente misión es «Instala una estación del montacargas». *Mochila → Descubrimientos* muestra las colecciones con barras. |
+| V13 | Contador: manivelas | Las tres palancas están al nivel del suelo, delante de la pantalla; cada anillo se gira sin saltar y la palanca de un anillo bloqueado deja de ofrecer «Girar». |
+| V14 | Fósil repetido | Ya no da +225 monedas («Nuevo descubrimiento: Fragmento fósil» no debe aparecer con monedas). |
+| V15 | Cuerda desde la boca | De pie en el borde del agujero, Q cuelga la cuerda hacia el interior. |
+| V16 | Consola | Sin avisos de `swoosh.wav`. |
