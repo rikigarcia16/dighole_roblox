@@ -61,7 +61,8 @@ cristal, la fumarola y el farol del campamento llevan luz.
 **Vida ambiental** (`AmbientLifeController`, en el cliente): el farol y la fumarola parpadean, los
 cristales y los bulbos laten, los fragmentos del Núcleo giran y, cada 4–10 s (según la calidad
 gráfica), cae un poco de polvo del techo cerca del jugador si hay techo a más de 6 studs. Solo se
-anima lo que está a menos de 140 studs, con un máximo de 60 objetos por fotograma.
+anima lo que está a menos de 140 studs: una lista de, como máximo, los 80 objetos cercanos, recalculada
+cada 0,5 s y animada en cada fotograma.
 
 **Sin verificar en Studio:** aspecto, escala y piezas reales por sector (contarlas con
 `#workspace.World:GetDescendants()` tras bajar 300 m), y el coste por fotograma de la animación
