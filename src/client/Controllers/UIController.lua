@@ -25,6 +25,7 @@ local ShopUI = require(UI.ShopUI)
 local InventoryUI = require(UI.InventoryUI)
 local MobilityUI = require(UI.MobilityUI)
 local TutorialUI = require(UI.TutorialUI)
+local GearUI = require(UI.GearUI)
 local Mobility = require(ReplicatedStorage.Shared.Config.Mobility)
 
 local ClientState = require(script.Parent.ClientState)
@@ -138,7 +139,7 @@ function UIController.start()
 	left:FindFirstChildOfClass("UIListLayout").VerticalAlignment = Enum.VerticalAlignment.Top
 	local _, backpackFill, backpackLabel = bar(left, "Backpack", 1, Theme.backpack)
 	local energyFrame, energyFill, energyLabel = bar(left, "Energy", 2, Theme.energy)
-	-- Ordinary digging does not use energy; the bar returns with equipment that consumes it.
+	-- Ordinary digging does not use energy; the bar shows once the player owns gear that does (GearUI).
 	energyFrame.Visible = false
 	local toolFrame, toolLabel = pill(left, "Tool", UDim2.new(), Vector2.zero, UDim2.new(1, 0, 0, 30), Theme.text)
 	toolFrame.LayoutOrder = 3
@@ -584,6 +585,18 @@ function UIController.start()
 		shakeButton.Text = "Sacudida al golpear: " .. (if shakeOn then "Sí" else "No")
 	end
 	local tutorial = TutorialUI.new(gui)
+	local gear = GearUI.new(gui, {
+		getState = getState,
+		notify = toast,
+		playUi = EffectsController.playUi,
+		playAt = function(key: string, position: Vector3)
+			EffectsController.playAt(key, position)
+		end,
+		-- the battery bar only matters once you carry equipment that uses it
+		showEnergy = function(visible: boolean)
+			energyFrame.Visible = visible
+		end,
+	})
 	settingsButton.Activated:Connect(function()
 		settings.Visible = not settings.Visible
 		EffectsController.playUi("ui_click")
@@ -738,6 +751,7 @@ function UIController.start()
 		mobility.refresh()
 		applySavedSettings(state)
 		tutorial.update(state)
+		gear.refresh()
 	end
 	coinsLabel.Text = "● 0"
 	ClientState.changed:Connect(onState)
@@ -751,7 +765,7 @@ function UIController.start()
 		local fraction = math.clamp(energy / math.max(max, 1), 0, 1)
 		energyFill.Size = UDim2.fromScale(fraction, 1)
 		energyFill.BackgroundColor3 = if fraction < 0.15 then Theme.danger else Theme.energy
-		energyLabel.Text = string.format("Energía  %d/%d", math.floor(energy), max)
+		energyLabel.Text = string.format("Batería  %d/%d", math.floor(energy), max)
 	end
 	player:GetAttributeChangedSignal("Energy"):Connect(updateEnergy)
 	player:GetAttributeChangedSignal("MaxEnergy"):Connect(updateEnergy)

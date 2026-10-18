@@ -5,7 +5,15 @@ local H = {}
 
 -- Value types ------------------------------------------------------------------------------
 local Vector3 = {}
-Vector3.__index = Vector3
+Vector3.__index = function(v, key)
+	if key == "Magnitude" then
+		return math.sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z)
+	elseif key == "Unit" then
+		local m = math.sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z)
+		return Vector3.new(v.X / m, v.Y / m, v.Z / m)
+	end
+	return rawget(Vector3, key)
+end
 function Vector3.new(x, y, z)
 	return setmetatable({ X = x or 0, Y = y or 0, Z = z or 0 }, Vector3)
 end

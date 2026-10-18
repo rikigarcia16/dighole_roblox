@@ -9,6 +9,7 @@ local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Tools = require(ReplicatedStorage.Shared.Config.Tools)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local Mobility = require(ReplicatedStorage.Shared.Config.Mobility)
+local Gear = require(ReplicatedStorage.Shared.Config.Gear)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Format = require(ReplicatedStorage.Shared.Util.Format)
 local RateLimiter = require(ReplicatedStorage.Shared.Util.RateLimiter)
@@ -115,11 +116,32 @@ local function buyRope(player: Player, profile: any, _id: string): Result
 	return { ok = true, message = string.format("Cuerda comprada (%d/%d).", profile.mobility.ropes, rope.maxCarried) }
 end
 
+local function buyGear(player: Player, profile: any, gearId: string): Result
+	local def = Gear.ById[gearId]
+	if not def then
+		return { ok = false, message = "Equipo no disponible." }
+	end
+	if profile.gear[gearId] then
+		return { ok = false, message = "Ya tienes " .. def.name .. "." }
+	end
+	if not nearShop(player) then
+		return { ok = false, message = "Vuelve al garaje para comprar." }
+	end
+	if profile.coins < def.price then
+		return { ok = false, message = "Te faltan " .. Format.number(def.price - profile.coins) .. " monedas." }
+	end
+	profile.coins -= def.price
+	profile.gear[gearId] = true
+	StateService.push(player)
+	return { ok = true, message = def.name .. " comprado. Tecla " .. def.key .. "." }
+end
+
 local actions: { [string]: (Player, any, string) -> Result } = {
 	buyTool = buyTool,
 	equipTool = equipTool,
 	buyUpgrade = buyUpgrade,
 	buyRope = buyRope,
+	buyGear = buyGear,
 }
 
 function ShopService.start()

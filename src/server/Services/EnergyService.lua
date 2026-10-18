@@ -1,6 +1,6 @@
 --!strict
--- Tool battery. Energy is runtime-only (not saved): it refills at the surface, which is the
--- pressure that brings players back up together with the backpack capacity.
+-- Battery for special equipment (Config/Gear: lamp, detector). Digging never uses it. Energy is
+-- runtime-only (not saved): it refills at the surface and next to an owned lift station.
 -- Replicated through player attributes "Energy" / "MaxEnergy" (cheap, frequent updates).
 
 local Players = game:GetService("Players")
@@ -49,6 +49,12 @@ function EnergyService.refresh(player: Player)
 	EnergyService.refill(player)
 end
 
+-- Other places that recharge the battery (MobilityService: next to an owned lift station).
+local rechargeSources: { (Player) -> boolean } = {}
+function EnergyService.addRechargeSource(check: (Player) -> boolean)
+	table.insert(rechargeSources, check)
+end
+
 local function isAtSurface(player: Player): boolean
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -72,7 +78,11 @@ function EnergyService.start()
 			task.wait(dt)
 			for player, current in energy do
 				local max = EnergyService.max(player)
-				if current < max and isAtSurface(player) then
+				local charging = isAtSurface(player)
+				for _, check in rechargeSources do
+					charging = charging or check(player)
+				end
+				if current < max and charging then
 					energy[player] = math.min(max, current + max * Upgrades.SurfaceRechargePerSecond * dt)
 					publish(player)
 				end

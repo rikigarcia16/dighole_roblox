@@ -159,9 +159,39 @@ test("hardness indicator: hits left, segments and locks", function()
 	eq(v.label, dirt.name)
 end)
 
-test("battery is not sold while nothing consumes energy", function()
-	ok(Upgrades.ById.battery.hidden, "battery hidden")
-	ok(not Upgrades.ById.backpack.hidden, "backpack still sold")
+test("battery: sold because gear uses it, never consumed by digging; gear is sane", function()
+	ok(not Upgrades.ById.battery.hidden, "battery sold (lamp and detector use it)")
+	for _, tool in Tools.List do
+		ok(tool.energyCost ~= nil, tool.id) -- field kept for old saves; DiggingService ignores it
+	end
+	local Gear = H.module("ReplicatedStorage", "Shared", "Config", "Gear")
+	local base = Upgrades.valueAt("battery", 1)
+	ok(base / Gear.Lamp.drainPerSecond >= 60, "the starting battery lights the lamp for a minute or more")
+	ok(base / Gear.Detector.pulseCost >= 4, "and gives a few detector pulses")
+	local last = 0
+	for _, def in Gear.List do
+		ok(def.price > last, def.id .. ": gear ordered by price")
+		last = def.price
+		ok(#def.key == 1, def.id .. " key hint")
+	end
+	ok(Gear.Hook.range >= 30 and Gear.Hook.range <= 48, "hook reach")
+end)
+
+test("resonance detector: nearest within range, rough band, never exact", function()
+	local Resonance = H.module("ServerScriptService", "Server", "Logic", "Resonance")
+	local from = H.Vector3.new(0, 0, 0)
+	local targets = {
+		{ kind = "chest", position = H.Vector3.new(50, 0, 0) },
+		{ kind = "geode", position = H.Vector3.new(0, -20, 0) },
+		{ kind = "fossil", position = H.Vector3.new(500, 0, 0) },
+	}
+	local r = Resonance.read(targets, from, 120)
+	eq(r.kind, "geode", "nearest wins")
+	eq(r.band, "muy cerca")
+	ok(math.abs(r.direction.Y + 1) < 1e-9, "points down towards it")
+	eq(Resonance.read({ targets[3] }, from, 120), nil, "out of range: silence")
+	eq(Resonance.read({}, from, 120), nil)
+	eq(Resonance.read({ targets[1] }, from, 120).band, "cerca")
 end)
 
 print("Util")
@@ -1164,6 +1194,13 @@ test("settings: validated from the client and from saves, defaults for old saves
 	eq(loaded.settings.shake, false)
 	local old = ProfileSchema.reconcile({ version = 4 }, 1)
 	eq(old.settings.effects, 0, "old save gets defaults")
+	-- gear: owned items survive save/load; unknown ids and junk are dropped; old saves own nothing
+	p.gear.lamp, p.gear.hook = true, true
+	local withGear = ProfileSchema.reconcile(dataStoreRoundTrip(p), 1)
+	ok(withGear.gear.lamp and withGear.gear.hook and not withGear.gear.detector, "gear persisted")
+	local junk = ProfileSchema.reconcile({ version = 4, gear = { jetpack = true, lamp = "yes", [1] = true } }, 1)
+	eq(next(junk.gear), nil, "junk gear dropped")
+	eq(next(old.gear), nil, "old save owns no gear")
 end)
 
 test("profile v3 data migrates to v4; counter and mobility sanitised", function()

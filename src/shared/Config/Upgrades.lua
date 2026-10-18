@@ -33,9 +33,8 @@ local list: { Track } = {
 		id = "battery",
 		name = "Batería",
 		unit = "⚡",
-		description = "Alimenta detectores, linternas potentes y herramientas especiales.",
-		-- Hidden until special equipment consumes energy: ordinary digging no longer uses it.
-		hidden = true,
+		description = "Para la linterna potente y el detector de resonancia. Cavar no la gasta.",
+		-- Only special equipment (Config/Gear) uses it: ordinary digging never does.
 		levels = {
 			{ value = 60, price = 0 },
 			{ value = 120, price = 120 },

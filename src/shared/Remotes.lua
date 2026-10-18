@@ -6,6 +6,9 @@
 --   ReturnToSurface()                               teleport back to the plot surface
 --   Sell()                                          sell the backpack (must be near the sell station)
 --   SaveSettings({ effects?, shake?, tutorialDone? })  player preferences (validated, saved)
+--   GearLamp(on)                                   toggle the powerful lamp (drains the battery)
+--   GearPulse() -> { ok, found, kind, band, direction, message }   resonance detector pulse
+--   GearHook(target: Vector3) -> { ok, point, normal, message }      grappling hook check
 --   SellItem(resourceId)                            sell one kept piece (relic), near the sell station
 --   Shop(action: string, id: string) -> result      RemoteFunction: "buyTool" | "equipTool" | "buyUpgrade"
 --   GetState() -> snapshot                          RemoteFunction: initial state
@@ -50,8 +53,9 @@ local EVENTS = {
 	"RescueState",
 	"SellItem",
 	"SaveSettings",
+	"GearLamp",
 }
-local FUNCTIONS = { "Shop", "GetState", "RescueQuote", "LiftTravel" }
+local FUNCTIONS = { "Shop", "GetState", "RescueQuote", "LiftTravel", "GearPulse", "GearHook" }
 
 local Remotes = {}
 

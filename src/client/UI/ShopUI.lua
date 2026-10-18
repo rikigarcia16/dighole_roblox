@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local Tools = require(ReplicatedStorage.Shared.Config.Tools)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local Mobility = require(ReplicatedStorage.Shared.Config.Mobility)
+local Gear = require(ReplicatedStorage.Shared.Config.Gear)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Format = require(ReplicatedStorage.Shared.Util.Format)
 local Grid = require(ReplicatedStorage.Shared.Util.Grid)
@@ -321,6 +322,54 @@ function ShopUI.new(parent: Instance, deps: Deps)
 			button.Size = UDim2.new(1, 0, 0, 40)
 			button.LayoutOrder = 4
 			button.Parent = c
+			-- special equipment: bought once, kept forever
+			local owned = state.gear or {}
+			for _, def in Gear.List do
+				local g = card(1 + def.order)
+				Build.label({
+					Text = def.name,
+					Size = UDim2.new(1, 0, 0, 26),
+					LayoutOrder = 1,
+					MaxTextSize = 22,
+					Parent = g,
+				})
+				Build.label({
+					Text = def.description,
+					Font = Theme.bodyFont,
+					TextColor3 = Theme.textDim,
+					Size = UDim2.new(1, 0, 0, 46),
+					LayoutOrder = 2,
+					MaxTextSize = 14,
+					TextWrapped = true,
+					Parent = g,
+				})
+				Build.label({
+					Text = "Tecla <b>" .. def.key .. "</b>",
+					RichText = true,
+					Font = Theme.bodyFont,
+					Size = UDim2.new(1, 0, 0, 22),
+					LayoutOrder = 3,
+					MaxTextSize = 16,
+					Parent = g,
+				})
+				local gearButton
+				if owned[def.id] then
+					gearButton = Build.button("Lo tienes", Theme.panelLight, { AutoButtonColor = false })
+				else
+					local affordable = state.coins >= def.price
+					gearButton = Build.button(
+						"Comprar · ● " .. Format.number(def.price),
+						if affordable then Theme.good else Theme.card
+					)
+					gearButton.Activated:Connect(function()
+						deps.playUi("ui_click")
+						purchase("buyGear", def.id, def.name, def.price)
+					end)
+				end
+				gearButton.Size = UDim2.new(1, 0, 0, 40)
+				gearButton.LayoutOrder = 4
+				gearButton.Parent = g
+			end
 		else
 			grid.CellSize = UDim2.fromOffset(250, 170)
 			for _, track in Upgrades.List do

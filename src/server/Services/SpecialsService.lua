@@ -722,6 +722,22 @@ local function readLandmark(player: Player, special: Special)
 	end
 end
 
+-- What the resonance detector can sense in a plot: chests, geodes and fossils not opened yet
+-- (hidden in the rock or already revealed). Positions are world positions of their models.
+function SpecialsService.resonanceTargets(plot: any): { { kind: string, position: Vector3 } }
+	local state = states[plot]
+	local list = {}
+	if not state then
+		return list
+	end
+	for _, special in state.specials do
+		if not special.opened and special.kind ~= "landmark" and special.model.Parent then
+			table.insert(list, { kind = special.kind, position = special.model:GetPivot().Position })
+		end
+	end
+	return list
+end
+
 -- Decoration streaming: every few seconds, drop the decoration of sectors far from every player in
 -- the plot and rebuild it (deterministically) when someone comes back.
 local function streamDecor()

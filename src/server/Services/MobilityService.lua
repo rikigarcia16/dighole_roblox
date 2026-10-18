@@ -27,6 +27,8 @@ local PlotService = require(script.Parent.PlotService)
 local StateService = require(script.Parent.StateService)
 local CaveProps = require(script.Parent.CaveProps)
 local AnomalyService = require(script.Parent.AnomalyService)
+local EnergyService = require(script.Parent.EnergyService)
+local Gear = require(ReplicatedStorage.Shared.Config.Gear)
 
 local MobilityService = {}
 
@@ -540,6 +542,22 @@ function MobilityService.start()
 			objs.folder:Destroy()
 			objects[plot] = nil
 		end
+	end)
+
+	-- The battery recharges next to any of your stations (EnergyService).
+	EnergyService.addRechargeSource(function(player: Player): boolean
+		local plot = PlotService.get(player)
+		local root = rootOf(player)
+		local objs = plot and objects[plot]
+		if not root or not objs then
+			return false
+		end
+		for _, model in objs.stations do
+			if (model:GetPivot().Position - root.Position).Magnitude <= Gear.StationRechargeDistance then
+				return true
+			end
+		end
+		return false
 	end)
 
 	-- The Counter gives its own station once solved.

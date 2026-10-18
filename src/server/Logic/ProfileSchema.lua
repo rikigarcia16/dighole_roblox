@@ -10,6 +10,7 @@ local Quests = require(Shared.Config.Quests)
 local Story = require(Shared.Config.Story)
 local Fossils = require(Shared.Config.Fossils)
 local Mobility = require(Shared.Config.Mobility)
+local Gear = require(Shared.Config.Gear)
 
 local ProfileSchema = {}
 
@@ -43,6 +44,7 @@ export type Profile = {
 	quests: { index: number, completed: { [string]: boolean } },
 	-- player preferences (added without a version bump: older saves get the defaults)
 	settings: { effects: number, shake: boolean, tutorialDone: boolean },
+	gear: { [string]: boolean }, -- special equipment owned (Config/Gear); additive like settings
 	stats: {
 		cellsDug: number,
 		maxDepth: number,
@@ -81,6 +83,7 @@ function ProfileSchema.default(seed: number): Profile
 		mobility = { ropes = 0, placedRopes = {}, stations = {}, rescues = 0 },
 		quests = { index = 1, completed = {} },
 		settings = { effects = 0, shake = true, tutorialDone = false },
+		gear = {},
 		stats = {
 			cellsDug = 0,
 			maxDepth = 0,
@@ -283,6 +286,14 @@ function ProfileSchema.reconcile(data: any, seed: number): Profile
 						{ id = station.id, cx = station.cx, d = station.d, cz = station.cz }
 					)
 				end
+			end
+		end
+	end
+
+	if type(data.gear) == "table" then
+		for id, owned in data.gear do
+			if owned == true and type(id) == "string" and Gear.ById[id] then
+				profile.gear[id] = true
 			end
 		end
 	end

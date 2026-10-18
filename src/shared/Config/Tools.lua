@@ -4,7 +4,7 @@
 -- power        : damage dealt to every cell inside the dig radius per hit.
 -- radius       : dig radius in cells around the target cell (0 = only the target cell).
 -- cooldown     : seconds between hits.
--- energyCost   : battery energy consumed per hit.
+-- energyCost   : unused since digging became free (kept so old configs and saves stay valid).
 -- reach        : max distance in studs from the character to the dig point.
 -- model        : recipe consumed by Util/ToolModels to build the 3D model procedurally.
 

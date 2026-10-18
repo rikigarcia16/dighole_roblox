@@ -53,6 +53,7 @@ function StateService.snapshot(player: Player): any?
 		clues = profile.clues,
 		collection = profile.collection,
 		settings = profile.settings,
+		gear = profile.gear,
 		persistent = PlayerDataService.isPersistent(player),
 	}
 	for _, provider in snapshotProviders do
