@@ -1056,6 +1056,45 @@ test("collection sets: pay once when complete, progress visible, journal grows",
 	end
 end)
 
+test("keep or sell: relics survive 'sell all', the case completes their collection, saves are safe", function()
+	local InventoryLogic = H.module("ServerScriptService", "Server", "Logic", "Inventory")
+	local CollectionSets = H.module("ServerScriptService", "Server", "Logic", "CollectionSets")
+	local inv = { copper = 3, relic = 1, antique_fragment = 2, stone = 5, bogus_item = 4 }
+	local value = InventoryLogic.takeSellable(inv)
+	eq(value, Resources.get("copper").value * 3 + Resources.get("stone").value * 5)
+	eq(inv.copper, nil)
+	eq(inv.relic, 1, "relic kept")
+	eq(inv.antique_fragment, 2, "fragment kept")
+	eq(inv.bogus_item, nil, "unknown ids dropped")
+	eq(InventoryLogic.keptCount(inv), 3)
+	for _, id in { "antique_fragment", "relic", "ancient_artifact" } do
+		ok(Resources.get(id).keep, id .. " is a kept piece")
+	end
+	-- the relics collection needs the pieces EXHIBITED, not just found
+	local p = ProfileSchema.default(5)
+	p.discoveries.antique_fragment, p.discoveries.relic, p.discoveries.ancient_artifact = 1, 1, 1
+	for _, set in CollectionSets.advance(p) do
+		ok(set.id ~= "relics", "found is not enough for the relics set")
+	end
+	p.collection.exhibit.antique_fragment = true
+	p.collection.exhibit.relic = true
+	p.collection.exhibit.ancient_artifact = true
+	local paid = false
+	for _, set in CollectionSets.advance(p) do
+		paid = paid or set.id == "relics"
+	end
+	ok(paid, "relics set completes once all three are shown")
+	-- the case survives save/load; junk and non-keep ids are dropped; old saves get an empty case
+	p.collection.exhibit.copper = true
+	local loaded = ProfileSchema.reconcile(dataStoreRoundTrip(p), 1)
+	ok(loaded.collection.exhibit.relic and loaded.collection.exhibit.ancient_artifact, "case persisted")
+	eq(loaded.collection.exhibit.copper, nil, "only kept pieces can be exhibited")
+	local old = ProfileSchema.reconcile({ version = 4, collection = { fossils = {} } }, 1)
+	ok(type(old.collection.exhibit) == "table" and next(old.collection.exhibit) == nil, "old save: empty case")
+	local junk = ProfileSchema.reconcile({ version = 4, collection = { exhibit = { [1] = true, relic = "yes" } } }, 1)
+	eq(next(junk.collection.exhibit), nil, "junk exhibit dropped")
+end)
+
 test("profile v3 data migrates to v4; counter and mobility sanitised", function()
 	local r = ProfileSchema.reconcile({
 		version = 3,

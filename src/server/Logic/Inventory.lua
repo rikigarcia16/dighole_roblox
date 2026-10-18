@@ -45,6 +45,33 @@ function Inventory.value(inventory: { [string]: number }): number
 	return total
 end
 
+-- "Sell all": everything except the pieces of the story (`keep`), which the player sells one by one
+-- or exhibits at home. Returns the value and removes what was sold.
+function Inventory.takeSellable(inventory: { [string]: number }): number
+	local total = 0
+	for id, count in inventory do
+		local resource = Resources.get(id)
+		if resource and not resource.keep then
+			total += count * resource.value
+			inventory[id] = nil
+		elseif not resource then
+			inventory[id] = nil -- unknown id: drop it, it cannot be sold or shown
+		end
+	end
+	return total
+end
+
+function Inventory.keptCount(inventory: { [string]: number }): number
+	local n = 0
+	for id, count in inventory do
+		local resource = Resources.get(id)
+		if resource and resource.keep then
+			n += count
+		end
+	end
+	return n
+end
+
 -- Coins for the first time a resource is ever found. Structure rewards (geodes, the fossil fragment
 -- given for a repeated species) already pay through their own structure, so they give none: a
 -- repeated fossil must never pay out like a discovery (+225 seen in Studio test 1).

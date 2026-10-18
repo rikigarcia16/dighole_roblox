@@ -7,7 +7,7 @@
 export type Set = {
 	id: string,
 	name: string,
-	kind: "resources" | "fossils",
+	kind: "resources" | "fossils" | "exhibit", -- exhibit: kept pieces shown in the house display case
 	items: { string }?, -- resource ids (kind "resources"); fossils use every species
 	reward: number,
 	line: string, -- journal line once complete
@@ -49,7 +49,7 @@ local Collections: { Set } = {
 	{
 		id = "relics",
 		name = "Restos de quien vino antes",
-		kind = "resources",
+		kind = "exhibit", -- finding them is not enough: they must be kept and shown, not sold
 		items = { "antique_fragment", "relic", "ancient_artifact" },
 		reward = 10000,
 		line = "Fragmento, reliquia, artefacto: tres épocas, la misma marca grabada.",

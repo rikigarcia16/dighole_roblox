@@ -104,29 +104,46 @@ function InventoryUI.new(parent: Instance, deps: Deps)
 		grid.CellSize = UDim2.new(0.5, -6, 0, 54)
 		if currentTab == "backpack" then
 			local total, items = 0, 0
+			local keptItems = 0
 			for _, resource in Resources.List do
 				local count = state.inventory[resource.id]
 				if count and count > 0 then
 					items += 1
-					total += count * resource.value
+					if not resource.keep then
+						total += count * resource.value -- what "sell all" pays
+					end
 					local r = row(resource.order)
 					swatch(r, resource, true)
+					local kept = resource.keep == true
+					if kept then
+						keptItems += 1
+					end
 					Build.label({
 						Text = string.format(
-							'<b>%s</b>  x%d\n<font color="#%s">%s</font> · %s c/u',
+							'<b>%s</b>  x%d\n<font color="#%s">%s</font> · %s c/u%s',
 							resource.name,
 							count,
 							Resources.Rarities[resource.rarity].color:ToHex(),
 							Resources.Rarities[resource.rarity].name,
-							Format.number(resource.value)
+							Format.number(resource.value),
+							if kept then ' · <font color="#FFCD3C">se conserva</font>' else ""
 						),
 						RichText = true,
 						Font = Theme.bodyFont,
 						TextXAlignment = Enum.TextXAlignment.Left,
-						Size = UDim2.new(1, -50, 1, 0),
+						Size = UDim2.new(1, if kept then -134 else -50, 1, 0),
 						MaxTextSize = 16,
 						Parent = r,
 					})
+					if kept then
+						-- selling a piece of the story is a deliberate, one-by-one choice
+						local sellOne =
+							Build.button("Vender", Theme.card, { Size = UDim2.fromOffset(76, 38), Parent = r })
+						sellOne.Activated:Connect(function()
+							deps.playUi("ui_click")
+							Remotes.event("SellItem"):FireServer(resource.id)
+						end)
+					end
 				end
 			end
 			summary.Text = string.format(
@@ -137,6 +154,9 @@ function InventoryUI.new(parent: Instance, deps: Deps)
 			)
 			footer.Text = if items == 0
 				then "Tu mochila está vacía. Cava para encontrar minerales."
+				elseif
+					keptItems > 0
+				then "Las piezas que se conservan no se venden con el resto: expónlas en la vitrina de casa (F) o véndelas aquí, en la estación de venta."
 				else "Vende todo en el carro de la estación de venta, junto a tu agujero."
 		elseif currentTab == "fossils" then
 			grid.CellSize = UDim2.new(1, -6, 0, 78)

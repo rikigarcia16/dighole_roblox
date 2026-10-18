@@ -28,7 +28,10 @@ function CollectionSets.progress(set: Collections.Set, profile: any): (number, n
 	local items = set.items or {}
 	local have = 0
 	for _, id in items do
-		if (profile.discoveries[id] or 0) > 0 then
+		local got = if set.kind == "exhibit"
+			then profile.collection.exhibit[id] == true
+			else (profile.discoveries[id] or 0) > 0
+		if got then
 			have += 1
 		end
 	end

@@ -40,6 +40,7 @@ export type Resource = {
 	spawn: SpawnRule?,
 	find: FindRule?,
 	rewardOnly: boolean?, -- obtained from structures (e.g. opening a geode), never from terrain
+	keep: boolean?, -- a piece of the story: "sell all" skips it; sell it alone or exhibit it at home
 	effect: string, -- key into EffectsController presets
 	sound: string, -- key into Sounds config
 	icon: string, -- glyph used by the UI icon generator
@@ -416,6 +417,7 @@ local list: { Resource } = {
 local finds: { Resource } = {
 	{
 		id = "antique_fragment",
+		keep = true,
 		name = "Fragmento antiguo",
 		value = 30,
 		color = Color3.fromRGB(196, 150, 96),
@@ -464,6 +466,7 @@ local finds: { Resource } = {
 	},
 	{
 		id = "relic",
+		keep = true,
 		name = "Reliquia",
 		value = 900,
 		color = Color3.fromRGB(255, 210, 120),
@@ -480,6 +483,7 @@ local finds: { Resource } = {
 	},
 	{
 		id = "ancient_artifact",
+		keep = true,
 		name = "Artefacto antiguo",
 		value = 5000,
 		color = Color3.fromRGB(80, 255, 230),

@@ -25,7 +25,12 @@ export type Profile = {
 	discoveries: { [string]: number }, -- resourceId -> total ever collected
 	zonesReached: { [string]: boolean },
 	clues: { [string]: boolean }, -- story notes read
-	collection: { fossils: { [string]: { count: number, firstDepth: number } } },
+	collection: {
+		fossils: { [string]: { count: number, firstDepth: number } },
+		-- kept pieces shown in the house display case: resourceId -> true. Added without a version
+		-- bump: older saves simply have none (reconcile fills the default).
+		exhibit: { [string]: boolean },
+	},
 	anomalies: {
 		counter: { found: boolean, solved: boolean, rings: { number }, solvedCount: number, solvedAt: number },
 	},
@@ -69,7 +74,7 @@ function ProfileSchema.default(seed: number): Profile
 		discoveries = {},
 		zonesReached = { garden = true },
 		clues = {},
-		collection = { fossils = {} },
+		collection = { fossils = {}, exhibit = {} },
 		anomalies = { counter = { found = false, solved = false, rings = {}, solvedCount = 0, solvedAt = 0 } },
 		mobility = { ropes = 0, placedRopes = {}, stations = {}, rescues = 0 },
 		quests = { index = 1, completed = {} },
@@ -184,6 +189,15 @@ function ProfileSchema.reconcile(data: any, seed: number): Profile
 					count = math.max(1, math.floor(finiteNonNegative(entry.count, 1))),
 					firstDepth = math.floor(finiteNonNegative(entry.firstDepth, 0)),
 				}
+			end
+		end
+	end
+
+	if type(data.collection) == "table" and type(data.collection.exhibit) == "table" then
+		for id, shown in data.collection.exhibit do
+			local resource = type(id) == "string" and Resources.get(id)
+			if shown == true and resource and resource.keep then
+				profile.collection.exhibit[id] = true
 			end
 		end
 	end

@@ -89,18 +89,55 @@ function InventoryService.sellAll(player: Player): number
 		StateService.notify(player, "error", "Acércate a una estación de venta.", "sell_far")
 		return 0
 	end
-	local value = Inventory.value(profile.inventory)
+	local kept = Inventory.keptCount(profile.inventory)
+	local value = Inventory.takeSellable(profile.inventory)
 	if value <= 0 then
-		StateService.notify(player, "info", "Tu mochila está vacía. ¡A cavar!", "sell_empty")
+		StateService.notify(
+			player,
+			"info",
+			if kept > 0
+				then "Solo llevas piezas que se conservan: véndelas una a una desde la mochila o expónlas en casa."
+				else "Tu mochila está vacía. ¡A cavar!",
+			"sell_empty"
+		)
 		return 0
 	end
-	table.clear(profile.inventory)
 	profile.coins += value
 	profile.stats.coinsEarned += value
 	profile.stats.sales += 1
-	StateService.notify(player, "sell", "Vendido por " .. Format.number(value) .. " monedas")
+	StateService.notify(
+		player,
+		"sell",
+		"Vendido por "
+			.. Format.number(value)
+			.. " monedas"
+			.. (if kept > 0 then " · conservas " .. kept .. " pieza(s) para la vitrina" else "")
+	)
 	StateService.push(player)
 	return value
+end
+
+-- Sells one unit of a kept piece (a relic): a deliberate choice, made at the sell station.
+function InventoryService.sellOne(player: Player, resourceId: string): boolean
+	local profile = PlayerDataService.get(player)
+	local resource = Resources.get(resourceId)
+	if not profile or not resource or not resource.keep then
+		return false
+	end
+	local count = profile.inventory[resourceId] or 0
+	if count <= 0 then
+		return false
+	end
+	if not nearSellStation(player) then
+		StateService.notify(player, "error", "Acércate a una estación de venta.", "sell_far")
+		return false
+	end
+	profile.inventory[resourceId] = if count > 1 then count - 1 else nil
+	profile.coins += resource.value
+	profile.stats.coinsEarned += resource.value
+	StateService.notify(player, "sell", resource.name .. " vendida por " .. Format.number(resource.value) .. " monedas")
+	StateService.push(player)
+	return true
 end
 
 function InventoryService.start()
@@ -108,6 +145,11 @@ function InventoryService.start()
 	Remotes.event("Sell").OnServerEvent:Connect(function(player)
 		if limiter:allow(player) then
 			InventoryService.sellAll(player)
+		end
+	end)
+	Remotes.event("SellItem").OnServerEvent:Connect(function(player, resourceId)
+		if limiter:allow(player) and type(resourceId) == "string" and #resourceId <= 40 then
+			InventoryService.sellOne(player, resourceId)
 		end
 	end)
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, player)

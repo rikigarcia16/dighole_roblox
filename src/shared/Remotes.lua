@@ -5,6 +5,7 @@
 --   Dig(targetPosition: Vector3)                   request one hit at a world position
 --   ReturnToSurface()                               teleport back to the plot surface
 --   Sell()                                          sell the backpack (must be near the sell station)
+--   SellItem(resourceId)                            sell one kept piece (relic), near the sell station
 --   Shop(action: string, id: string) -> result      RemoteFunction: "buyTool" | "equipTool" | "buyUpgrade"
 --   GetState() -> snapshot                          RemoteFunction: initial state
 -- Server -> Client
@@ -46,6 +47,7 @@ local EVENTS = {
 	"RescueCancel",
 	"LiftRide",
 	"RescueState",
+	"SellItem",
 }
 local FUNCTIONS = { "Shop", "GetState", "RescueQuote", "LiftTravel" }
 

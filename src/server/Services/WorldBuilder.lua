@@ -240,6 +240,7 @@ export type PlotPoints = {
 	sell: Vector3,
 	shop: Vector3,
 	lift: Vector3,
+	vitrine: { Vector3 }, -- slots of the house display case, in Config/Collections "relics" order
 	depthLabel: TextLabel,
 	ownerLabel: TextLabel,
 }
@@ -311,6 +312,7 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 	local spawnCFrame = CFrame.lookAt(at(0, 4, -56), at(0, 4, 0))
 
 	-- House (behind the hole) -------------------------------------------------------------------
+	local vitrineSlots: { Vector3 } = {}
 	do
 		local hx, hz, w, dpt, h = 0, 76, 30, 22, 12
 		local front = hz - dpt / 2
@@ -430,6 +432,36 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 			collide = false,
 		})
 		prompt(note, "Note", "Nota misteriosa", "Leer", 8):SetAttribute("NoteId", "house_note")
+		-- Display case on the east wall: the pieces the player chose to keep instead of selling.
+		local cabinet = make(folder, {
+			name = "VitrineBase",
+			size = Vector3.new(10, 3, 2.6),
+			cframe = CFrame.new(at(hx + 8, 2.5, hz + 8)),
+			color = Palette.darkWood,
+			material = Enum.Material.Wood,
+		})
+		make(folder, {
+			name = "VitrineGlass",
+			size = Vector3.new(10, 3.2, 2.6),
+			cframe = CFrame.new(at(hx + 8, 5.6, hz + 8)),
+			color = Color3.fromRGB(200, 225, 235),
+			material = Enum.Material.Glass,
+			transparency = 0.75,
+			collide = false,
+			shadow = false,
+		})
+		label(cabinet, Enum.NormalId.Front, "VITRINA", Color3.fromRGB(255, 220, 160))
+		local vitrineLight = Instance.new("PointLight")
+		vitrineLight.Range = 9
+		vitrineLight.Brightness = 0.7
+		vitrineLight.Color = Color3.fromRGB(255, 236, 200)
+		vitrineLight.Parent = cabinet
+		prompt(cabinet, "Exhibit", "Vitrina", "Exponer", 8)
+		vitrineSlots = {
+			at(hx + 5, 4.6, hz + 8),
+			at(hx + 8, 4.6, hz + 8),
+			at(hx + 11, 4.6, hz + 8),
+		}
 		local light = Instance.new("PointLight")
 		light.Range = 18
 		light.Brightness = 0.8
@@ -727,6 +759,7 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 			sell = sellPoint,
 			shop = shopPoint,
 			lift = liftPoint,
+			vitrine = vitrineSlots,
 			depthLabel = depthLabel,
 			ownerLabel = ownerLabel,
 		}

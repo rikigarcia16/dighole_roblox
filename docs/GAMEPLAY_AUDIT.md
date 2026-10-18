@@ -144,3 +144,20 @@ pruebas de Studio.
   `docs/BALANCE.md`.
 - **Studio pendiente:** que el aviso de misión y colección aparezca, cómo se ve la pestaña y que
   una partida antigua continúe la cadena.
+
+### Bloque 4b: vender o conservar (G2)
+- El fragmento antiguo, la reliquia y el artefacto llevan `keep`: «Vender todo» ya no los vende
+  (`Inventory.takeSellable`, con test [VM]). En la mochila tienen su propio botón «Vender» (evento
+  `SellItem`, validado en el servidor: pieza que se conserva, que la lleva encima y que está junto a
+  la estación de venta).
+- **Vitrina** en la casa (F en la vitrina): expone una unidad de cada pieza; se guarda en
+  `collection.exhibit` y se reconstruye al entrar. Así la casa refleja el progreso.
+- La colección «Restos de quien vino antes» (10 000) se completa **exponiendo**, no solo
+  encontrando. Vender una reliquia (900) o el artefacto (5 000) da dinero ahora, pero retrasa la
+  colección: es una decisión real.
+- Compatibilidad: el campo es nuevo y no cambia la versión. Las partidas antiguas cargan con la
+  vitrina vacía; los identificadores basura o de piezas que no se conservan se descartan (test
+  [VM]). **Riesgo conocido:** si se vuelve a una versión anterior del juego, esa versión no conoce
+  `exhibit` y lo perdería al guardar. Las piezas ya expuestas no vuelven a la mochila.
+- **Studio pendiente:** la vitrina con las piezas girando, el botón «Vender» de una pieza y el
+  aviso al vender cuando solo se llevan piezas conservadas.
