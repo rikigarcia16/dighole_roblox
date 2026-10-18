@@ -221,7 +221,7 @@ Primera vez que las iteraciones 4–6 se ejecutan en Studio (`docs/STUDIO_REPORT
 
 **Qué estaba mal y está arreglado** [Studio salvo donde se indica]:
 - El hierro se generaba como césped (material `Granite` inexistente en terreno). Test nuevo de
-  materiales [pendiente de pasar en la VM: no había `luaucheck`].
+  materiales [VM: pasa].
 - Texto «Label» fijo en pantalla; sin forma de subir entre 2 y 8 m (justo cuando el tutorial lo
   pide); palancas del Contador con el indicador equivocado; cuerda desde el borde demasiado
   exigente; panel ⚙ encima de la Mochila; recarga de decoración en un fotograma.
@@ -238,4 +238,4 @@ Primera vez que las iteraciones 4–6 se ejecutan en Studio (`docs/STUDIO_REPORT
 | A10 | Interfaz en móvil sin revisar | *Test → Device* en Studio |
 | A11 | Escenas de cueva (V4–V7), sensación de herramientas (V9), transiciones (V2) sin ver | El usuario, con las capturas del informe |
 | A12 | Dos jugadores y guardado real | Lugar publicado (lista en el informe, §6) |
-| A13 | `luaucheck` no ejecutado en esta tanda | Pasar `tests/run.lua` y `tests/static_checks.lua` |
+| A13 | ~~`luaucheck` no ejecutado en esta tanda~~ **Cerrado:** ejecutado sobre 68bcdd9/0b2eea2 sin cambios de código. `luaucheck check` sin errores; `tests/run.lua` 61 ok, 0 fallos (incluido «terrain materials are real terrain materials and not shared»); `tests/static_checks.lua` 62 usos de remotes verificados, 0 fallos | — |

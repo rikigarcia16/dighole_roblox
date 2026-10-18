@@ -7,9 +7,9 @@ MCP de Studio, *Play* con 1 jugador.
 ## Niveles de verificación
 
 - **(a) Automático:** StyLua 2.6.0 limpio en `src` y `tests` (con fin de línea CRLF, el que deja Git
-  en Windows). **`luaucheck` no se ha ejecutado:** necesita Rust/cargo y aquí no está instalado. Por
-  tanto ni `tests/run.lua` (incluido el test nuevo de materiales) ni `tests/static_checks.lua` se
-  han pasado en esta tanda. **Hay que pasarlos** antes de dar los cambios por cerrados.
+  en Windows). **`luaucheck`** (pasado después, en otra máquina con Rust): `check` sin errores,
+  `tests/run.lua` 61 ok / 0 fallos (incluido el test nuevo de materiales) y
+  `tests/static_checks.lua` 62 usos de remotes verificados / 0 fallos. No hizo falta tocar código.
 - **(b) VM de Luau:** nada nuevo ejecutado aquí (ver arriba).
 - **(c) Studio:** lo marcado OK en la tabla se ha visto funcionar en Studio (consola, valor leído
   por código o captura).
