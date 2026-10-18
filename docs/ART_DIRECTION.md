@@ -36,3 +36,33 @@ Valores en `src/shared/Config/Visuals.lua`. Se aplican en `AmbienceController`.
 
 **Sin verificar en Studio:** cómo se ve. Hay que recorrer las capas, ajustar los valores a ojo y
 comprobar el coste de las partículas en calidad baja.
+
+## Escenas de cueva (bloque 4)
+
+`Logic/ScenePlan` decide, de forma determinista por semilla y sector, qué hay en cada galería y en
+cada cámara. `Services/CaveScenes` lo construye con piezas. El plan es puro y tiene test: cada
+objeto está sobre suelo real o cuelga de un techo real, nunca dentro de la sala del Contador ni
+fuera de su estilo, y el sector no pasa de 60 objetos.
+
+| Estilo | Qué cuenta | Escenas |
+|---|---|---|
+| Minas | Alguien trabajó aquí y se fue con prisa | Raíles en las galerías llanas; una vagoneta en un fondo de saco, a veces volcada con el mineral por el suelo; el **campamento de E.** (saco de dormir, caja con farol que parpadea, pico apoyado, hoguera fría y una tabla con «E.»); **flechas de tiza** de E. en las galerías que llevan al Contador |
+| Cristal | La roca está viva | Racimos de cristal colgando del techo; un **corazón de cristal** que late en las cámaras grandes |
+| Ruinas | Lo construyó alguien | Arcos con un glifo; a veces uno derrumbado; columnas caídas |
+| Lava | Calor hostil | Columnas de basalto con una grieta encendida; una fumarola que suelta brasas |
+| Abismo | Respira | Lianas luminosas que cuelgan y laten; una nube de esporas |
+| Núcleo | No es natural | Fragmentos que flotan y giran |
+| Todas | Escala | Estalactitas y estalagmitas en las cámaras |
+
+**Medido en la VM** (30 semillas × 47 sectores): 7,1 objetos por sector de media y 18 como máximo,
+es decir, unas 30 piezas por sector de media y unas 180 en el peor caso. Solo el corazón de
+cristal, la fumarola y el farol del campamento llevan luz.
+
+**Vida ambiental** (`AmbientLifeController`, en el cliente): el farol y la fumarola parpadean, los
+cristales y los bulbos laten, los fragmentos del Núcleo giran y, cada 4–10 s (según la calidad
+gráfica), cae un poco de polvo del techo cerca del jugador si hay techo a más de 6 studs. Solo se
+anima lo que está a menos de 140 studs, con un máximo de 60 objetos por fotograma.
+
+**Sin verificar en Studio:** aspecto, escala y piezas reales por sector (contarlas con
+`#workspace.World:GetDescendants()` tras bajar 300 m), y el coste por fotograma de la animación
+ambiental.

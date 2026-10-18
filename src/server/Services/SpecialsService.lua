@@ -33,6 +33,7 @@ local InventoryService = require(script.Parent.InventoryService)
 local StateService = require(script.Parent.StateService)
 local FxService = require(script.Parent.FxService)
 local CaveProps = require(script.Parent.CaveProps)
+local CaveScenes = require(script.Parent.CaveScenes)
 
 local SpecialsService = {}
 
@@ -302,6 +303,7 @@ end
 
 local function buildSector(plot: any, state: PlotState, sector: Caves.Sector)
 	CaveProps.decorate(plot, sector, state.folder)
+	CaveScenes.build(plot, sector, state.folder)
 	fireHooks(sectorBuiltHooks, plot, sector, state.folder)
 	for _, spot in sector.spots do
 		local systemKey = Caves.systemKey(sector.index, spot.system)

@@ -110,3 +110,20 @@ pruebas de Studio.
   plantilla se elimina al arrancar; StyLua fijado a la versión 2.6.0.
 - **Studio pendiente:** girar los tres anillos desde el suelo, cuerda desde el borde, ausencia de
   avisos de `swoosh.wav` en la consola.
+
+### Bloque 2 (`baf1f18`): identidad visual por capa
+- `Config/Visuals` define la gradación de color, el bloom, la atmósfera y las partículas de las 7
+  capas. `Util/ZoneLook` es puro y tiene test de continuidad en cada límite y de oscurecimiento
+  con la profundidad [VM].
+- `AmbienceController` hace la transición gradual y lleva un único emisor de partículas alrededor
+  de la cámara, escalado por la calidad gráfica. La superficie tiene ahora luz de tarde.
+- **Studio pendiente:** ajustar los valores a ojo (ver `docs/ART_DIRECTION.md`).
+
+### Bloque 3: escenas de cueva y vida ambiental
+- `Logic/ScenePlan` (puro, con test) y `Services/CaveScenes`: 15 tipos de escena ligados a su
+  estilo, entre ellos el campamento y las flechas de tiza de E., que conectan con la historia.
+  Presupuesto de 60 objetos por sector; la media medida es 7,1 [VM].
+- `AmbientLifeController` en el cliente: parpadeo, latido, giro y polvo que cae, con coste por
+  fotograma acotado [código].
+- **Studio pendiente:** aspecto, número real de piezas, coste en calidad baja y que nada estorbe
+  al cavar (las estalagmitas y el corazón de cristal tienen colisión en la base).

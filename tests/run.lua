@@ -999,6 +999,64 @@ test("profile v3 data migrates to v4; counter and mobility sanitised", function(
 	dataStoreRoundTrip(r)
 end)
 
+test("cave scenes: on real floors / ceilings, within budget, each style tells its own story", function()
+	local ScenePlan = H.module("ServerScriptService", "Server", "Logic", "ScenePlan")
+	local seen = {} -- style -> kind -> sectors with it
+	local sectorsOfStyle = {}
+	local total, sectorsCounted, maxProps = 0, 0, 0
+	for seed = 1, 30 do
+		for index = 2, 48 do
+			local sector = Caves.sector(seed, index)
+			local props = ScenePlan.plan(seed, sector)
+			ok(#props <= ScenePlan.Budget, "budget exceeded: " .. #props)
+			total += #props
+			sectorsCounted += 1
+			maxProps = math.max(maxProps, #props)
+			sectorsOfStyle[sector.style] = (sectorsOfStyle[sector.style] or 0) + 1
+			local kinds = {}
+			for _, prop in props do
+				local x, z = math.floor(prop.x), math.floor(prop.z)
+				local where = string.format("%s at %d,%d,%d (seed %d)", prop.kind, x, prop.d, z, seed)
+				local id, water = Caves.cellAt(seed, x, prop.d, z)
+				ok(id > 0 and not water, where .. " is not in open air")
+				if prop.anchor == "floor" then
+					eq(Caves.cellAt(seed, x, prop.d + 1, z), 0, where .. " floats: no rock below")
+				else
+					eq(Caves.cellAt(seed, x, prop.d - 1, z), 0, where .. " hangs from nothing")
+				end
+				ok(not Anomalies.inReserved(x, prop.d, z), where .. " inside the Counter's box")
+				-- signature kinds stay in their style
+				for style, list in ScenePlan.Signature do
+					for _, kind in list do
+						if kind == prop.kind and kind ~= "chalk" then
+							eq(sector.style, style, prop.kind .. " outside its style")
+						end
+					end
+				end
+				kinds[prop.kind] = true
+			end
+			seen[sector.style] = seen[sector.style] or {}
+			for kind in kinds do
+				seen[sector.style][kind] = (seen[sector.style][kind] or 0) + 1
+			end
+		end
+	end
+	-- every style shows its signature scenes regularly
+	for style, list in ScenePlan.Signature do
+		local n = sectorsOfStyle[style] or 0
+		ok(n > 0, "no sector of style " .. style)
+		local withAny = 0
+		for _, kind in list do
+			withAny = math.max(withAny, (seen[style] or {})[kind] or 0)
+		end
+		ok(withAny / n >= 0.5, style .. ": signature scene in only " .. withAny .. "/" .. n .. " sectors")
+	end
+	-- rails and E.'s chalk exist (mines)
+	ok(((seen.mine or {}).rails or 0) > 0, "rails")
+	ok(((seen.mine or {}).chalk or 0) > 0, "chalk arrows on the guided galleries")
+	print(string.format("       scenes: %.1f props per sector on average, max %d", total / sectorsCounted, maxProps))
+end)
+
 test("zone look: every zone has an art direction, layers blend at boundaries and darken with depth", function()
 	local Visuals = H.module("ReplicatedStorage", "Shared", "Config", "Visuals")
 	local ZoneLook = H.module("ReplicatedStorage", "Shared", "Util", "ZoneLook")

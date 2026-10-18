@@ -47,7 +47,7 @@ function AmbienceController.setEffectsScale(scale: number?)
 	effectsOverride = scale
 end
 
-local function effectsScale(): number
+function AmbienceController.effectsScale(): number
 	if effectsOverride then
 		return effectsOverride
 	end
@@ -165,7 +165,7 @@ local wasUnderground = false
 
 local function step(depth: number, grade: ColorCorrectionEffect, bloom: BloomEffect, atmosphere: Atmosphere)
 	local underground = depth > UNDERGROUND_DEPTH
-	local scale = effectsScale()
+	local scale = AmbienceController.effectsScale()
 	if underground then
 		local look = ZoneLook.at(depth)
 		Lighting.Ambient = easeColor(Lighting.Ambient, look.ambient)
