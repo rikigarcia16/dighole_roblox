@@ -1,5 +1,5 @@
 -- Progression simulation: a bot digs a 4x4 shaft straight down through the real generated
--- terrain, sells when the backpack is full or the battery is empty, and buys the cheapest
+-- terrain, sells when the backpack is full (digging uses no energy), and buys the cheapest
 -- available improvement. Prints when key milestones happen so the economy targets in
 -- docs/BALANCE.md can be checked after any config change.
 --
@@ -16,6 +16,7 @@ H.mount("ServerScriptService", "Server", "src/server")
 local Resources = H.module("ReplicatedStorage", "Shared", "Config", "Resources")
 local Tools = H.module("ReplicatedStorage", "Shared", "Config", "Tools")
 local Upgrades = H.module("ReplicatedStorage", "Shared", "Config", "Upgrades")
+local Quests = H.module("ReplicatedStorage", "Shared", "Config", "Quests")
 local OreGeneration = H.module("ServerScriptService", "Server", "Logic", "OreGeneration")
 local Grid = H.module("ReplicatedStorage", "Shared", "Util", "Grid")
 
@@ -46,6 +47,16 @@ local function simulate(seed, maxMinutes)
 			events[name] = t
 		end
 	end
+	-- quest rewards the bot can earn by itself (depth, tools, finds); the rest needs a player
+	local paid = {}
+	local function questRewards(kind, key, value)
+		for _, q in Quests do
+			if not paid[q.id] and q.kind == kind and (q.key == nil or q.key == key) and value >= q.target then
+				paid[q.id] = true
+				coins += q.reward
+			end
+		end
+	end
 
 	local function sell()
 		t += TRIP_SECONDS
@@ -74,15 +85,16 @@ local function simulate(seed, maxMinutes)
 							tools[candidate.id] = true
 							tool = candidate
 							event("tool: " .. candidate.name)
+							questRewards("tool", candidate.id, 1)
 						end
 				end
 			end
 			for _, track in Upgrades.List do
-				local nextLevel = track.levels[levels[track.id] + 1]
+				local nextLevel = not track.hidden and track.levels[(levels[track.id] or 1) + 1]
 				if nextLevel and nextLevel.price < bestCost then
 					bestCost, bestAction =
 						nextLevel.price, function()
-							levels[track.id] += 1
+							levels[track.id] = (levels[track.id] or 1) + 1
 							event(track.name .. " nivel " .. levels[track.id])
 						end
 				end
@@ -116,7 +128,6 @@ local function simulate(seed, maxMinutes)
 		else
 			local hits = math.ceil(r.hardness / tool.power) / effectiveCells(tool.radius)
 			t += hits * tool.cooldown
-			energy -= hits * tool.energyCost
 			if used < Upgrades.valueAt("backpack", levels.backpack) then
 				inventory[id] = (inventory[id] or 0) + 1
 				used += 1
@@ -124,13 +135,15 @@ local function simulate(seed, maxMinutes)
 			if not discovered[id] then
 				discovered[id] = true
 				coins += r.value * 5
+				questRewards("collect", id, 1)
 			end
 			local findId = not r.isOre and OreGeneration.findAt(seed, x, depth, z)
 			if findId then
 				inventory[findId] = (inventory[findId] or 0) + 1
 				event("first find: " .. Resources.get(findId).name)
+				questRewards("collect", findId, 1)
 			end
-			if used >= Upgrades.valueAt("backpack", levels.backpack) or energy <= 0 then
+			if used >= Upgrades.valueAt("backpack", levels.backpack) then
 				sell()
 			end
 		end
@@ -138,6 +151,7 @@ local function simulate(seed, maxMinutes)
 		if cellInLayer >= SHAFT * SHAFT then
 			cellInLayer = 0
 			depth += 1
+			questRewards("depth", nil, depth)
 			if depth == 25 then
 				event("25 m")
 			end

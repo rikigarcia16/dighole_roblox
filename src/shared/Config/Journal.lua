@@ -7,6 +7,7 @@
 --   fossil = id                  : species registered in the collection
 --   zone = id                    : zone reached
 --   clue = id                    : note read
+--   set = id / anySet = true     : collection set complete (Config/Collections)
 
 export type Paragraph = { text: string, requires: { [string]: any }? }
 export type Entry = { id: string, title: string, requires: { [string]: any }, paragraphs: { Paragraph } }
@@ -61,5 +62,20 @@ local Journal: { Entry } = {
 		},
 	},
 }
+
+-- One entry that grows with every completed collection set.
+local Collections = require(script.Parent.Collections)
+local collectionParagraphs: { Paragraph } = {
+	{ text = "Lo que el agujero ha querido enseñarme, ordenado." },
+}
+for _, set in Collections do
+	table.insert(collectionParagraphs, { text = "· " .. set.name .. ": " .. set.line, requires = { set = set.id } })
+end
+table.insert(Journal, {
+	id = "collections",
+	title = "Lo que guarda el agujero",
+	requires = { anySet = true },
+	paragraphs = collectionParagraphs,
+})
 
 return Journal

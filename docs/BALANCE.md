@@ -111,3 +111,22 @@ pruebas reales.
 
 La simulación cuenta los hallazgos pero no los cofres ni las misiones, así que el ritmo real será
 algo más rápido de lo que indica la tabla.
+
+## Iteración 5: misiones hasta el Núcleo y colecciones (simulación en la VM)
+
+El simulador ya no compra la batería oculta, cavar no gasta energía y cobra las recompensas de
+misión que el bot puede conseguir solo (profundidad, herramientas y hallazgos). Tiempos estimados
+para un jugador real (×1,7):
+
+| Hito | Antes | Ahora |
+|---|---|---|
+| Zona 2 (50 m) | 11,0 min | 10,3 min |
+| Zona 3 (150 m) | 22,7 min | 20,5 min |
+| Zona 4 (350 m) | 39,4 min | 35,9 min |
+| Zona 5 (650 m) | 61,7 min | 52,4 min |
+| Zona 6 (1000 m) | 86,1 min | 72,1 min |
+| Zona 7 (1500 m) | 122,2 min | 102,8 min |
+
+Las misiones aceleran un 10–16 % sin saltarse ninguna herramienta. Cada recompensa ronda el 10 %
+del precio de la siguiente herramienta. Las colecciones (300–40 000) no entran en la simulación:
+dependen de explorar, no de cavar en línea recta.

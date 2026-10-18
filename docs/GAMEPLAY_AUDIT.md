@@ -127,3 +127,20 @@ pruebas de Studio.
   fotograma acotado [código].
 - **Studio pendiente:** aspecto, número real de piezas, coste en calidad baja y que nada estorbe
   al cavar (las estalagmitas y el corazón de cristal tienen colisión en la base).
+
+### Bloque 4: progresión por capa y colecciones
+- La cadena de misiones pasa de 12 a 32 y llega hasta el Núcleo (problema G1). Tipos nuevos:
+  especies fósiles, El Contador (encontrado o resuelto), estaciones y colecciones. Cada capa
+  trae un mineral nuevo, una estructura, la herramienta clave y la siguiente profundidad.
+- Las misiones nuevas van **al final**: un `quests.index` guardado sigue apuntando a la misma
+  misión, y quien había terminado la cadena antigua continúa por `station_1` (test [VM]).
+- **6 colecciones con recompensa única** (`Config/Collections`, `Logic/CollectionSets`): menas
+  altas, gemas de cristal, gemas profundas, materia legendaria, reliquias y fósiles. La
+  finalización se guarda como `quests.completed["set_<id>"]`, así que no cambia el formato del
+  guardado; el test de ida y vuelta confirma que no paga dos veces tras volver a entrar [VM].
+- Las colecciones se ven con su barra de progreso en *Mochila → Descubrimientos*. El diario tiene
+  una entrada nueva, «Lo que guarda el agujero», con una línea por colección completada.
+- Economía: con las misiones se llega al Núcleo en unos 103 minutos estimados (antes 122); ver
+  `docs/BALANCE.md`.
+- **Studio pendiente:** que el aviso de misión y colección aparezca, cómo se ve la pestaña y que
+  una partida antigua continúe la cadena.

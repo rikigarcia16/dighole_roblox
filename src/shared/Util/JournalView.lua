@@ -34,6 +34,16 @@ local function holds(requires: { [string]: any }?, state: any): boolean
 			if not (state.clues and state.clues[value]) then
 				return false
 			end
+		elseif key == "set" or key == "anySet" then
+			local found = false
+			for _, set in state.sets or {} do
+				if set.done and (key == "anySet" or set.id == value) then
+					found = true
+				end
+			end
+			if found ~= (if key == "anySet" then value else true) then
+				return false
+			end
 		else
 			return false -- unknown condition: hide rather than show something wrong
 		end

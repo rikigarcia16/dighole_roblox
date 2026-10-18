@@ -267,6 +267,56 @@ function InventoryUI.new(parent: Instance, deps: Deps)
 				state.maxDepth or 0
 			)
 		else
+			-- Collection sets first: what is left to complete, and what it pays.
+			for i, set in state.sets or {} do
+				local r = row(-100 + i)
+				local fraction = if set.total > 0 then set.have / set.total else 0
+				local badge = Build("Frame", {
+					Size = UDim2.fromOffset(40, 40),
+					BackgroundColor3 = if set.done then Theme.good else Theme.panelLight,
+					Parent = r,
+					[Build.Children] = { Build.corner(8), Build.stroke(Theme.accent, if set.done then 2 else 1) },
+				})
+				Build.label({
+					Text = if set.done then "✓" else string.format("%d/%d", set.have, set.total),
+					Size = UDim2.fromScale(1, 1),
+					MaxTextSize = 16,
+					Parent = badge,
+				})
+				local info = Build("Frame", {
+					BackgroundTransparency = 1,
+					Size = UDim2.new(1, -50, 1, 0),
+					Parent = r,
+				})
+				Build.label({
+					Text = string.format(
+						"<b>%s</b>  %s",
+						set.name,
+						if set.done
+							then '<font color="#6EDC6E">completada</font>'
+							else '<font color="#FFCD3C">● ' .. Format.number(set.reward) .. "</font>"
+					),
+					RichText = true,
+					Font = Theme.bodyFont,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					Size = UDim2.new(1, 0, 0.6, 0),
+					MaxTextSize = 15,
+					Parent = info,
+				})
+				local track = Build("Frame", {
+					Position = UDim2.new(0, 0, 0.7, 0),
+					Size = UDim2.new(1, -8, 0, 6),
+					BackgroundColor3 = Theme.panelLight,
+					Parent = info,
+					[Build.Children] = { Build.corner(3) },
+				})
+				Build("Frame", {
+					Size = UDim2.fromScale(fraction, 1),
+					BackgroundColor3 = if set.done then Theme.good else Theme.accent,
+					Parent = track,
+					[Build.Children] = { Build.corner(3) },
+				})
+			end
 			local found = 0
 			for _, resource in Resources.List do
 				local count = state.discoveries[resource.id] or 0

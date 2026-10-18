@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Format = require(ReplicatedStorage.Shared.Util.Format)
 local QuestLogic = require(script.Parent.Parent.Logic.QuestLogic)
+local CollectionSets = require(script.Parent.Parent.Logic.CollectionSets)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local StateService = require(script.Parent.StateService)
 
@@ -24,9 +25,17 @@ function QuestService.start()
 			end
 			StateService.notify(player, "quest", text)
 		end
+		for _, set in CollectionSets.advance(profile) do
+			StateService.notify(
+				player,
+				"discovery",
+				"Colección completada: " .. set.name .. " · +" .. Format.number(set.reward) .. " monedas"
+			)
+		end
 	end)
 	StateService.addSnapshotProvider(function(_player, profile, snapshot)
 		snapshot.quest = QuestLogic.view(profile)
+		snapshot.sets = CollectionSets.view(profile)
 	end)
 end
 

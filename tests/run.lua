@@ -642,11 +642,42 @@ test("quest chain advances in order and never pays twice", function()
 	p.discoveries.geode = 1
 	p.stats.cavesFound = 1
 	QuestLogic.advance(p)
+	-- the original 12 quests are done; the chain now continues with the layers below 150 m
+	eq(p.quests.index, 13, "old chain finished")
+	eq(QuestLogic.view(p).id, "station_1", "continues with the new chain")
+	-- a player who had finished the old chain (saved index 13 = old #Quests + 1) continues too
+	local veteran = ProfileSchema.reconcile({ version = 4, quests = { index = 13, completed = {} } }, 1)
+	eq(QuestLogic.view(veteran).id, "station_1", "veteran continues")
+	-- satisfy everything: the whole chain completes, each quest pays once
+	table.insert(p.mobility.stations, { id = "mines", cx = 1, d = 60, cz = 1 })
+	p.anomalies.counter.found = true
+	p.anomalies.counter.solved = true
+	local Fossils = H.module("ReplicatedStorage", "Shared", "Config", "Fossils")
+	for _, sp in Fossils.List do
+		p.collection.fossils[sp.id] = { count = 1, firstDepth = sp.minDepth }
+	end
+	for _, id in
+		{ "amethyst", "gold", "blue_crystal", "ruby", "relic", "obsidian", "abyss_crystal", "ancient_artifact" }
+	do
+		p.discoveries[id] = 1
+	end
+	p.stats.geodesOpened = 3
+	p.tools.industrial_pick = true
+	p.tools.portable_drill = true
+	p.stats.maxDepth = 1600
+	local before = p.coins
+	QuestLogic.advance(p)
 	eq(QuestLogic.view(p), nil, "chain finished")
 	eq(p.quests.index, #Quests + 1)
-	for _, q in Quests do
+	local expected = 0
+	for i, q in Quests do
 		ok(p.quests.completed[q.id], q.id .. " completed")
+		if i >= 13 then
+			expected += q.reward
+		end
 	end
+	eq(p.coins - before, expected, "each new quest paid exactly once")
+	eq(#QuestLogic.advance(p), 0)
 end)
 
 test("every quest references something that exists", function()
@@ -661,6 +692,19 @@ test("every quest references something that exists", function()
 		end
 		if q.kind == "clue" then
 			ok(Story.Notes[q.key], q.id)
+		end
+		if q.kind == "set" then
+			local found = false
+			for _, set in H.module("ReplicatedStorage", "Shared", "Config", "Collections") do
+				found = found or set.id == q.key
+			end
+			ok(found, q.id .. ": unknown set")
+		end
+		if q.kind == "counter" then
+			ok(q.key == "found" or q.key == "solved", q.id)
+		end
+		if q.kind == "fossils" then
+			ok(q.target <= #H.module("ReplicatedStorage", "Shared", "Config", "Fossils").List, q.id)
 		end
 	end
 	for _, id in Story.NoteOrder do
@@ -681,7 +725,8 @@ test("profile v1 data migrates to v2", function()
 		clues = { fake = true, miner_box = true },
 		plot = { openedChests = { "1_8_0", 5, string.rep("x", 100) } },
 	}, 1)
-	ok(bad.quests.index <= 13, "quest index clamped")
+	local QuestsConfig = H.module("ReplicatedStorage", "Shared", "Config", "Quests")
+	ok(bad.quests.index <= #QuestsConfig + 1, "quest index clamped")
 	ok(bad.clues.miner_box and not bad.clues.fake, "clues sanitised")
 	eq(#bad.plot.openedChests, 1, "chest keys sanitised")
 end)
@@ -965,6 +1010,50 @@ test("journal: entries and paragraphs follow discoveries, numbers are filled in"
 		end
 	end
 	ok(not JournalView.holds({ somethingNew = true }, p), "unknown conditions hide content")
+end)
+
+test("collection sets: pay once when complete, progress visible, journal grows", function()
+	local CollectionSets = H.module("ServerScriptService", "Server", "Logic", "CollectionSets")
+	local Collections = H.module("ReplicatedStorage", "Shared", "Config", "Collections")
+	local JournalView = H.module("ReplicatedStorage", "Shared", "Util", "JournalView")
+	local p = ProfileSchema.default(3)
+	for _, set in Collections do
+		for _, id in set.items or {} do
+			ok(Resources.get(id), set.id .. ": unknown item " .. id)
+		end
+		ok(set.reward > 0, set.id .. " reward")
+	end
+	p.discoveries.coal, p.discoveries.copper, p.discoveries.iron = 3, 1, 1
+	eq(#CollectionSets.advance(p), 0, "3/4 is not complete")
+	local view = CollectionSets.view(p)
+	eq(view[1].have, 3)
+	eq(view[1].total, 4)
+	p.discoveries.silver = 1
+	local coins = p.coins
+	local done = CollectionSets.advance(p)
+	eq(#done, 1)
+	eq(done[1].id, "upper_ores")
+	eq(p.coins - coins, done[1].reward)
+	eq(#CollectionSets.advance(p), 0, "never pays twice")
+	ok(CollectionSets.isComplete("upper_ores", p))
+	-- the completion survives save and load (stored in quests.completed)
+	local loaded = ProfileSchema.reconcile(dataStoreRoundTrip(p), 1)
+	ok(CollectionSets.isComplete("upper_ores", loaded), "completion persisted")
+	eq(#CollectionSets.advance(loaded), 0, "no second payment after rejoin")
+	-- journal: the collections entry appears with its line
+	local state = { sets = CollectionSets.view(loaded) }
+	local entry
+	for _, e in JournalView.entries(state) do
+		if e.id == "collections" then
+			entry = e
+		end
+	end
+	ok(entry and entry.body:find("Carbón"), "journal line for the completed set")
+	ok(not entry.body:find("Siete especies"), "no line for an incomplete set")
+	eq(#JournalView.entries({ sets = CollectionSets.view(ProfileSchema.default(1)) }) >= 0, true)
+	for _, e in JournalView.entries({ sets = CollectionSets.view(ProfileSchema.default(1)) }) do
+		ok(e.id ~= "collections", "hidden until a set is complete")
+	end
 end)
 
 test("profile v3 data migrates to v4; counter and mobility sanitised", function()

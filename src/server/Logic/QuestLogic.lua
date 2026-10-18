@@ -3,6 +3,8 @@
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Quests = require(Shared.Config.Quests)
+local Collections = require(Shared.Config.Collections)
+local CollectionSets = require(script.Parent.CollectionSets)
 
 local QuestLogic = {}
 
@@ -29,6 +31,19 @@ function QuestLogic.progress(quest: Quests.Quest, profile: any): number
 		return if profile.tools[key :: string] then 1 else 0
 	elseif quest.kind == "clue" then
 		return if profile.clues[key :: string] then 1 else 0
+	elseif quest.kind == "fossils" then
+		return CollectionSets.fossilCount(profile)
+	elseif quest.kind == "counter" then
+		return if profile.anomalies.counter[key :: string] == true then 1 else 0
+	elseif quest.kind == "stations" then
+		return #profile.mobility.stations
+	elseif quest.kind == "set" then
+		for _, set in Collections do
+			if set.id == key then
+				local have, total = CollectionSets.progress(set, profile)
+				return if total > 0 and have >= total then 1 else 0
+			end
+		end
 	end
 	return 0
 end
