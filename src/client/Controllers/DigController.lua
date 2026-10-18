@@ -22,6 +22,7 @@ local HardnessView = require(ReplicatedStorage.Shared.Util.HardnessView)
 local Resources = require(ReplicatedStorage.Shared.Config.Resources)
 local DigFeel = require(ReplicatedStorage.Shared.Config.DigFeel)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
+local CrackPattern = require(ReplicatedStorage.Shared.Util.CrackPattern)
 local ClientState = require(script.Parent.ClientState)
 local EffectsController = require(script.Parent.EffectsController)
 local PlotLocator = require(script.Parent.PlotLocator)
@@ -108,10 +109,93 @@ local function cellKey(info: PlotLocator.CellInfo): string
 	return string.format("%s:%d:%d:%d", info.folder.Name, info.cx, info.d, info.cz)
 end
 
+-- Cracks -----------------------------------------------------------------------------------------
+-- Thin dark lines on the surface around the last hit, more of them as the cell weakens (pattern in
+-- Util/CrackPattern). Client only: the parts live in a local folder and never replicate.
+local CRACK_COLOR = Color3.fromRGB(28, 22, 20)
+local MAX_CRACKED_CELLS = 8
+local crackFolder = Instance.new("Folder")
+crackFolder.Name = "THNE_Cracks"
+crackFolder.Parent = workspace
+type Crack = { model: Model?, token: number }
+local cracks: { [string]: Crack } = {}
+local crackOrder: { string } = {}
+local crackToken = 0
+-- last local hit per cell: where the cracks start (the server only reports the cell)
+local lastHits: { [string]: { position: Vector3, normal: Vector3 } } = {}
+
+local function clearCracks(key: string)
+	local crack = cracks[key]
+	if crack and crack.model then
+		crack.model:Destroy()
+	end
+	cracks[key] = nil
+	lastHits[key] = nil
+	local index = table.find(crackOrder, key)
+	if index then
+		table.remove(crackOrder, index)
+	end
+end
+
+local function drawCracks(key: string, info: PlotLocator.CellInfo, fraction: number)
+	local hit = lastHits[key]
+	if fraction <= 0 or not hit then
+		clearCracks(key)
+		return
+	end
+	local existing = cracks[key]
+	if existing and existing.model then
+		existing.model:Destroy()
+	end
+	local normal = hit.normal
+	local tangent = normal:Cross(if math.abs(normal.Y) < 0.9 then Vector3.yAxis else Vector3.xAxis).Unit
+	local bitangent = normal:Cross(tangent).Unit
+	local origin = hit.position + normal * 0.04
+	local model = Instance.new("Model")
+	model.Name = key
+	local seed = info.cx + 97 * info.d + 9973 * info.cz
+	for _, line in CrackPattern.lines(seed, fraction) do
+		local direction = tangent * math.cos(line.angle) + bitangent * math.sin(line.angle)
+		local from = origin + direction * line.start
+		local to = from + direction * line.length
+		local segment = Instance.new("Part")
+		segment.Anchored = true
+		segment.CanCollide = false
+		segment.CanQuery = false
+		segment.CanTouch = false
+		segment.CastShadow = false
+		segment.Material = Enum.Material.SmoothPlastic
+		segment.Color = CRACK_COLOR
+		segment.Transparency = 0.15
+		segment.Size = Vector3.new(0.09, 0.05, line.length)
+		segment.CFrame = CFrame.lookAt((from + to) / 2, to, normal)
+		segment.Parent = model
+	end
+	model.Parent = crackFolder
+	crackToken += 1
+	local token = crackToken
+	cracks[key] = { model = model, token = token }
+	if not table.find(crackOrder, key) then
+		table.insert(crackOrder, key)
+		if #crackOrder > MAX_CRACKED_CELLS then
+			clearCracks(crackOrder[1])
+		end
+	end
+	-- the server forgets partial damage after a while too (cells regenerate when the plot reloads)
+	task.delay(PROGRESS_MEMORY, function()
+		local current = cracks[key]
+		if current and current.token == token then
+			clearCracks(key)
+		end
+	end)
+end
+
 function DigController.reportProgress(position: Vector3, fraction: number)
 	local info = PlotLocator.cellAt(position)
 	if info then
-		progressCache[cellKey(info)] = { fraction = fraction, at = os.clock() }
+		local key = cellKey(info)
+		progressCache[key] = { fraction = fraction, at = os.clock() }
+		drawCracks(key, info, fraction)
 	end
 end
 
@@ -159,7 +243,13 @@ local function computeTarget(reach: number): (Vector3?, Vector3?, Enum.Material?
 		return result.Position, result.Normal, result.Material
 	end
 
-	-- Fallback: dig in front of / beneath the feet.
+	-- Fallback: dig beneath the feet, then in front of them. Straight down first: standing on the rim
+	-- of a hole the screen-centre ray falls past the edge, and "in front and down" pointed into the
+	-- hole too, so E / gamepad / touch did nothing at all (Studio test 2).
+	local below = workspace:Raycast(root.Position, Vector3.new(0, -reach, 0), rayParams)
+	if below then
+		return below.Position, below.Normal, below.Material
+	end
 	local forward = root.CFrame.LookVector * Vector3.new(1, 0, 1)
 	local direction = (forward.Unit * 0.45 - Vector3.yAxis).Unit
 	local fallback = workspace:Raycast(root.Position, direction * reach, rayParams)
@@ -265,6 +355,10 @@ function DigController.start()
 			return
 		end
 		digEvent:FireServer(position, normal)
+		local hitCell = PlotLocator.cellAt(position - normal * 0.5)
+		if hitCell then
+			lastHits[cellKey(hitCell)] = { position = position, normal = normal }
+		end
 		local resource = material and Resources.fromMaterial(material)
 		if resource then
 			if tool.power < resource.requiredPower then

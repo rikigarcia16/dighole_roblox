@@ -199,6 +199,34 @@ test("hardness indicator: hits left, segments and locks", function()
 	eq(v.label, dirt.name)
 end)
 
+test("cracks: none when intact, grow with damage, stable per cell", function()
+	local CrackPattern = H.module("ReplicatedStorage", "Shared", "Util", "CrackPattern")
+	eq(CrackPattern.count(0), 0, "no cracks on an intact cell")
+	eq(CrackPattern.count(-1), 0)
+	eq(CrackPattern.count(0 / 0), 0, "NaN is ignored")
+	eq(#CrackPattern.lines(5, 0), 0)
+	eq(CrackPattern.count(0.01), 1, "the first hit already shows a crack")
+	eq(CrackPattern.count(1), CrackPattern.MaxLines)
+	eq(CrackPattern.count(7), CrackPattern.MaxLines, "capped")
+	local previous = 0
+	for f = 0.05, 1, 0.05 do
+		local n = CrackPattern.count(f)
+		ok(n >= previous, "never fewer cracks with more damage")
+		previous = n
+	end
+	-- growth keeps the earlier lines in place, only longer: the pattern does not reshuffle
+	local early = CrackPattern.lines(1234, 0.3)
+	local late = CrackPattern.lines(1234, 0.9)
+	ok(#late > #early, "more lines later")
+	for i, line in early do
+		eq(line.angle, late[i].angle, "same angle for line " .. i)
+		ok(late[i].length >= line.length, "line " .. i .. " grows")
+		ok(line.length > 0.3 and line.length < 2, "line length is small")
+	end
+	local other = CrackPattern.lines(4321, 0.9)
+	ok(other[1].angle ~= late[1].angle or other[1].length ~= late[1].length, "cells differ")
+end)
+
 test("battery: sold because gear uses it, never consumed by digging; gear is sane", function()
 	ok(not Upgrades.ById.battery.hidden, "battery sold (lamp and detector use it)")
 	for _, tool in Tools.List do
