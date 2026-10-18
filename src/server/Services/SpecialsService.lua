@@ -10,6 +10,7 @@
 
 local CollectionService = game:GetService("CollectionService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
@@ -34,6 +35,7 @@ local StateService = require(script.Parent.StateService)
 local FxService = require(script.Parent.FxService)
 local CaveProps = require(script.Parent.CaveProps)
 local CaveScenes = require(script.Parent.CaveScenes)
+local DecorStreaming = require(script.Parent.Parent.Logic.DecorStreaming)
 
 local SpecialsService = {}
 
@@ -60,6 +62,7 @@ type Special = {
 type PlotState = {
 	folder: Folder,
 	sectors: { [number]: boolean }, -- sectors already decorated
+	decor: { [number]: { Model } }, -- loaded decoration per sector (DecorStreaming unloads far ones)
 	revealedSystems: { [string]: boolean },
 	specials: { [string]: Special },
 	bySystem: { [string]: { Special } },
@@ -264,6 +267,7 @@ local function stateFor(plot: any): PlotState?
 	local state: PlotState = {
 		folder = folder,
 		sectors = {},
+		decor = {},
 		revealedSystems = {},
 		specials = {},
 		bySystem = {},
@@ -302,8 +306,10 @@ local function register(state: PlotState, special: Special)
 end
 
 local function buildSector(plot: any, state: PlotState, sector: Caves.Sector)
-	CaveProps.decorate(plot, sector, state.folder)
-	CaveScenes.build(plot, sector, state.folder)
+	state.decor[sector.index] = {
+		CaveProps.decorate(plot, sector, state.folder),
+		CaveScenes.build(plot, sector, state.folder),
+	}
 	fireHooks(sectorBuiltHooks, plot, sector, state.folder)
 	for _, spot in sector.spots do
 		local systemKey = Caves.systemKey(sector.index, spot.system)
@@ -716,7 +722,50 @@ local function readLandmark(player: Player, special: Special)
 	end
 end
 
+-- Decoration streaming: every few seconds, drop the decoration of sectors far from every player in
+-- the plot and rebuild it (deterministically) when someone comes back.
+local function streamDecor()
+	for plot, state in states do
+		local active = {}
+		for _, player in Players:GetPlayers() do
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if root and PlotService.plotAt(root.Position) == plot then
+				local depth = Grid.depthMetersFromY(root.Position.Y - 3)
+				table.insert(active, math.floor(math.max(depth, 0) / SECTOR))
+			end
+		end
+		local loaded = {}
+		for index in state.decor do
+			loaded[index] = true
+		end
+		local toLoad, toUnload = DecorStreaming.plan(state.sectors, loaded, active)
+		for _, index in toUnload do
+			for _, model in state.decor[index] do
+				model:Destroy()
+			end
+			state.decor[index] = nil
+		end
+		for _, index in toLoad do
+			local sector = Caves.sector(plot.seed, index)
+			state.decor[index] = {
+				CaveProps.decorate(plot, sector, state.folder),
+				CaveScenes.build(plot, sector, state.folder),
+			}
+		end
+	end
+end
+
 function SpecialsService.start()
+	task.spawn(function()
+		while true do
+			task.wait(4)
+			local ok, err = pcall(streamDecor)
+			if not ok then
+				warn("[SpecialsService] decoration streaming failed:", err)
+			end
+		end
+	end)
 	TerrainChunkService.onChunkGenerated(onChunkGenerated)
 
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
