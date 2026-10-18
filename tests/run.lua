@@ -989,67 +989,137 @@ test("block counter: server stat survives save and load, never derived from the 
 	dataStoreRoundTrip(again)
 end)
 
-test("counter room: sealed, two doorways, guided galleries, nothing random inside", function()
-	local room = Anomalies.CounterRoom
-	for seed = 1, 40 do
-		local sector = Caves.sector(seed, Anomalies.CounterSector)
-		local roomSystem = sector.counterSystem
-		ok(roomSystem and sector.systems[roomSystem].counter, "room system registered")
-		for x = room.x0 - 1, room.x1 + 1 do
-			for d = room.d0 - 1, room.d1 + 1 do
-				for z = room.z0 - 1, room.z1 + 1 do
-					local id = OreGeneration.resourceAt(seed, x, d, z)
-					if Anomalies.inRoom(x, d, z) then
-						eq(id, "air", "room interior is open")
-						eq(Caves.cellAt(seed, x, d, z), roomSystem, "room interior is one system")
-						ok(not FossilBeds.bedAt(seed, x, d, z), "no fossil in the room")
-					else
-						ok(id ~= "air" and id ~= "water", "shell is rock at " .. x .. "," .. d .. "," .. z)
-						ok(Anomalies.isSealed(x, d, z) ~= Anomalies.isDoorway(x, d, z), "shell is sealed or doorway")
+test("anomaly rooms: sealed, two doorways, guided galleries, nothing random inside", function()
+	ok(#Anomalies.RoomList >= 2, "the Counter and E.'s workshop")
+	for _, def in Anomalies.RoomList do
+		local room = def.box
+		ok(Anomalies.roomForSector(def.sector) == def, def.id .. " found by sector")
+		ok(room.d0 >= def.sector * 32 + 4 and room.d1 + 8 < (def.sector + 1) * 32, def.id .. " fits in its sector")
+		for seed = 1, 40 do
+			local sector = Caves.sector(seed, def.sector)
+			local roomSystem = sector.anomalySystem
+			ok(roomSystem and sector.systems[roomSystem].anomaly == def.id, "room system registered")
+			eq(sector.anomalyId, def.id)
+			if def.id == "counter" then
+				ok(sector.counterSystem == roomSystem and sector.systems[roomSystem].counter, "Counter keeps its names")
+			end
+			for x = room.x0 - 1, room.x1 + 1 do
+				for d = room.d0 - 1, room.d1 + 1 do
+					for z = room.z0 - 1, room.z1 + 1 do
+						local id = OreGeneration.resourceAt(seed, x, d, z)
+						if Anomalies.inRoom(x, d, z) then
+							eq(id, "air", "room interior is open")
+							eq(Caves.cellAt(seed, x, d, z), roomSystem, "room interior is one system")
+							ok(not FossilBeds.bedAt(seed, x, d, z), "no fossil in the room")
+						else
+							ok(id ~= "air" and id ~= "water", "shell is rock at " .. x .. "," .. d .. "," .. z)
+							ok(
+								Anomalies.isSealed(x, d, z) ~= Anomalies.isDoorway(x, d, z),
+								"shell is sealed or doorway"
+							)
+						end
 					end
 				end
 			end
-		end
-		for _, spot in sector.spots do
-			ok(not Anomalies.inReserved(spot.cx, spot.d, spot.cz), spot.kind .. " inside the reserved box")
-		end
-		-- solid foundation: nothing opens right under the floor (players fell under the room in Studio)
-		for x = room.x0 - 2, room.x1 + 2 do
-			for d = room.d1 + 2, room.d1 + 8 do
-				for z = room.z0 - 2, room.z1 + 2 do
-					ok(Anomalies.inFoundation(x, d, z), "foundation box")
-					local id = Caves.cellAt(seed, x, d, z)
-					-- a sealed geode pocket is fine (it is not open space to fall into)
-					ok(
-						id == 0 or (sector.systems[id] and sector.systems[id].hasCave == false),
-						"open cave under the room at " .. x .. "," .. d .. "," .. z .. " (seed " .. seed .. ")"
-					)
-				end
+			for _, spot in sector.spots do
+				ok(not Anomalies.inReserved(spot.cx, spot.d, spot.cz), spot.kind .. " inside the reserved box")
 			end
-		end
-		-- each doorway has open gallery right outside it, at floor level
-		for _, door in Anomalies.CounterDoorways do
-			local outside = if door.x < room.x0 then door.x - 1 else door.x + 1
-			local open = 0
-			for z = door.z0, door.z1 do
-				for d = door.d0, door.d1 do
-					if Caves.cellAt(seed, outside, d, z) > 0 then
-						open += 1
+			-- solid foundation: nothing opens right under the floor (players fell under the room in Studio)
+			for x = room.x0 - 2, room.x1 + 2 do
+				for d = room.d1 + 2, room.d1 + 8 do
+					for z = room.z0 - 2, room.z1 + 2 do
+						ok(Anomalies.inFoundation(x, d, z), "foundation box")
+						local id = Caves.cellAt(seed, x, d, z)
+						-- a sealed geode pocket is fine (it is not open space to fall into)
+						ok(
+							id == 0 or (sector.systems[id] and sector.systems[id].hasCave == false),
+							"open cave under the room at " .. x .. "," .. d .. "," .. z .. " (seed " .. seed .. ")"
+						)
 					end
 				end
 			end
-			ok(
-				open >= 2,
-				"gallery reaches doorway at x=" .. door.x .. " (open cells " .. open .. ", seed " .. seed .. ")"
-			)
+			-- each doorway has open gallery right outside it, at floor level
+			for _, door in def.doorways do
+				local outside = if door.x < room.x0 then door.x - 1 else door.x + 1
+				local open = 0
+				for z = door.z0, door.z1 do
+					for d = door.d0, door.d1 do
+						if Caves.cellAt(seed, outside, d, z) > 0 then
+							open += 1
+						end
+					end
+				end
+				ok(
+					open >= 2,
+					"gallery reaches doorway at x=" .. door.x .. " (open cells " .. open .. ", seed " .. seed .. ")"
+				)
+			end
 		end
+		-- sealed walls cannot be dug, doorways can
+		ok(Anomalies.isSealed(room.x0 - 1, room.d0, room.z0), def.id .. " wall corner sealed")
+		ok(not Anomalies.isSealed(def.doorways[1].x, room.d1, def.doorways[1].z0), def.id .. " doorway diggable")
 	end
-	-- sealed walls cannot be dug, doorways can
-	ok(Anomalies.isSealed(room.x0 - 1, room.d0, room.z0), "wall corner sealed")
-	ok(
-		not Anomalies.isSealed(Anomalies.CounterDoorways[1].x, room.d1, Anomalies.CounterDoorways[1].z0),
-		"doorway diggable"
-	)
+	-- the rooms never overlap
+	local a, b = Anomalies.Rooms.counter.box, Anomalies.Rooms.workshop.box
+	ok(a.d1 + 8 < b.d0 - 1, "rooms and foundations are far apart")
+	eq(Anomalies.CounterRoom, Anomalies.Rooms.counter.box)
+	eq(Anomalies.CounterSector, Anomalies.Rooms.counter.sector)
+end)
+
+test("workshop: journal grows with the hung shovel, numbers filled, beyond or short of E.", function()
+	local JournalView = H.module("ReplicatedStorage", "Shared", "Util", "JournalView")
+	local p = ProfileSchema.default(5)
+	local function entry(id: string): any
+		for _, e in JournalView.entries(p) do
+			if e.id == id then
+				return e
+			end
+		end
+		return nil
+	end
+	ok(not entry("workshop_found"), "nothing before finding it")
+	p.anomalies.workshop.found = true
+	local found = entry("workshop_found")
+	ok(found and found.body:find("octavo gancho"), "empty hook mentioned before hanging")
+	ok(not entry("workshop_hung"), "no hung entry yet")
+	p.anomalies.workshop.hung = true
+	p.anomalies.workshop.hungCount = 2500
+	local hung = entry("workshop_hung")
+	ok(hung and hung.body:find("2500") and hung.body:find("1412"), "count and the gap to E. (3912 - 2500)")
+	ok(not hung.body:find("Nadie había bajado tanto"), "not beyond E.")
+	ok(not entry("workshop_found").body:find("octavo gancho"), "empty hook paragraph gone")
+	p.anomalies.workshop.hungCount = 5000
+	hung = entry("workshop_hung")
+	ok(hung.body:find("Nadie había bajado tanto") and not hung.body:find("me faltaban"), "beyond E.")
+	ok(not hung.body:find("La máquina me contó"), "Counter paragraph waits for the Counter")
+	p.anomalies.counter.solved = true
+	p.anomalies.counter.solvedCount = 1900
+	ok(entry("workshop_hung").body:find("1900"), "Counter number joins the ledger entry")
+end)
+
+test("workshop state: defaults, sanitised, survives a DataStore round trip", function()
+	local p = ProfileSchema.default(9)
+	eq(p.anomalies.workshop.hung, false)
+	eq(p.anomalies.workshop.toolId, "")
+	p.anomalies.workshop = { found = false, hung = true, hungCount = 4210, hungAt = 1790000000, toolId = "miner_pick" }
+	local loaded = ProfileSchema.reconcile(dataStoreRoundTrip(p), 1)
+	local w = loaded.anomalies.workshop
+	ok(w.hung and w.found, "hung implies found")
+	eq(w.hungCount, 4210)
+	eq(w.toolId, "miner_pick")
+	-- garbage is cleaned, never trusted
+	local bad = ProfileSchema.default(9)
+	bad.anomalies.workshop = { found = "yes", hung = 1, hungCount = 0 / 0, hungAt = -5, toolId = "laser_sword" } :: any
+	local fixed = ProfileSchema.reconcile(dataStoreRoundTrip(bad), 1).anomalies.workshop
+	ok(fixed.found == false and fixed.hung == false, "non-boolean flags are false")
+	eq(fixed.hungCount, 0)
+	eq(fixed.hungAt, 0)
+	eq(fixed.toolId, "", "unknown tool dropped")
+	-- an older save without the field loads with the default
+	local old = ProfileSchema.default(9) :: any
+	old.anomalies.workshop = nil
+	local migrated = ProfileSchema.reconcile(dataStoreRoundTrip(old), 1)
+	eq(migrated.anomalies.workshop.hung, false, "older saves get the default")
 end)
 
 test("counter puzzle: per-plot solution, never starts solved, rings lock, solves in <= 15 turns", function()

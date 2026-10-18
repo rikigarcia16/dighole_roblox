@@ -2,6 +2,7 @@
 -- Composes the visible journal entries from the player's state snapshot (pure; tested offline).
 
 local Journal = require(script.Parent.Parent.Config.Journal)
+local Anomalies = require(script.Parent.Parent.Config.Anomalies)
 
 local JournalView = {}
 
@@ -12,8 +13,22 @@ local function holds(requires: { [string]: any }?, state: any): boolean
 		return true
 	end
 	local counter = state.anomalies and state.anomalies.counter or {}
+	local workshop = state.anomalies and state.anomalies.workshop or {}
 	for key, value in requires do
-		if key == "counterFound" then
+		if key == "workshopFound" then
+			if (workshop.found == true) ~= value then
+				return false
+			end
+		elseif key == "workshopHung" then
+			if (workshop.hung == true) ~= value then
+				return false
+			end
+		elseif key == "workshopBeyondE" then
+			local beyond = workshop.hung == true and (workshop.hungCount or 0) > Anomalies.WorkshopEBlocks
+			if beyond ~= value then
+				return false
+			end
+		elseif key == "counterFound" then
 			if (counter.found == true) ~= value then
 				return false
 			end
@@ -54,11 +69,16 @@ JournalView.holds = holds
 
 local function fill(text: string, state: any): string
 	local counter = state.anomalies and state.anomalies.counter or {}
+	local workshop = state.anomalies and state.anomalies.workshop or {}
 	local stats = state.stats or {}
 	return (
 		text:gsub("{(%w+)}", function(name: string): string
 			if name == "solvedCount" then
 				return tostring(counter.solvedCount or 0)
+			elseif name == "hungCount" then
+				return tostring(workshop.hungCount or 0)
+			elseif name == "workshopShort" then
+				return tostring(math.max(0, Anomalies.WorkshopEBlocks - (workshop.hungCount or 0)))
 			elseif name == "cellsDug" then
 				return tostring(stats.cellsDug or 0)
 			end

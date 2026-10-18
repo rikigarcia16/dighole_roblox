@@ -72,8 +72,10 @@ export type Sector = {
 	water: { [number]: boolean },
 	features: { Feature },
 	spots: { Spot },
-	systems: { [number]: { hasCave: boolean, counter: boolean? } },
+	systems: { [number]: { hasCave: boolean, counter: boolean?, anomaly: string? } },
 	counterSystem: number?, -- system id of the Counter room (only in its sector)
+	anomalySystem: number?, -- system id of the anomaly room in this sector (Counter or workshop)
+	anomalyId: string?, -- which room (Config/Anomalies)
 }
 
 local function idx(x: number, y: number, z: number): number
@@ -103,8 +105,10 @@ local function build(seed: number, index: number): Sector
 		return sector
 	end
 
-	-- The Counter's sector keeps its room and shell untouched by every random shape.
-	local hasCounter = index == Anomalies.CounterSector
+	-- A sector with an anomaly room (the Counter, E.'s workshop) keeps its room, shell and foundation
+	-- untouched by every random shape.
+	local anomaly = Anomalies.roomForSector(index)
+	local hasCounter = anomaly ~= nil
 
 	local counter = 0
 	local function rand(): number
@@ -387,11 +391,11 @@ local function build(seed: number, index: number): Sector
 		end
 	end
 
-	-- The Counter room --------------------------------------------------------------------------
-	-- Its interior is one sealed system; two mine galleries lead to the only two doorways (west and
+	-- The anomaly room --------------------------------------------------------------------------
+	-- Its interior is one sealed system; two galleries lead to the only two doorways (west and
 	-- east). The galleries stop one cell short: the player digs the doorway and breaks in.
-	if hasCounter then
-		local room = Anomalies.CounterRoom
+	if anomaly then
+		local room = anomaly.box
 		local roomSystem = newSystem()
 		for x = room.x0, room.x1 do
 			for d = room.d0, room.d1 do
@@ -400,7 +404,11 @@ local function build(seed: number, index: number): Sector
 				end
 			end
 		end
-		sector.counterSystem = roomSystem
+		sector.anomalySystem = roomSystem
+		sector.anomalyId = anomaly.id
+		if anomaly.id == "counter" then
+			sector.counterSystem = roomSystem
+		end
 		local floorCentre = room.d1 -- gallery centre line at the room's floor layer
 		local c = N // 2
 		local guided = {
@@ -512,8 +520,13 @@ local function build(seed: number, index: number): Sector
 		feature.system = find(feature.system)
 		sector.systems[feature.system] = { hasCave = true }
 	end
-	if sector.counterSystem then
-		sector.systems[sector.counterSystem] = { hasCave = false, counter = true }
+	if sector.anomalySystem then
+		sector.anomalySystem = find(sector.anomalySystem)
+		if sector.counterSystem then
+			sector.counterSystem = sector.anomalySystem
+		end
+		sector.systems[sector.anomalySystem] =
+			{ hasCave = false, counter = sector.anomalyId == "counter", anomaly = sector.anomalyId }
 	end
 
 	local function solidAt(x: number, d: number, z: number): boolean

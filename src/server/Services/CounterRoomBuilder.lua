@@ -72,10 +72,13 @@ function CounterRoomBuilder.build(
 	parent: Instance
 ): Room
 	local room = Anomalies.CounterRoom
-	local minX, maxX = plot.originX + room.x0 * CELL, plot.originX + (room.x1 + 1) * CELL
-	local minZ, maxZ = plot.originZ + room.z0 * CELL, plot.originZ + (room.z1 + 1) * CELL
-	local floorY = GameConfig.SurfaceY - (room.d1 + 1) * CELL
-	local topY = GameConfig.SurfaceY - room.d0 * CELL
+	-- build on the visible surfaces: the terrain bulges into the cell box (Anomalies.TerrainBulge)
+	local pad = Anomalies.TerrainBulge
+	local cellFloorY = GameConfig.SurfaceY - (room.d1 + 1) * CELL
+	local minX, maxX = plot.originX + room.x0 * CELL + pad, plot.originX + (room.x1 + 1) * CELL - pad
+	local minZ, maxZ = plot.originZ + room.z0 * CELL + pad, plot.originZ + (room.z1 + 1) * CELL - pad
+	local floorY = cellFloorY + pad
+	local topY = GameConfig.SurfaceY - room.d0 * CELL - pad
 	local sizeX, sizeZ, height = maxX - minX, maxZ - minZ, topY - floorY
 	local cx, cz = (minX + maxX) / 2, (minZ + maxZ) / 2
 	local center = Vector3.new(cx, floorY, cz)
@@ -127,7 +130,7 @@ function CounterRoomBuilder.build(
 	local inset = 0.3
 	local doorZ0 = plot.originZ + Anomalies.CounterDoorways[1].z0 * CELL
 	local doorZ1 = plot.originZ + (Anomalies.CounterDoorways[1].z1 + 1) * CELL
-	local doorTop = floorY + 2 * CELL
+	local doorTop = cellFloorY + 2 * CELL
 	local function wall(name: string, size: Vector3, position: Vector3)
 		local w = part(model, name, size, CFrame.new(position), DARK, Enum.Material.SmoothPlastic)
 		w.Reflectance = 0.08

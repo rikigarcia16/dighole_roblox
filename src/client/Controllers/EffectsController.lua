@@ -355,6 +355,7 @@ local SPECIAL_SOUNDS = {
 	landmark = "discover_epic",
 	counter_found = "counter_found",
 	counter_lock = "counter_lock",
+	workshop_found = "counter_found", -- placeholder until the workshop has its own sound
 }
 
 function EffectsController.special(position: Vector3, kind: string, resourceId: string?)
@@ -362,8 +363,10 @@ function EffectsController.special(position: Vector3, kind: string, resourceId: 
 	local color = if resource then resource.color else Color3.fromRGB(255, 230, 180)
 	if kind == "counter_found" then
 		EffectsController.narrative:Fire("UNA SALA QUE NADIE EXCAVÓ")
+	elseif kind == "workshop_found" then
+		EffectsController.narrative:Fire("ALGUIEN TRABAJABA AQUÍ")
 	end
-	if kind ~= "cave" and kind ~= "counter_found" then
+	if kind ~= "cave" and kind ~= "counter_found" and kind ~= "workshop_found" then
 		local e = nextEmitter(position)
 		e.sparkle.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
 		e.sparkle:Emit(if kind == "geode" then 45 else 25)

@@ -1,9 +1,13 @@
 --!strict
 -- Journal entries that grow with later discoveries. Each paragraph can require conditions; the
--- client composes the visible text (Util/JournalView). Placeholders: {solvedCount}, {cellsDug}.
+-- client composes the visible text (Util/JournalView). Placeholders: {solvedCount}, {cellsDug},
+-- {hungCount} (blocks dug when the shovel was hung in E.'s workshop), {workshopShort} (how many
+-- E. still had over you then).
 --
 -- requires keys (all must hold):
 --   counterFound / counterSolved : the Counter room state
+--   workshopFound / workshopHung : E.'s workshop state
+--   workshopBeyondE              : you had dug more than E. when you hung your shovel
 --   fossil = id                  : species registered in the collection
 --   zone = id                    : zone reached
 --   clue = id                    : note read
@@ -58,6 +62,64 @@ local Journal: { Entry } = {
 			{
 				text = "Los cristales de la criatura fósil vibran cuando pego la oreja a la roca. Tres golpes, una pausa.",
 				requires = { fossil = "crystal_creature" },
+			},
+		},
+	},
+	{
+		id = "workshop_found",
+		title = "El taller de E.",
+		requires = { workshopFound = true },
+		paragraphs = {
+			{
+				text = "Trescientos metros por debajo de la máquina, una puerta con marco de madera. Dentro, un banco, "
+					.. "un martillo frío y un farol todavía tibio, y un estante con siete palas viejas. "
+					.. "Cada una lleva una etiqueta con un número.",
+			},
+			{
+				text = "El ritmo grave que se oía desde las Cuevas de Cristal venía de aquí: alguien martillaba en este "
+					.. "banco, tres golpes y una pausa. Al abrir la puerta, el martillo ya estaba quieto.",
+			},
+			{
+				text = "Hay un octavo gancho, vacío. Su etiqueta está en blanco.",
+				requires = { workshopHung = false },
+			},
+			{
+				text = "Los números de las etiquetas se parecen a los de la máquina: bloques. Cada pala contó los suyos.",
+				requires = { counterSolved = true },
+			},
+		},
+	},
+	{
+		id = "workshop_hung",
+		title = "La octava pala",
+		requires = { workshopHung = true },
+		paragraphs = {
+			{
+				text = "Colgué mi pala en el gancho vacío. Las otras siete se balancearon a la vez, como si alguien "
+					.. "hubiera abierto una puerta. En el libro del banco, debajo de «E. — 3 912», había una línea nueva "
+					.. "con la misma letra: {hungCount}.",
+			},
+			{
+				text = "Es mi número. Cuando llegué ya había cavado más que E. Nadie había bajado tanto.",
+				requires = { workshopBeyondE = true },
+			},
+			{
+				text = "E. llegó a 3 912. A mí me faltaban {workshopShort} cuando colgué la pala. "
+					.. "La línea estaba escrita antes de que yo entrara.",
+				requires = { workshopBeyondE = false },
+			},
+			{
+				text = "La máquina me contó {solvedCount} al resolverla. El libro y la máquina llevan la misma cuenta.",
+				requires = { counterSolved = true },
+			},
+			{
+				text = "Desde entonces mi batería dura la mitad más. Las palas del estante no eran recuerdos: "
+					.. "eran herramientas para el siguiente.",
+			},
+			{
+				text = "La huella fósil de pala encaja con el gancho vacío. Alguien colgó una pala aquí antes de que "
+					.. "la roca existiera.",
+				requires = { fossil = "shovel_imprint" },
 			},
 		},
 	},

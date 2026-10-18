@@ -446,7 +446,7 @@ function SpecialsService.onCellsBroken(player: Player, plot: any, broken: { { cx
 									then "¡Has abierto una cueva! Algo brilla en la oscuridad..."
 									else "¡Has abierto una cueva!"
 							)
-						elseif info and not info.counter then -- the Counter is presented by AnomalyService
+						elseif info and not info.anomaly then -- anomaly rooms are presented by their own service
 							StateService.notify(player, "discovery", "La roca suena hueca... ¡una geoda!")
 						end
 						StateService.push(player)

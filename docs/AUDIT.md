@@ -315,3 +315,16 @@ durante la prueba (no en el repositorio).
 | W8 | Batería | Se recarga en la superficie y quieto junto a una estación tuya; cavar no la gasta nunca. |
 | W9 | Descarga de decoración | Baja a 300 m y espera 5 s: `#workspace.World:GetDescendants()` baja respecto a V8, porque los sectores de 64–200 m dejan de tener decoración. Vuelve en el montacargas a las Minas: los raíles y faroles reaparecen en unos 4 s, en el mismo sitio. |
 | W10 | MicroProfiler al volver con el montacargas | La reconstrucción de la decoración no debe dar tirones (anota los ms). |
+
+
+## 9. Fase 3: pruebas de Studio de lo nuevo
+
+| # | Prueba | Qué debe pasar |
+|---|---|---|
+| X1 | Golpear piedra con la pala oxidada | Líneas oscuras que crecen en la celda a cada golpe y desaparecen al romperla. |
+| X2 | De pie en el borde de un hueco, mantener E sin apuntar | Cava el suelo bajo tus pies. |
+| X3 | Bajar de 350 a 450 m | Se oye un ritmo grave de tres golpes, apagado, cada vez más claro. |
+| X4 | Abrir un acceso del taller (456–460 m, galería guiada) | «ALGUIEN TRABAJABA AQUÍ», entrada «El taller de E.»; el ritmo se calla. |
+| X5 | F en el gancho vacío | Tu herramienta cuelga, las palas se balancean, el libro muestra tu número; batería +50 %. |
+| X6 | Salir y volver (guardado real) | El taller sigue resuelto, tu herramienta en el gancho y el libro escrito. |
+| X7 | Sala del Contador | Suelo negro con líneas de luz visible; ningún puntal dentro. |

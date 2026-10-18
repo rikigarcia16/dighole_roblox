@@ -239,3 +239,37 @@ Primera vez que las iteraciones 4–6 se ejecutan en Studio (`docs/STUDIO_REPORT
 | A11 | Escenas de cueva (V4–V7), sensación de herramientas (V9), transiciones (V2) sin ver | El usuario, con las capturas del informe |
 | A12 | Dos jugadores y guardado real | Lugar publicado (lista en el informe, §6) |
 | A13 | ~~`luaucheck` no ejecutado en esta tanda~~ **Cerrado:** ejecutado sobre 68bcdd9/0b2eea2 sin cambios de código. `luaucheck check` sin errores; `tests/run.lua` 61 ok, 0 fallos (incluido «terrain materials are real terrain materials and not shared»); `tests/static_checks.lua` 62 usos de remotes verificados, 0 fallos | — |
+
+## 11. Fase 3, primeros bloques
+
+### Grietas y cavar desde el borde (`6f420c3`)
+- Grietas en la celda según el daño: `Util/CrackPattern` (puro, con test) y dibujo en el cliente
+  [Studio: aparecen y se borran al romper; el aspecto lo juzga el usuario].
+- Apuntado de respaldo hacia el suelo bajo los pies: cavar con E, mando o táctil desde el borde de
+  un hueco [código; no reproducido en Studio].
+
+### Audio
+- `docs/AUDIO_NEEDED.md`: lista de sonidos propios por prioridad, con duración y carácter.
+
+### Segunda anomalía: «El taller de E.» (Cavernas Antiguas, 456–460 m)
+- `Config/Anomalies` admite varias salas (`Rooms`, `RoomList`); El Contador conserva sus nombres.
+  `Logic/Caves` reserva la sala del sector que toque, con cimiento y galerías guiadas.
+- `WorkshopRoomBuilder` y `WorkshopService`: taller cálido (banco, farol, siete palas con sus
+  números y un gancho vacío). Al colgar tu pala, las palas se balancean, el libro pasa la página y
+  muestra tu número de bloques frente a los 3 912 de E. Utilidad: **batería +50 %**.
+- Señal previa: `WorkshopController`, el ritmo grave de tres golpes a través de la roca (el diario
+  del Contador ya lo anunciaba); se calla al abrir la sala.
+- Diario: «El taller de E.» y «La octava pala», que crecen con lo que has hecho.
+- Perfil: `anomalies.workshop` (campo nuevo, sin cambio de versión, saneado en `reconcile`, test de
+  ida y vuelta). **Riesgo al volver a una versión anterior:** esa versión descartaría el campo y se
+  perdería la batería extra y el estado del taller.
+- **Compatibilidad del mundo:** el sector 14 (448–479 m) se genera algo distinto que antes (la caja
+  reservada y dos galerías). Si alguien ya había cavado dentro de esa caja, esas celdas siguen
+  abiertas (manda `plot.dug`).
+- Studio [verificado]: se construye (70 piezas), suena y se calla al abrir, se revela con el aviso y
+  la entrada del diario, colgar la pala funciona (libro «… — 5 104 (+1 192)», batería 60 → 90).
+- Arreglos encontrados al probarlo, que afectan también al Contador: el terreno suave sobresale 2
+  studs hacia dentro de las salas (el suelo de vidrio del Contador nunca se había visto) y los
+  puntales de las galerías guiadas acababan dentro de las salas. Ambos corregidos y vistos en Studio.
+- **Pendiente:** pasar `luaucheck` (tests nuevos de salas, diario y guardado del taller); revisar a
+  ojo el taller y el Contador; el aviso narrativo ya no lo tapa un hallazgo épico [código, sin ver].

@@ -35,6 +35,8 @@ export type Profile = {
 	},
 	anomalies: {
 		counter: { found: boolean, solved: boolean, rings: { number }, solvedCount: number, solvedAt: number },
+		-- E.'s workshop (Ancient Caverns). Added without a version bump: older saves get the default.
+		workshop: { found: boolean, hung: boolean, hungCount: number, hungAt: number, toolId: string },
 	},
 	mobility: {
 		ropes: number, -- ropes carried
@@ -80,7 +82,10 @@ function ProfileSchema.default(seed: number): Profile
 		zonesReached = { garden = true },
 		clues = {},
 		collection = { fossils = {}, exhibit = {} },
-		anomalies = { counter = { found = false, solved = false, rings = {}, solvedCount = 0, solvedAt = 0 } },
+		anomalies = {
+			counter = { found = false, solved = false, rings = {}, solvedCount = 0, solvedAt = 0 },
+			workshop = { found = false, hung = false, hungCount = 0, hungAt = 0, toolId = "" },
+		},
 		mobility = { ropes = 0, placedRopes = {}, stations = {}, rescues = 0 },
 		quests = { index = 1, completed = {} },
 		settings = { effects = 0, shake = true, tutorialDone = false },
@@ -246,6 +251,15 @@ function ProfileSchema.reconcile(data: any, seed: number): Profile
 				end
 			end
 		end
+	end
+	if type(data.anomalies) == "table" and type(data.anomalies.workshop) == "table" then
+		local w = data.anomalies.workshop
+		local workshop = profile.anomalies.workshop
+		workshop.found = w.found == true or w.hung == true
+		workshop.hung = w.hung == true
+		workshop.hungCount = math.floor(finiteNonNegative(w.hungCount, 0))
+		workshop.hungAt = math.floor(finiteNonNegative(w.hungAt, 0))
+		workshop.toolId = if type(w.toolId) == "string" and Tools.get(w.toolId) then w.toolId else ""
 	end
 
 	if type(data.mobility) == "table" then

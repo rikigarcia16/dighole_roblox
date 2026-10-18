@@ -9,6 +9,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
+local Anomalies = require(ReplicatedStorage.Shared.Config.Anomalies)
 local Zones = require(ReplicatedStorage.Shared.Config.Zones)
 local Grid = require(ReplicatedStorage.Shared.Util.Grid)
 local Hash = require(ReplicatedStorage.Shared.Util.Hash)
@@ -99,6 +100,21 @@ local function mineSupports(plot: Plot, feature: Caves.Feature, parent: Instance
 					local height = ceilY - floorY
 					local frame = CFrame.lookAt(Vector3.new(wx, floorY, wz), Vector3.new(wx + dx, floorY, wz + dz))
 					local half = feature.radius * CELL * 0.7
+					-- guided galleries end at an anomaly room: never put a frame inside its box
+					-- (Studio test 3 found a post in the middle of E.'s workshop)
+					local blocked = false
+					for _, side in { -1, 1 } do
+						local foot = (frame * CFrame.new(side * half, 1, 0)).Position
+						local fx = math.floor((foot.X - plot.originX) / CELL)
+						local fz = math.floor((foot.Z - plot.originZ) / CELL)
+						local fd = math.floor((GameConfig.SurfaceY - foot.Y) / CELL)
+						if Anomalies.inReserved(fx, fd, fz) then
+							blocked = true
+						end
+					end
+					if blocked then
+						continue
+					end
 					for _, side in { -1, 1 } do
 						part(
 							parent,

@@ -15,6 +15,7 @@ local order = {
 	"QuestService",
 	"SpecialsService",
 	"AnomalyService",
+	"WorkshopService",
 	"MobilityService",
 	"GearService",
 	"DiggingService",

@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
+local Anomalies = require(ReplicatedStorage.Shared.Config.Anomalies)
 local Grid = require(ReplicatedStorage.Shared.Util.Grid)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
@@ -17,7 +18,12 @@ local energy: { [Player]: number } = {}
 
 function EnergyService.max(player: Player): number
 	local profile = PlayerDataService.get(player)
-	return Upgrades.valueAt("battery", profile and profile.upgrades.battery or 1)
+	local base = Upgrades.valueAt("battery", profile and profile.upgrades.battery or 1)
+	-- E.'s battery: hanging your shovel in the workshop (WorkshopService) adds half as much again
+	if profile and profile.anomalies.workshop.hung then
+		return math.floor(base * (1 + Anomalies.WorkshopBatteryBonus))
+	end
+	return base
 end
 
 function EnergyService.get(player: Player): number

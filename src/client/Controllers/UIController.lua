@@ -817,6 +817,9 @@ function UIController.start()
 	-- Epic / legendary discoveries: a short line under the zone banner; legendary also glows at the
 	-- screen edges for a moment. Rare finds stay in the world (glint + chime) to avoid UI spam.
 	local rareToken = 0
+	-- a narrative line (a room found, the Counter speaking) keeps the banner for a moment: the same
+	-- hit that opens a doorway can also break an epic ore (Studio test 3)
+	local narrativeUntil = 0
 	local rareBanner = Build.label({
 		Name = "RareBanner",
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -852,17 +855,20 @@ function UIController.start()
 	edgeStroke.Transparency = 1
 	edgeStroke.Parent = edgeGlow
 	EffectsController.bigDiscovery:Connect(function(resource)
-		rareToken += 1
-		local token = rareToken
 		local rarity = Resources.Rarities[resource.rarity]
-		rareBanner.Text = string.format("¡%s! %s", string.upper(rarity.name), resource.name)
-		rareBanner.TextColor3 = rarity.color
-		rareBanner.TextTransparency = 0
 		if rarity.order >= 5 then
 			edgeStroke.Color = resource.color
 			edgeStroke.Transparency = 0.35
 			TweenService:Create(edgeStroke, TweenInfo.new(1.6, Enum.EasingStyle.Quad), { Transparency = 1 }):Play()
 		end
+		if os.clock() < narrativeUntil then
+			return -- the narrative line keeps the banner (and its own fade-out)
+		end
+		rareToken += 1
+		local token = rareToken
+		rareBanner.Text = string.format("¡%s! %s", string.upper(rarity.name), resource.name)
+		rareBanner.TextColor3 = rarity.color
+		rareBanner.TextTransparency = 0
 		task.delay(2.2, function()
 			if token == rareToken then
 				fadeBanner(token, 0.5)
@@ -942,6 +948,7 @@ function UIController.start()
 	local function showNarrative(text: string)
 		rareToken += 1
 		local token = rareToken
+		narrativeUntil = os.clock() + 4.5
 		rareBanner.Text = text
 		rareBanner.TextColor3 = Color3.fromRGB(200, 232, 255)
 		rareBanner.TextTransparency = 1
