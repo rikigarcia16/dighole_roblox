@@ -163,6 +163,21 @@ local function fenceLine(parent: Instance, from: Vector3, to: Vector3, gapCenter
 	local length = direction.Magnitude
 	local unit = direction.Unit
 	local posts = math.floor(length / 8)
+	-- Rails run unbroken between gaps: one part per run and height instead of one per segment.
+	-- Same look, ~220 fewer parts per plot (every plot is built even when empty; Studio test 2).
+	local function rails(runFrom: Vector3, runTo: Vector3)
+		local mid = (runFrom + runTo) / 2
+		for _, h in { 1.3, 2.7 } do
+			make(parent, {
+				name = "FenceRail",
+				size = Vector3.new(0.3, 0.4, (runTo - runFrom).Magnitude),
+				cframe = CFrame.lookAt(mid + Vector3.new(0, h, 0), runTo + Vector3.new(0, h, 0)),
+				color = Palette.trim,
+				material = Enum.Material.Wood,
+			})
+		end
+	end
+	local runStart: Vector3? = nil
 	for i = 0, posts do
 		local p = from + unit * (i * length / posts)
 		local inGap = gapCenter and (p - gapCenter).Magnitude < (gapWidth or 0) / 2
@@ -175,21 +190,14 @@ local function fenceLine(parent: Instance, from: Vector3, to: Vector3, gapCenter
 				material = Enum.Material.Wood,
 			})
 		end
-		if i < posts then
-			local nextP = from + unit * ((i + 1) * length / posts)
-			local mid = (p + nextP) / 2
-			local railGap = gapCenter and (mid - gapCenter).Magnitude < (gapWidth or 0) / 2
-			if not railGap then
-				for _, h in { 1.3, 2.7 } do
-					make(parent, {
-						name = "FenceRail",
-						size = Vector3.new(0.3, 0.4, (nextP - p).Magnitude),
-						cframe = CFrame.lookAt(mid + Vector3.new(0, h, 0), nextP + Vector3.new(0, h, 0)),
-						color = Palette.trim,
-						material = Enum.Material.Wood,
-					})
-				end
-			end
+		local nextP = from + unit * ((i + 1) * length / posts)
+		local segmentOpen = i < posts
+			and not (gapCenter and (((p + nextP) / 2) - gapCenter).Magnitude < (gapWidth or 0) / 2)
+		if segmentOpen and not runStart then
+			runStart = p
+		elseif not segmentOpen and runStart then
+			rails(runStart, p)
+			runStart = nil
 		end
 	end
 end

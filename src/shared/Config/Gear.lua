@@ -53,7 +53,7 @@ end
 
 Gear.Lamp = { drainPerSecond = 0.6, range = 60, brightness = 2.2 }
 Gear.Detector = { pulseCost = 12, cooldown = 2.5, range = 120 } -- studs (30 m)
-Gear.Hook = { range = 40, cooldown = 1.6, speed = 70, maxSeconds = 1 } -- studs, s, studs/s
+Gear.Hook = { range = 40, cooldown = 1.6, speed = 70, maxSeconds = 1, hangSeconds = 1.5 } -- studs, s, studs/s, s
 
 -- Where the battery recharges besides the surface: within this many studs of an owned station.
 Gear.StationRechargeDistance = 14

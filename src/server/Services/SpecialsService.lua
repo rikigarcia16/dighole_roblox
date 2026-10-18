@@ -741,7 +741,16 @@ end
 -- Decoration streaming: every few seconds, drop the decoration of sectors far from every player in
 -- the plot and rebuild it (deterministically) when someone comes back.
 local function streamDecor()
+	-- snapshot: loading below yields, and plots may be claimed or released meanwhile
+	local snapshot = {}
 	for plot, state in states do
+		table.insert(snapshot, { plot, state })
+	end
+	for _, entry in snapshot do
+		local plot, state = entry[1], entry[2]
+		if states[plot] ~= state then
+			continue
+		end
 		local active = {}
 		for _, player in Players:GetPlayers() do
 			local character = player.Character
@@ -762,7 +771,15 @@ local function streamDecor()
 			end
 			state.decor[index] = nil
 		end
-		for _, index in toLoad do
+		for i, index in toLoad do
+			if i > 1 then
+				-- one sector per frame: coming back with the lift reloads ~5 sectors (~4 ms in one frame
+				-- in Studio test 2), so spread them out
+				task.wait()
+				if states[plot] ~= state or state.decor[index] or not state.folder.Parent then
+					continue
+				end
+			end
 			local sector = Caves.sector(plot.seed, index)
 			state.decor[index] = {
 				CaveProps.decorate(plot, sector, state.folder),

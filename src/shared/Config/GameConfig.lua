@@ -35,7 +35,7 @@ GameConfig.EnergyTickSeconds = 0.25
 
 -- Surface return -----------------------------------------------------------
 GameConfig.ReturnToSurfaceCooldown = 8
-GameConfig.ReturnButtonMinDepth = 8 -- metres; HUD shows the return button below this depth
+GameConfig.ReturnButtonMinDepth = 2 -- metres; return button from this depth (the tutorial asks to go up at ~3 m)
 
 -- Interaction distances (studs) ---------------------------------------------
 GameConfig.SellDistance = 18

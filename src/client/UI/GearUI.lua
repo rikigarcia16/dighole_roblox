@@ -110,10 +110,34 @@ local function pull(point: Vector3)
 		a0:Destroy()
 		anchorPart:Destroy()
 	end
+	-- Studio test 2: releasing at the wall dropped the player straight back down a shaft with no
+	-- ledge. Now the hook holds you against the wall for a moment (time to dig a foothold or jump);
+	-- jumping lets go with a stronger push up.
+	local hangingSince: number? = nil
+	local character = root.Parent
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	connection = RunService.Heartbeat:Connect(function()
+		if not root.Parent then
+			finish()
+			return
+		end
+		local now = os.clock()
+		if hangingSince then
+			local jumped = humanoid ~= nil and humanoid.Jump
+			if jumped or now - hangingSince > Gear.Hook.hangSeconds then
+				root.AssemblyLinearVelocity = Vector3.new(0, if jumped then 34 else 12, 0)
+				finish()
+			end
+			return
+		end
 		local delta = point - root.Position
-		if not root.Parent or delta.Magnitude < 4 or os.clock() - started > Gear.Hook.maxSeconds then
-			-- stop just short of the wall, with a little upward help to climb onto a ledge
+		if delta.Magnitude < 4 then
+			-- stop just short of the wall and hold
+			hangingSince = now
+			velocity.VectorVelocity = Vector3.zero
+			return
+		end
+		if now - started > Gear.Hook.maxSeconds then
 			root.AssemblyLinearVelocity = Vector3.new(0, 18, 0)
 			finish()
 			return

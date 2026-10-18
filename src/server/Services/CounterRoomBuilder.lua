@@ -363,7 +363,10 @@ function CounterRoomBuilder.build(
 		prompt.ObjectText = "Anillo " .. ROMAN[r]
 		prompt.KeyboardKeyCode = Enum.KeyCode.F
 		prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
-		prompt.MaxActivationDistance = 6
+		-- Short range: the levers are 3 studs apart and Roblox keeps showing whichever prompt
+		-- appeared first while it stays in range: with 6 the neighbour kept the F key. Standing in front,
+		-- your own lever is ~4.1 studs away (it sits low) and the next one ~5.1.
+		prompt.MaxActivationDistance = 4.6
 		prompt.RequiresLineOfSight = false
 		prompt.Enabled = false
 		prompt:SetAttribute("Action", "CounterRing")

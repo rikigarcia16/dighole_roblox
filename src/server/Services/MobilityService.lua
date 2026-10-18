@@ -370,27 +370,43 @@ local function placeRope(player: Player)
 		return
 	end
 	local feet = root.Position - Vector3.new(0, 2.5, 0)
-	local top = feet + flat.Unit * Mobility.Rope.reachForward + Vector3.new(0, 1, 0)
-	-- the rope must hang inside the player's own hole...
-	local cx, d, cz = Grid.worldToCell(plot.originX, plot.originZ, top - Vector3.new(0, 2, 0))
-	if not Grid.inDigArea(cx, math.max(d, 0), cz) then
-		StateService.notify(player, "info", "La cuerda tiene que colgar dentro de tu agujero.", "rope_bad", 3)
-		return
+	local function tryAt(forward: number): (Vector3?, number, string?)
+		local top = feet + flat.Unit * forward + Vector3.new(0, 1, 0)
+		-- the rope must hang inside the player's own hole...
+		local cx, d, cz = Grid.worldToCell(plot.originX, plot.originZ, top - Vector3.new(0, 2, 0))
+		if not Grid.inDigArea(cx, math.max(d, 0), cz) then
+			return nil, 0, "La cuerda tiene que colgar dentro de tu agujero."
+		end
+		-- ...from open space (nothing between the player and the anchor)...
+		if workspace:Raycast(root.Position, top - root.Position, terrainOnly) then
+			return nil, 0, "No hay espacio para colgar la cuerda ahí."
+		end
+		-- ...down to a floor within reach: never a rope that leaves you hanging.
+		local hit = workspace:Raycast(top, Vector3.new(0, -Mobility.Rope.maxLength, 0), terrainOnly)
+		if not hit then
+			return nil, 0, "No llega al fondo: la cuerda mide 20 m."
+		end
+		local length = top.Y - hit.Position.Y
+		if length < Mobility.Rope.minDrop then
+			return nil, 0, "Aquí no hace falta cuerda."
+		end
+		return top, length, nil
 	end
-	-- ...from open space (nothing between the player and the anchor)...
-	if workspace:Raycast(root.Position, top - root.Position, terrainOnly) then
-		StateService.notify(player, "info", "No hay espacio para colgar la cuerda ahí.", "rope_bad", 3)
-		return
+	-- Smooth terrain rounds the rim of a hole into a slope a few studs wide, so a player standing at
+	-- the edge often has the slope 4 studs ahead (Studio test 2): look a little further before
+	-- giving up. The first attempt's message is the one shown.
+	local top, length, reason = tryAt(Mobility.Rope.reachForward)
+	for _, extra in { 1.5, 3, 4.5 } do
+		if top then
+			break
+		end
+		local laterTop, laterLength = tryAt(Mobility.Rope.reachForward + extra)
+		if laterTop then
+			top, length = laterTop, laterLength
+		end
 	end
-	-- ...down to a floor within reach: never a rope that leaves you hanging.
-	local hit = workspace:Raycast(top, Vector3.new(0, -Mobility.Rope.maxLength, 0), terrainOnly)
-	if not hit then
-		StateService.notify(player, "info", "No llega al fondo: la cuerda mide 20 m.", "rope_bad", 3)
-		return
-	end
-	local length = top.Y - hit.Position.Y
-	if length < Mobility.Rope.minDrop then
-		StateService.notify(player, "info", "Aquí no hace falta cuerda.", "rope_bad", 3)
+	if not top then
+		StateService.notify(player, "info", reason or "No se puede colgar aquí.", "rope_bad", 3)
 		return
 	end
 	profile.mobility.ropes -= 1

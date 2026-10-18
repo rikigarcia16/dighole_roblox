@@ -246,7 +246,10 @@ local list: { Resource } = {
 		name = "Hierro",
 		value = 25,
 		color = Color3.fromRGB(150, 120, 108),
-		terrainMaterial = M.Granite,
+		-- Granite is not a terrain material: Roblox wrote Grass instead, so iron showed up as green
+		-- lawn with grass blades and the client labelled it "Césped" (Studio test 2). WoodPlanks was
+		-- the only free terrain material; its texture can be replaced later with a MaterialVariant.
+		terrainMaterial = M.WoodPlanks,
 		rarity = "Uncommon",
 		hardness = 10,
 		requiredPower = 2,

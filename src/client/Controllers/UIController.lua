@@ -490,6 +490,8 @@ function UIController.start()
 		gui,
 		{ getState = getState, playUi = EffectsController.playUi, openNote = openNote, openText = openText }
 	)
+	-- the settings panel is created below; panels that open over it close it (Studio test 2)
+	local hideSettings: () -> () = function() end
 	local mobility = MobilityUI.new(gui, buttons, {
 		getState = getState,
 		notify = toast,
@@ -499,6 +501,7 @@ function UIController.start()
 			note.Visible = false
 			shop.close()
 			inventory.close()
+			hideSettings()
 		end,
 	})
 
@@ -519,6 +522,9 @@ function UIController.start()
 		Parent = gui,
 		[Build.Children] = { Build.corner(12), Build.stroke(Theme.stroke, 2), Build.padding(10) },
 	})
+	hideSettings = function()
+		settings.Visible = false
+	end
 	Build.label({
 		Text = "Efectos visuales",
 		Size = UDim2.new(1, 0, 0, 22),
@@ -599,12 +605,18 @@ function UIController.start()
 	})
 	settingsButton.Activated:Connect(function()
 		settings.Visible = not settings.Visible
+		if settings.Visible then
+			-- it sits over the top-right of the backpack and garage windows
+			shop.close()
+			inventory.close()
+		end
 		EffectsController.playUi("ui_click")
 	end)
 
 	backpackButton.Activated:Connect(function()
 		EffectsController.playUi("ui_click")
 		shop.close()
+		hideSettings()
 		inventory.toggle()
 	end)
 	surfaceButton.Activated:Connect(function()
@@ -617,6 +629,7 @@ function UIController.start()
 		end
 		if input.KeyCode == Enum.KeyCode.B or input.KeyCode == Enum.KeyCode.ButtonY then
 			shop.close()
+			hideSettings()
 			inventory.toggle()
 		elseif input.KeyCode == Enum.KeyCode.R or input.KeyCode == Enum.KeyCode.DPadUp then
 			if surfaceButton.Visible then
@@ -634,6 +647,7 @@ function UIController.start()
 		local action = prompt:GetAttribute("Action")
 		if action == "Shop" then
 			inventory.close()
+			hideSettings()
 			shop.open()
 		end
 	end)
@@ -802,17 +816,29 @@ function UIController.start()
 
 	-- Epic / legendary discoveries: a short line under the zone banner; legendary also glows at the
 	-- screen edges for a moment. Rare finds stay in the world (glint + chime) to avoid UI spam.
+	local rareToken = 0
 	local rareBanner = Build.label({
 		Name = "RareBanner",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.4),
 		Size = UDim2.fromOffset(520, 44),
 		MaxTextSize = 34,
+		Text = "",
 		TextTransparency = 1,
 		Parent = gui,
 	})
 	local rareStroke = Build.textStroke()
 	rareStroke.Parent = rareBanner
+	-- The stroke stays visible at TextTransparency 1, so a hidden banner must also be empty.
+	local function fadeBanner(token: number, seconds: number)
+		local tween = TweenService:Create(rareBanner, TweenInfo.new(seconds), { TextTransparency = 1 })
+		tween.Completed:Connect(function()
+			if token == rareToken then
+				rareBanner.Text = ""
+			end
+		end)
+		tween:Play()
+	end
 	local edgeGlow = Build("Frame", {
 		Name = "EdgeGlow",
 		Size = UDim2.fromScale(1, 1),
@@ -825,7 +851,6 @@ function UIController.start()
 	edgeStroke.Thickness = 18
 	edgeStroke.Transparency = 1
 	edgeStroke.Parent = edgeGlow
-	local rareToken = 0
 	EffectsController.bigDiscovery:Connect(function(resource)
 		rareToken += 1
 		local token = rareToken
@@ -840,7 +865,7 @@ function UIController.start()
 		end
 		task.delay(2.2, function()
 			if token == rareToken then
-				TweenService:Create(rareBanner, TweenInfo.new(0.5), { TextTransparency = 1 }):Play()
+				fadeBanner(token, 0.5)
 			end
 		end)
 	end)
@@ -923,7 +948,7 @@ function UIController.start()
 		TweenService:Create(rareBanner, TweenInfo.new(1.2), { TextTransparency = 0 }):Play()
 		task.delay(4, function()
 			if token == rareToken then
-				TweenService:Create(rareBanner, TweenInfo.new(1.2), { TextTransparency = 1 }):Play()
+				fadeBanner(token, 1.2)
 			end
 		end)
 	end

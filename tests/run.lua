@@ -27,6 +27,46 @@ test("every resource has the required fields", function()
 	end
 end)
 
+-- Studio test 2: Granite is not a terrain material (Roblox silently writes Grass instead).
+local TERRAIN_MATERIALS = {
+	Asphalt = true,
+	Basalt = true,
+	Brick = true,
+	Cobblestone = true,
+	Concrete = true,
+	CrackedLava = true,
+	Glacier = true,
+	Grass = true,
+	Ground = true,
+	Ice = true,
+	LeafyGrass = true,
+	Limestone = true,
+	Mud = true,
+	Pavement = true,
+	Rock = true,
+	Salt = true,
+	Sand = true,
+	Sandstone = true,
+	Slate = true,
+	Snow = true,
+	Water = true,
+	WoodPlanks = true,
+}
+
+test("terrain materials are real terrain materials and not shared", function()
+	local seen = {}
+	for _, r in Resources.List do
+		if r.terrainMaterial then
+			local material: any = r.terrainMaterial
+			local name = if type(material) == "string" then material else material.Name
+			name = tostring(name):match("[^%.]+$")
+			ok(TERRAIN_MATERIALS[name], r.id .. " uses " .. tostring(name) .. ", which terrain does not support")
+			ok(not seen[name], r.id .. " shares its terrain material with " .. tostring(seen[name]))
+			seen[name] = r.id
+		end
+	end
+end)
+
 test("zones are contiguous and reference existing base materials", function()
 	local expectedStart = 0
 	for i, z in Zones.List do
