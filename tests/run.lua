@@ -1110,6 +1110,62 @@ test("keep or sell: relics survive 'sell all', the case completes their collecti
 	eq(next(junk.collection.exhibit), nil, "junk exhibit dropped")
 end)
 
+test("tutorial: each hint follows what the player has done and ends for good", function()
+	local TutorialLogic = H.module("ReplicatedStorage", "Shared", "Util", "TutorialLogic")
+	local state = {
+		stats = { cellsDug = 0, sales = 0 },
+		used = 0,
+		capacity = 20,
+		coins = 0,
+		tools = { rusty_shovel = true },
+		maxDepth = 0,
+		settings = { tutorialDone = false },
+	}
+	eq(TutorialLogic.step(state).id, "dig")
+	ok(TutorialLogic.step(state, true).text:find("CAVAR"), "touch wording")
+	state.stats.cellsDug = 5
+	state.used = 4
+	eq(TutorialLogic.step(state).id, "fill")
+	state.used = 10
+	local s = TutorialLogic.step(state)
+	eq(s.id, "sell")
+	eq(s.target, "sell")
+	state.stats.sales, state.used = 1, 0
+	eq(TutorialLogic.step(state).id, "earn")
+	state.coins = Tools.get("reinforced_shovel").price
+	eq(TutorialLogic.step(state).target, "shop")
+	state.tools.reinforced_shovel = true
+	eq(TutorialLogic.step(state).id, "deeper")
+	state.maxDepth = TutorialLogic.FinishDepth
+	eq(TutorialLogic.step(state), nil, "finished by depth")
+	state.maxDepth, state.settings.tutorialDone = 0, true
+	eq(TutorialLogic.step(state), nil, "never again once done")
+	eq(TutorialLogic.step(nil), nil)
+end)
+
+test("settings: validated from the client and from saves, defaults for old saves", function()
+	local p = ProfileSchema.default(1)
+	eq(p.settings.effects, 0)
+	ok(p.settings.shake and not p.settings.tutorialDone)
+	ProfileSchema.applySettings(p.settings, { effects = 2, shake = false, tutorialDone = true, junk = 1 })
+	eq(p.settings.effects, 2)
+	eq(p.settings.shake, false)
+	ok(p.settings.tutorialDone)
+	eq(p.settings.junk, nil, "unknown keys ignored")
+	ProfileSchema.applySettings(p.settings, { effects = 9, shake = "no", tutorialDone = false })
+	eq(p.settings.effects, 2, "out of range ignored")
+	eq(p.settings.shake, false, "wrong type ignored")
+	ok(p.settings.tutorialDone, "tutorial cannot be reset from the client")
+	ProfileSchema.applySettings(p.settings, { effects = 0 / 0 })
+	eq(p.settings.effects, 2, "NaN ignored")
+	ProfileSchema.applySettings(p.settings, "garbage")
+	local loaded = ProfileSchema.reconcile(dataStoreRoundTrip(p), 1)
+	eq(loaded.settings.effects, 2)
+	eq(loaded.settings.shake, false)
+	local old = ProfileSchema.reconcile({ version = 4 }, 1)
+	eq(old.settings.effects, 0, "old save gets defaults")
+end)
+
 test("profile v3 data migrates to v4; counter and mobility sanitised", function()
 	local r = ProfileSchema.reconcile({
 		version = 3,

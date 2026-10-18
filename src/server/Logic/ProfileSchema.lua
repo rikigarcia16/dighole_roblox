@@ -41,6 +41,8 @@ export type Profile = {
 		rescues: number,
 	},
 	quests: { index: number, completed: { [string]: boolean } },
+	-- player preferences (added without a version bump: older saves get the defaults)
+	settings: { effects: number, shake: boolean, tutorialDone: boolean },
 	stats: {
 		cellsDug: number,
 		maxDepth: number,
@@ -78,6 +80,7 @@ function ProfileSchema.default(seed: number): Profile
 		anomalies = { counter = { found = false, solved = false, rings = {}, solvedCount = 0, solvedAt = 0 } },
 		mobility = { ropes = 0, placedRopes = {}, stations = {}, rescues = 0 },
 		quests = { index = 1, completed = {} },
+		settings = { effects = 0, shake = true, tutorialDone = false },
 		stats = {
 			cellsDug = 0,
 			maxDepth = 0,
@@ -104,6 +107,24 @@ local migrations: { [number]: (any) -> () } = {
 	-- had already read the stone tablet keep the clue; its location simply moved into the room.
 	[3] = function(_data) end,
 }
+
+-- Settings arrive from the client (SaveSettings) and from saves: only known keys and valid values.
+-- effects: 0 = automatic, 1..3 = low / medium / high.
+function ProfileSchema.applySettings(target: any, input: any)
+	if type(input) ~= "table" then
+		return
+	end
+	local effects = input.effects
+	if type(effects) == "number" and effects == math.floor(effects) and effects >= 0 and effects <= 3 then
+		target.effects = effects
+	end
+	if type(input.shake) == "boolean" then
+		target.shake = input.shake
+	end
+	if input.tutorialDone == true then
+		target.tutorialDone = true -- one way: the tutorial never comes back once finished
+	end
+end
 
 local function finiteNonNegative(value: any, fallback: number): number
 	if type(value) == "number" and value == value and value >= 0 and value < math.huge then
@@ -264,6 +285,10 @@ function ProfileSchema.reconcile(data: any, seed: number): Profile
 				end
 			end
 		end
+	end
+
+	if type(data.settings) == "table" then
+		ProfileSchema.applySettings(profile.settings, data.settings)
 	end
 
 	if type(data.quests) == "table" then

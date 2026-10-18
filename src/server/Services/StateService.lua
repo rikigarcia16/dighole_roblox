@@ -10,6 +10,7 @@ local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local RateLimiter = require(ReplicatedStorage.Shared.Util.RateLimiter)
 local Inventory = require(script.Parent.Parent.Logic.Inventory)
+local ProfileSchema = require(script.Parent.Parent.Logic.ProfileSchema)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 local StateService = {}
@@ -51,6 +52,7 @@ function StateService.snapshot(player: Player): any?
 		stats = profile.stats,
 		clues = profile.clues,
 		collection = profile.collection,
+		settings = profile.settings,
 		persistent = PlayerDataService.isPersistent(player),
 	}
 	for _, provider in snapshotProviders do
@@ -107,6 +109,15 @@ function StateService.start()
 		end
 		return StateService.snapshot(player)
 	end
+	-- Preferences: validated by ProfileSchema.applySettings, saved with the profile. Not pushed back
+	-- (the client already shows what it asked for), so a slider cannot spam full snapshots.
+	local settingsLimiter = RateLimiter.new(2, 6)
+	Remotes.event("SaveSettings").OnServerEvent:Connect(function(player, input)
+		local profile = PlayerDataService.get(player)
+		if profile and settingsLimiter:allow(player) then
+			ProfileSchema.applySettings(profile.settings, input)
+		end
+	end)
 	PlayerDataService.onLoaded(function(player)
 		StateService.push(player)
 		if not PlayerDataService.isPersistent(player) then

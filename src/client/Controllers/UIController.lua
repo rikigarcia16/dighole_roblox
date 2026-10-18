@@ -24,6 +24,7 @@ local Story = require(ReplicatedStorage.Shared.Config.Story)
 local ShopUI = require(UI.ShopUI)
 local InventoryUI = require(UI.InventoryUI)
 local MobilityUI = require(UI.MobilityUI)
+local TutorialUI = require(UI.TutorialUI)
 local Mobility = require(ReplicatedStorage.Shared.Config.Mobility)
 
 local ClientState = require(script.Parent.ClientState)
@@ -528,10 +529,14 @@ function UIController.start()
 	local qualities = { { "Auto", nil }, { "Bajo", 0.3 }, { "Medio", 0.65 }, { "Alto", 1 } } :: { { any } }
 	local qualityButtons: { TextButton } = {}
 	local currentQuality = 1
+	local shakeOn = true
 	local function paintQuality()
 		for i, b in qualityButtons do
 			b.BackgroundColor3 = if i == currentQuality then Theme.accent else Theme.card
 		end
+	end
+	local function saveSettings()
+		Remotes.event("SaveSettings"):FireServer({ effects = currentQuality - 1, shake = shakeOn })
 	end
 	for i, q in qualities do
 		local b = Build.button(q[1], Theme.card, {
@@ -545,11 +550,11 @@ function UIController.start()
 			AmbienceController.setEffectsScale(q[2])
 			EffectsController.playUi("ui_click")
 			paintQuality()
+			saveSettings()
 		end)
 		qualityButtons[i] = b
 	end
 	paintQuality()
-	local shakeOn = true
 	local shakeButton = Build.button("Sacudida al golpear: Sí", Theme.card, {
 		Position = UDim2.new(0, 0, 0, 80),
 		Size = UDim2.new(1, 0, 0, 36),
@@ -561,7 +566,24 @@ function UIController.start()
 		EffectsController.setCameraShake(shakeOn)
 		shakeButton.Text = "Sacudida al golpear: " .. (if shakeOn then "Sí" else "No")
 		EffectsController.playUi("ui_click")
+		saveSettings()
 	end)
+	-- saved preferences arrive with the first state
+	local settingsApplied = false
+	local function applySavedSettings(state: any)
+		if settingsApplied or not state or not state.settings then
+			return
+		end
+		settingsApplied = true
+		local saved = state.settings
+		currentQuality = math.clamp((saved.effects or 0) + 1, 1, #qualities)
+		AmbienceController.setEffectsScale(qualities[currentQuality][2])
+		paintQuality()
+		shakeOn = saved.shake ~= false
+		EffectsController.setCameraShake(shakeOn)
+		shakeButton.Text = "Sacudida al golpear: " .. (if shakeOn then "Sí" else "No")
+	end
+	local tutorial = TutorialUI.new(gui)
 	settingsButton.Activated:Connect(function()
 		settings.Visible = not settings.Visible
 		EffectsController.playUi("ui_click")
@@ -714,6 +736,8 @@ function UIController.start()
 		shop.refresh()
 		inventory.refresh()
 		mobility.refresh()
+		applySavedSettings(state)
+		tutorial.update(state)
 	end
 	coinsLabel.Text = "● 0"
 	ClientState.changed:Connect(onState)
