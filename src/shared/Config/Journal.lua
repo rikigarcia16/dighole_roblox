@@ -146,8 +146,8 @@ table.insert(Journal, {
 	requires = { zone = "forgotten_mines" },
 	paragraphs = {
 		{
-			text = "En las paredes de las Minas alguien escribió con tiza, con la misma letra que la placa del "
-				.. "Contador. No son avisos. Parecen apuestas.",
+			text = "En los campamentos de las Minas hay pizarras escritas con tiza, con la misma letra que la "
+				.. "placa del Contador. No son avisos. Parecen apuestas.",
 		},
 		{
 			text = "«Tres geodas sin ver el cielo. Después, el detector ya no duda.» — E.",

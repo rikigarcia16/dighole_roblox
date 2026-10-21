@@ -339,3 +339,4 @@ durante la prueba (no en el repositorio).
 | X15 | Bajar desde la superficie hasta 350 m sin montacargas | Aviso «HAZAÑA» y «A pulso»; en el garaje, cuerdas «x/7». Si usas el montacargas por el camino, no se concede. |
 | X16 | Subir andando y con cuerdas desde 150 m con la mochila casi llena | Hazaña «La subida»; después la baliza cuesta la mitad. |
 | X17 | Abrir tres geodas sin volver a la superficie | Hazaña; el detector se puede usar cada 1,5 s. |
+| X18 | Encontrar un campamento de E. en las Minas (saco rojo, caja con farol y «E.») | Pizarra con una apuesta en tiza y «— E.», legible y sin piezas atravesándola. |

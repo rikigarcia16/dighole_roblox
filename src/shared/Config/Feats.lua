@@ -30,6 +30,13 @@ for _, feat in Feats.List do
 	Feats.ById[feat.id] = feat
 end
 
+-- E.'s bets, chalked on a slate at each camp in the Mines (CaveScenes), the same as in the journal.
+Feats.Chalk = {
+	"Tres geodas sin ver el cielo",
+	"Hasta las Cavernas sin montacargas",
+	"Del Cristal al cielo, cargado y sin baliza",
+}
+
 Feats.Geodes = 3
 Feats.BareDescentDepth = 350 -- metres: the Ancient Caverns
 Feats.ClimbDepth = 150 -- metres: below the Mines

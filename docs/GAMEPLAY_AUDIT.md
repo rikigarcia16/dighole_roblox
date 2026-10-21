@@ -346,6 +346,16 @@ Primera vez que las iteraciones 4–6 se ejecutan en Studio (`docs/STUDIO_REPORT
 - La sensación de golpe por material y por herramienta ya existía (`Config/DigFeel`: perfiles por
   material y peso, chispas y sacudida por herramienta); no la he tocado.
 
+### Pizarras de E. en los campamentos de las Minas
+- Cada campamento de E. (escena «camp», Minas) tiene ahora una pizarra apoyada con una de sus tres
+  apuestas en tiza y su firma, distinta en cada sector. Las pistas de las hazañas existen también en
+  el mundo, no solo en el diario; el diario dice ahora «En los campamentos de las Minas hay
+  pizarras...».
+- No todas las parcelas tienen campamento (en Studio, 23 campamentos en 120 sectores de las Minas
+  con 40 semillas; salen las tres apuestas). Tu parcela de prueba no tiene ninguno.
+- Studio: las tres variantes construidas con el constructor real y vistas en captura; corregido
+  que el saco de dormir atravesaba la pizarra. Test añadido (pendiente `luaucheck`).
+
 ### Problemas abiertos de la fase 3
 - `luaucheck` no se ha pasado en local sobre los tests nuevos (no hay cargo en este equipo): falta
   ejecutarlo en la nube o instalando Rust.

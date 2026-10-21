@@ -2138,4 +2138,22 @@ test("feats: only hinted in the journal after something related, confirmed when 
 	ok((chalk() :: string):find("sin baliza"), "climb hint from the Crystal Caves")
 end)
 
+test("feats: each Mines camp chalks one of E.'s bets", function()
+	local Feats = H.module("ReplicatedStorage", "Shared", "Config", "Feats")
+	local ScenePlan = H.module("ServerScriptService", "Server", "Logic", "ScenePlan")
+	eq(#Feats.Chalk, #Feats.List, "one bet per feat")
+	local seen = {}
+	for seed = 1, 40 do
+		for index = 2, 4 do
+			for _, prop in ScenePlan.plan(seed, Caves.sector(seed, index)) do
+				if prop.kind == "camp" then
+					ok(Feats.Chalk[prop.variant] ~= nil, "camp variant names a bet")
+					seen[prop.variant] = true
+				end
+			end
+		end
+	end
+	ok(seen[1] and seen[2] and seen[3], "all three bets appear somewhere")
+end)
+
 H.finish()

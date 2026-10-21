@@ -8,6 +8,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
+local Feats = require(ReplicatedStorage.Shared.Config.Feats)
 local Zones = require(ReplicatedStorage.Shared.Config.Zones)
 local Caves = require(script.Parent.Parent.Logic.Caves)
 local ScenePlan = require(script.Parent.Parent.Logic.ScenePlan)
@@ -215,6 +216,33 @@ local function camp(c: Ctx)
 	label.Font = Enum.Font.Antique
 	label.TextColor3 = Color3.fromRGB(40, 30, 24)
 	label.Parent = gui
+	-- a slate leaning on the bedroll with one of E.'s bets in chalk (the feats, Config/Feats)
+	local bet = Feats.Chalk[c.variant] or Feats.Chalk[1]
+	local slate = part(
+		c.model,
+		"Slate",
+		Vector3.new(2.2, 1.5, 0.12),
+		c.at * CFrame.new(-2, 0.95, 2.7) * CFrame.Angles(math.rad(-14), math.pi, 0),
+		Color3.fromRGB(38, 42, 44),
+		Enum.Material.Slate
+	)
+	local board = Instance.new("SurfaceGui")
+	board.Face = Enum.NormalId.Front
+	board.LightInfluence = 1
+	board.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	board.PixelsPerStud = 60
+	board.Parent = slate
+	local text = Instance.new("TextLabel")
+	text.BackgroundTransparency = 1
+	text.Position = UDim2.fromScale(0.06, 0.08)
+	text.Size = UDim2.fromScale(0.88, 0.84)
+	text.Text = bet .. "\n— E."
+	text.TextScaled = true
+	text.TextWrapped = true
+	text.Font = Enum.Font.PermanentMarker
+	text.TextColor3 = CHALK
+	text.TextTransparency = 0.1
+	text.Parent = board
 end
 
 local function chalk(c: Ctx)

@@ -232,7 +232,9 @@ function ScenePlan.plan(seed: number, sector: Caves.Sector): { Prop }
 			if style == "mine" then
 				if not campPlaced and rand() < 0.45 then
 					local x, z = around(0.5)
-					campPlaced = onFloor("camp", x, floorLevel, z, rand() * 6.28, 1)
+					-- the variant picks which of E.'s bets is chalked on the camp slate (Config/Feats),
+					-- a different one in each Mines sector
+					campPlaced = onFloor("camp", x, floorLevel, z, rand() * 6.28, 1 + sector.index % 3)
 				end
 			elseif style == "crystal" then
 				for _ = 1, if big then 5 else 3 do
