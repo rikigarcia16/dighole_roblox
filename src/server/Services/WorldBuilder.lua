@@ -242,6 +242,16 @@ function WorldBuilder.buildHub(parent: Instance, center: Vector3)
 	tree(hub, center + Vector3.new(24, 0, -14), 1)
 end
 
+-- Grass terrain grows blades through thin floors (Studio test 3: tall grass inside the house):
+-- under buildings the top layer of the ground is plain earth.
+local function bareGround(center: Vector3, sizeX: number, sizeZ: number)
+	workspace.Terrain:FillBlock(
+		CFrame.new(center.X, GameConfig.SurfaceY - 2, center.Z),
+		Vector3.new(sizeX + 8, 4, sizeZ + 8),
+		Enum.Material.Ground
+	)
+end
+
 -- Plot -----------------------------------------------------------------------------------------
 export type PlotPoints = {
 	spawn: CFrame,
@@ -249,6 +259,8 @@ export type PlotPoints = {
 	shop: Vector3,
 	lift: Vector3,
 	vitrine: { Vector3 }, -- slots of the house display case, in Config/Collections "relics" order
+	layerMap: CFrame, -- board on the back wall of the house (its front faces into the room)
+	trophies: { Vector3 }, -- shelf slots on the west wall, one per collection set
 	depthLabel: TextLabel,
 	ownerLabel: TextLabel,
 }
@@ -321,6 +333,8 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 
 	-- House (behind the hole) -------------------------------------------------------------------
 	local vitrineSlots: { Vector3 } = {}
+	local layerMapFrame = CFrame.new()
+	local trophySlots: { Vector3 } = {}
 	do
 		local hx, hz, w, dpt, h = 0, 76, 30, 22, 12
 		local front = hz - dpt / 2
@@ -331,6 +345,7 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 			color = Palette.darkWood,
 			material = Enum.Material.WoodPlanks,
 		})
+		bareGround(at(hx, 0, hz), w, dpt)
 		make(folder, {
 			name = "HouseWall",
 			size = Vector3.new(w, h, 1),
@@ -470,6 +485,20 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 			at(hx + 8, 4.6, hz + 8),
 			at(hx + 11, 4.6, hz + 8),
 		}
+		-- Progress shown in the house (ExhibitService): a map of the layers on the back wall and a
+		-- trophy shelf on the west wall.
+		local mapCenter = at(hx - 7, 6.5, hz + dpt / 2 - 1.1)
+		layerMapFrame = CFrame.lookAt(mapCenter, mapCenter - Vector3.new(0, 0, 1))
+		make(folder, {
+			name = "TrophyShelf",
+			size = Vector3.new(1.4, 0.3, 15),
+			cframe = CFrame.new(at(hx - w / 2 + 1.7, 4.2, hz - 1)),
+			color = Palette.darkWood,
+			material = Enum.Material.Wood,
+		})
+		for i = 0, 6 do
+			table.insert(trophySlots, at(hx - w / 2 + 1.7, 4.35, hz - 7.6 + i * 2.2))
+		end
 		local light = Instance.new("PointLight")
 		light.Range = 18
 		light.Brightness = 0.8
@@ -496,6 +525,7 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 			color = Color3.fromRGB(150, 150, 150),
 			material = Enum.Material.Concrete,
 		})
+		bareGround(at(gx, 0, gz), dpt, w)
 		make(folder, {
 			name = "GarageWall",
 			size = Vector3.new(1, h, w),
@@ -768,6 +798,8 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 			shop = shopPoint,
 			lift = liftPoint,
 			vitrine = vitrineSlots,
+			layerMap = layerMapFrame,
+			trophies = trophySlots,
 			depthLabel = depthLabel,
 			ownerLabel = ownerLabel,
 		}

@@ -288,3 +288,11 @@ Primera vez que las iteraciones 4–6 se ejecutan en Studio (`docs/STUDIO_REPORT
   fósiles por parcela entre 650 y 2 200 m, ninguno fuera de su profundidad ni entre 400 y 650 m.
   Modelos vistos en una captura; aspecto pendiente de tu revisión. Tests añadidos (pendiente
   `luaucheck`).
+
+### Casa que refleja el progreso
+- Mapa de capas en la pared del fondo («EL AGUJERO»): cada capa se ilumina con su color al
+  alcanzarla, las demás muestran «???» y su profundidad, y abajo el récord. Estante de trofeos en la
+  pared oeste: uno por colección completada. Todo se deriva del perfil (sin campos nuevos) y se
+  reconstruye solo cuando cambia (firma de capas, colecciones y récord) [Studio: visto].
+- Bajo la casa y el garaje la capa superior del terreno es tierra: antes crecía césped alto
+  atravesando el suelo de la casa [Studio: visto].

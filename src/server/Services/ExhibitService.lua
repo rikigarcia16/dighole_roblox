@@ -6,6 +6,10 @@
 --
 -- Shown pieces are saved in profile.collection.exhibit and rebuilt in the case on join, so the
 -- house reflects how far the player has gone.
+--
+-- The house also shows progress derived from the profile (no new saved fields): a map of the seven
+-- layers on the back wall, lit as each one is reached, with the depth record; and a trophy for each
+-- completed collection set on the west wall shelf.
 
 local CollectionService = game:GetService("CollectionService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -13,6 +17,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Collections = require(ReplicatedStorage.Shared.Config.Collections)
 local Resources = require(ReplicatedStorage.Shared.Config.Resources)
+local Zones = require(ReplicatedStorage.Shared.Config.Zones)
+local Format = require(ReplicatedStorage.Shared.Util.Format)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local PlotService = require(script.Parent.PlotService)
 local StateService = require(script.Parent.StateService)
@@ -79,6 +85,194 @@ local function rebuild(plot: any, profile: any)
 	shown[plot] = folder
 end
 
+-- Progress in the house ------------------------------------------------------------------------------
+
+type Progress = { folder: Folder, signature: string }
+local progress: { [any]: Progress } = {}
+
+local function setDone(profile: any, id: string): boolean
+	return profile.quests.completed["set_" .. id] == true
+end
+
+local function signatureOf(profile: any): string
+	local parts = {}
+	for _, zone in Zones.List do
+		table.insert(parts, if profile.zonesReached[zone.id] then "1" else "0")
+	end
+	for _, set in Collections do
+		table.insert(parts, if setDone(profile, set.id) then "1" else "0")
+	end
+	table.insert(parts, tostring(math.floor(profile.stats.maxDepth)))
+	return table.concat(parts)
+end
+
+local function trophyColor(set: any): Color3
+	if set.kind == "fossils" then
+		return if set.id == "deep_fossils" then Color3.fromRGB(80, 230, 210) else Color3.fromRGB(226, 214, 184)
+	end
+	local first = set.items and set.items[1]
+	local resource = first and Resources.get(first)
+	return if resource then resource.color else Color3.fromRGB(255, 210, 120)
+end
+
+local function newPart(
+	name: string,
+	size: Vector3,
+	cframe: CFrame,
+	color: Color3,
+	material: Enum.Material,
+	parent: Instance
+): Part
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Anchored = true
+	p.Size = size
+	p.CFrame = cframe
+	p.Color = color
+	p.Material = material
+	p.CastShadow = false
+	p.Parent = parent
+	return p
+end
+
+local function buildLayerMap(plot: any, profile: any, folder: Folder)
+	local board = newPart(
+		"LayerMap",
+		Vector3.new(11, 9.4, 0.2),
+		plot.points.layerMap,
+		Color3.fromRGB(58, 44, 32),
+		Enum.Material.Wood,
+		folder
+	)
+	board.CanCollide = false
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 40
+	gui.LightInfluence = 0.4
+	gui.Parent = board
+	local title = Instance.new("TextLabel")
+	title.BackgroundTransparency = 1
+	title.Size = UDim2.new(1, 0, 0, 40)
+	title.Text = "EL AGUJERO"
+	title.TextColor3 = Color3.fromRGB(245, 226, 190)
+	title.Font = Enum.Font.SpecialElite
+	title.TextScaled = true
+	title.Parent = gui
+	local rows = #Zones.List
+	local anyReached = false
+	for i, zone in Zones.List do
+		local reached = profile.zonesReached[zone.id] == true
+		anyReached = anyReached or reached
+		local row = Instance.new("Frame")
+		row.BorderSizePixel = 0
+		row.Position = UDim2.new(0, 16, 0, 44 + (i - 1) * 40)
+		row.Size = UDim2.new(1, -32, 0, 36)
+		row.BackgroundColor3 = if reached
+			then zone.accent:Lerp(Color3.new(0, 0, 0), 0.35)
+			else Color3.fromRGB(28, 24, 20)
+		row.Parent = gui
+		local label = Instance.new("TextLabel")
+		label.BackgroundTransparency = 1
+		label.Position = UDim2.fromOffset(10, 0)
+		label.Size = UDim2.new(1, -20, 1, 0)
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.Font = Enum.Font.SpecialElite
+		label.TextScaled = true
+		label.TextColor3 = if reached then Color3.fromRGB(250, 240, 220) else Color3.fromRGB(90, 80, 70)
+		label.Text = if reached
+			then string.format(
+				"%s · %d–%s m",
+				zone.name,
+				zone.minDepth,
+				if i == rows then "…" else tostring(zone.maxDepth)
+			)
+			else string.format("???  · %d m", zone.minDepth)
+		label.Parent = row
+	end
+	if anyReached then
+		local marker = Instance.new("TextLabel")
+		marker.BackgroundTransparency = 1
+		marker.Position = UDim2.new(0, 16, 0, 44 + rows * 40)
+		marker.Size = UDim2.new(1, -32, 0, 32)
+		marker.Font = Enum.Font.SpecialElite
+		marker.TextScaled = true
+		marker.TextColor3 = Color3.fromRGB(255, 205, 90)
+		marker.Text = "Récord: " .. Format.depth(profile.stats.maxDepth)
+		marker.Parent = gui
+	end
+end
+
+local function buildTrophies(plot: any, profile: any, folder: Folder)
+	local slot = 0
+	for _, set in Collections do
+		if setDone(profile, set.id) then
+			slot += 1
+			local at = plot.points.trophies[slot]
+			if not at then
+				break
+			end
+			newPart(
+				"TrophyBase",
+				Vector3.new(1, 0.5, 1),
+				CFrame.new(at + Vector3.new(0, 0.25, 0)),
+				Color3.fromRGB(40, 32, 26),
+				Enum.Material.Marble,
+				folder
+			)
+			local piece = newPart(
+				"Trophy_" .. set.id,
+				Vector3.new(0.7, 1.1, 0.7),
+				CFrame.new(at + Vector3.new(0, 1.15, 0)),
+				trophyColor(set),
+				Enum.Material.Neon,
+				folder
+			)
+			piece.CanCollide = false
+			piece:SetAttribute("SpinSpeed", 0.25)
+			CollectionService:AddTag(piece, "THNE_Spin")
+			local gui = Instance.new("BillboardGui")
+			-- narrow and staggered: the shelf slots are only 2.2 studs apart
+			gui.Size = UDim2.fromOffset(110, 34)
+			gui.StudsOffsetWorldSpace = Vector3.new(0, if slot % 2 == 0 then 1.9 else 1.1, 0)
+			gui.MaxDistance = 18
+			gui.LightInfluence = 0
+			gui.Parent = piece
+			local label = Instance.new("TextLabel")
+			label.BackgroundTransparency = 1
+			label.Size = UDim2.fromScale(1, 1)
+			label.Text = set.name
+			label.TextScaled = true
+			label.TextWrapped = true
+			label.Font = Enum.Font.GothamBold
+			label.TextColor3 = Color3.fromRGB(255, 236, 200)
+			label.TextStrokeTransparency = 0.4
+			label.Parent = gui
+		end
+	end
+end
+
+-- Rebuilds the layer map and the trophies when something they show has changed.
+local function refreshProgress(plot: any, profile: any)
+	if not plot.folder or not plot.points or not plot.points.layerMap then
+		return
+	end
+	local signature = signatureOf(profile)
+	local current = progress[plot]
+	if current and current.signature == signature and current.folder.Parent then
+		return
+	end
+	if current then
+		current.folder:Destroy()
+	end
+	local folder = Instance.new("Folder")
+	folder.Name = "Progress"
+	buildLayerMap(plot, profile, folder)
+	buildTrophies(plot, profile, folder)
+	folder.Parent = plot.folder
+	progress[plot] = { folder = folder, signature = signature }
+end
+
 local function near(player: Player, part: BasePart): boolean
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -131,9 +325,19 @@ function ExhibitService.start()
 		local profile = PlayerDataService.get(player)
 		if profile then
 			rebuild(plot, profile)
+			refreshProgress(plot, profile)
+		end
+	end)
+	-- every state push may follow a new layer, a completed set or a deeper record
+	StateService.beforePush(function(player)
+		local plot = PlotService.get(player)
+		local profile = PlayerDataService.get(player)
+		if plot and profile then
+			refreshProgress(plot, profile)
 		end
 	end)
 	PlotService.onReleased(function(plot)
+		progress[plot] = nil -- its folder goes with the plot folder
 		local old = shown[plot]
 		if old then
 			old:Destroy()
