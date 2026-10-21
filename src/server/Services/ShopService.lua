@@ -124,6 +124,10 @@ local function buyGear(player: Player, profile: any, gearId: string): Result
 	if profile.gear[gearId] then
 		return { ok = false, message = "Ya tienes " .. def.name .. "." }
 	end
+	local base = def.upgradeOf and Gear.ById[def.upgradeOf]
+	if base and not profile.gear[base.id] then
+		return { ok = false, message = "Primero necesitas: " .. base.name .. "." }
+	end
 	if not nearShop(player) then
 		return { ok = false, message = "Vuelve al garaje para comprar." }
 	end

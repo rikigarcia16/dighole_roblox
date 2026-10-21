@@ -296,3 +296,14 @@ Primera vez que las iteraciones 4–6 se ejecutan en Studio (`docs/STUDIO_REPORT
   reconstruye solo cuando cambia (firma de capas, colecciones y récord) [Studio: visto].
 - Bajo la casa y el garaje la capa superior del terreno es tierra: antes crecía césped alto
   atravesando el suelo de la casa [Studio: visto].
+
+### Gancho motorizado
+- Mejora del gancho (12 000, necesita el gancho): misma tecla T y sin botón propio (el botón pasa a
+  «Gancho ⚡»). Alcance 80 studs y tirón de 100 studs/s; gasta 6 de batería solo cuando el
+  lanzamiento pasa del alcance normal (40); sin batería funciona como el gancho. El servidor sigue
+  validando línea de roca, parcela y distancia. Campo de perfil: `gear.motor_hook` (aditivo; una
+  versión anterior lo descartaría).
+- Studio: compra verificada (sin gancho: «Primero necesitas: Gancho.»; con él, cobra 12 000). El
+  lanzamiento largo no se pudo comprobar (no encontré una cámara con pared a más de 40 studs).
+- Mochila propulsora: **no**. Con el gancho, la cuerda y el gancho motorizado ya hay tres formas de
+  moverse en vertical; una cuarta no añade decisiones.

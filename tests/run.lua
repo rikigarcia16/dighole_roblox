@@ -243,6 +243,12 @@ test("battery: sold because gear uses it, never consumed by digging; gear is san
 		ok(#def.key == 1, def.id .. " key hint")
 	end
 	ok(Gear.Hook.range >= 30 and Gear.Hook.range <= 48, "hook reach")
+	-- the motor hook is an upgrade: it needs the hook, reaches further, pulls harder and costs battery
+	local motor = Gear.ById.motor_hook
+	ok(motor and motor.upgradeOf == "hook" and Gear.ById[motor.upgradeOf], "motor hook upgrades the hook")
+	ok(motor.price > Gear.ById.hook.price, "and costs more")
+	ok(Gear.MotorHook.range > Gear.Hook.range and Gear.MotorHook.speed > Gear.Hook.speed, "longer and stronger")
+	ok(Gear.MotorHook.batteryCost > 0 and base / Gear.MotorHook.batteryCost >= 5, "a few throws per battery")
 end)
 
 test("resonance detector: nearest within range, rough band, never exact", function()
@@ -1157,6 +1163,14 @@ test("workshop: journal grows with the hung shovel, numbers filled, beyond or sh
 	p.anomalies.counter.solved = true
 	p.anomalies.counter.solvedCount = 1900
 	ok(entry("workshop_hung").body:find("1900"), "Counter number joins the ledger entry")
+end)
+
+test("motor hook: saved like any other gear", function()
+	local saved = ProfileSchema.default(3)
+	saved.gear = { hook = true, motor_hook = true, not_gear = true } :: any
+	local loaded = ProfileSchema.reconcile(dataStoreRoundTrip(saved), 1)
+	ok(loaded.gear.hook == true and loaded.gear.motor_hook == true, "motor hook survives a round trip")
+	ok(loaded.gear.not_gear == nil, "unknown gear dropped")
 end)
 
 test("workshop state: defaults, sanitised, survives a DataStore round trip", function()

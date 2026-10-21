@@ -70,7 +70,7 @@ local function showArrow(direction: Vector3, color: Color3)
 end
 
 -- Pulls the local character to `point` (the server already checked it), with a visible line.
-local function pull(point: Vector3)
+local function pull(point: Vector3, speed: number?)
 	local root = rootPart()
 	if not root then
 		return
@@ -142,7 +142,7 @@ local function pull(point: Vector3)
 			finish()
 			return
 		end
-		velocity.VectorVelocity = delta.Unit * Gear.Hook.speed
+		velocity.VectorVelocity = delta.Unit * (speed or Gear.Hook.speed)
 	end)
 end
 
@@ -166,12 +166,14 @@ function GearUI.new(gui: ScreenGui, deps: Deps)
 		hook = Color3.fromRGB(150, 130, 100),
 	}
 	for _, def in Gear.List do
-		buttonFor[def.id] = Build.button(def.name:match("^(%S+)") or def.name, colors[def.id] or Theme.card, {
-			Size = UDim2.fromOffset(104, 50),
-			LayoutOrder = 10 + def.order,
-			Visible = false,
-			Parent = buttons,
-		})
+		if not def.upgradeOf then -- upgrades share the button of what they improve
+			buttonFor[def.id] = Build.button(def.name:match("^(%S+)") or def.name, colors[def.id] or Theme.card, {
+				Size = UDim2.fromOffset(104, 50),
+				LayoutOrder = 10 + def.order,
+				Visible = false,
+				Parent = buttons,
+			})
+		end
 	end
 
 	local lampWanted = false
@@ -216,7 +218,7 @@ function GearUI.new(gui: ScreenGui, deps: Deps)
 		local params = RaycastParams.new()
 		params.FilterType = Enum.RaycastFilterType.Include
 		params.FilterDescendantsInstances = { workspace.Terrain }
-		local hit = workspace:Raycast(ray.Origin, ray.Direction * (Gear.Hook.range + 30), params)
+		local hit = workspace:Raycast(ray.Origin, ray.Direction * (Gear.MotorHook.range + 30), params)
 		if not hit then
 			deps.notify("info", "Apunta a una pared o un techo de roca.")
 			return
@@ -229,7 +231,7 @@ function GearUI.new(gui: ScreenGui, deps: Deps)
 		end
 		if result.ok and typeof(result.point) == "Vector3" then
 			deps.playAt("too_hard", result.point)
-			pull(result.point)
+			pull(result.point, if type(result.speed) == "number" then result.speed else nil)
 		elseif result.message and result.message ~= "" then
 			deps.notify("info", result.message)
 		end
@@ -262,6 +264,8 @@ function GearUI.new(gui: ScreenGui, deps: Deps)
 			button.Visible = gear[id] == true
 			usesBattery = usesBattery or (gear[id] == true and id ~= "hook")
 		end
+		usesBattery = usesBattery or gear.motor_hook == true
+		buttonFor.hook.Text = if gear.motor_hook then "Gancho ⚡" else "Gancho"
 		deps.showEnergy(usesBattery)
 	end
 	return api

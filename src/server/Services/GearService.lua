@@ -128,15 +128,29 @@ local function hook(player: Player, target: any): any
 		return { ok = false, message = "Solo dentro de tu agujero." }
 	end
 	local toTarget = target - h.Position
-	if toTarget.Magnitude > Gear.Hook.range + 2 or toTarget.Magnitude < 4 then
+	-- the motor doubles the reach and the pull, paid with battery; without it, the plain hook
+	local range, speed = Gear.Hook.range, Gear.Hook.speed
+	local motor = owns(player, "motor_hook")
+		and toTarget.Magnitude > Gear.Hook.range + 2
+		and EnergyService.get(player) >= Gear.MotorHook.batteryCost
+	if motor then
+		range, speed = Gear.MotorHook.range, Gear.MotorHook.speed
+	end
+	if toTarget.Magnitude > range + 2 or toTarget.Magnitude < 4 then
+		if owns(player, "motor_hook") and toTarget.Magnitude <= Gear.MotorHook.range + 2 then
+			return { ok = false, message = "Sin batería, el motor no llega tan lejos." }
+		end
 		return { ok = false, message = "Demasiado lejos para el gancho." }
 	end
-	local hit = workspace:Raycast(h.Position, toTarget.Unit * (Gear.Hook.range + 2), terrainOnly)
+	local hit = workspace:Raycast(h.Position, toTarget.Unit * (range + 2), terrainOnly)
 	if not hit or (hit.Position - target).Magnitude > 4 then
 		return { ok = false, message = "El gancho no encuentra roca ahí." }
 	end
+	if motor then
+		EnergyService.consume(player, Gear.MotorHook.batteryCost)
+	end
 	lastHook[player] = now
-	return { ok = true, point = hit.Position, normal = hit.Normal }
+	return { ok = true, point = hit.Position, normal = hit.Normal, speed = speed }
 end
 
 function GearService.start()

@@ -7,6 +7,8 @@
 --             nearest hidden thing (geode, chest, fossil, the Counter); costs battery per pulse
 --   hook      grappling hook: pulls you to a rock surface in reach; to cross pits and reach
 --             high galleries (never through rock: the server checks the line)
+--   motor_hook upgrade of the hook (same key, no extra button): twice the reach and a stronger
+--             pull, paid with battery on each throw; with an empty battery it works as the hook
 
 export type GearDef = {
 	id: string,
@@ -15,6 +17,7 @@ export type GearDef = {
 	price: number,
 	order: number,
 	key: string, -- keyboard hint shown in the UI
+	upgradeOf: string?, -- an upgrade of another piece: needs it first and has no button of its own
 }
 
 local Gear = {}
@@ -44,6 +47,15 @@ Gear.List = {
 		order = 3,
 		key = "T",
 	},
+	{
+		id = "motor_hook",
+		name = "Gancho motorizado",
+		description = "Mejora del gancho: el doble de alcance y un tirón más fuerte. Cada lanzamiento gasta batería.",
+		price = 12000,
+		order = 4,
+		key = "T",
+		upgradeOf = "hook",
+	},
 } :: { GearDef }
 
 Gear.ById = {} :: { [string]: GearDef }
@@ -54,6 +66,7 @@ end
 Gear.Lamp = { drainPerSecond = 0.6, range = 60, brightness = 2.2 }
 Gear.Detector = { pulseCost = 12, cooldown = 2.5, range = 120 } -- studs (30 m)
 Gear.Hook = { range = 40, cooldown = 1.6, speed = 70, maxSeconds = 1, hangSeconds = 1.5 } -- studs, s, studs/s, s
+Gear.MotorHook = { range = 80, speed = 100, batteryCost = 6 } -- studs, studs/s, battery per throw
 
 -- Where the battery recharges besides the surface: within this many studs of an owned station.
 Gear.StationRechargeDistance = 14
