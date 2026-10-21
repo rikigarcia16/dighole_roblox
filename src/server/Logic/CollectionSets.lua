@@ -23,7 +23,16 @@ CollectionSets.fossilCount = fossilCount
 
 function CollectionSets.progress(set: Collections.Set, profile: any): (number, number)
 	if set.kind == "fossils" then
-		return fossilCount(profile), #Fossils.List
+		if not set.items then
+			return fossilCount(profile), #Fossils.List
+		end
+		local have = 0
+		for _, id in set.items do
+			if profile.collection.fossils[id] then
+				have += 1
+			end
+		end
+		return have, #set.items
 	end
 	local items = set.items or {}
 	local have = 0

@@ -616,6 +616,87 @@ function CaveProps.fossil(
 				CFrame.new(0, 0.4, -2.4) * CFrame.Angles(0, angle, 0) * CFrame.new(0, 0, 2.1)
 			)
 		end
+	elseif model == "salamander" then
+		-- long body, four splayed legs, a tail that curls back on itself
+		bone("Spine", Vector3.new(0.3, 0.3, 3.2), CFrame.new(0, 0.5, -0.4))
+		bone("Skull", Vector3.new(0.9, 0.5, 1.2), CFrame.new(0, 0.55, -2.5), BONE_DARK)
+		for i = 0, 5 do
+			local t = i / 5
+			bone(
+				"Tail",
+				Vector3.new(0.28 - t * 0.15, 0.25, 0.7),
+				CFrame.new(math.sin(t * 2.4) * 1.2, 0.4, 1.4 + t * 1.8) * CFrame.Angles(0, t * 1.3, 0)
+			)
+		end
+		for _, side in { -1, 1 } do
+			for _, k in { -1.4, 0.6 } do
+				bone(
+					"Leg",
+					Vector3.new(1.3, 0.18, 0.18),
+					CFrame.new(side * 0.8, 0.35, k) * CFrame.Angles(0, side * 0.6, 0)
+				)
+			end
+		end
+		-- the tool marks on the vertebrae
+		for i = 1, 3 do
+			bone("Mark", Vector3.new(0.34, 0.05, 0.08), CFrame.new(0, 0.66, -1.2 + i * 0.5), BONE_DARK)
+		end
+	elseif model == "hand" then
+		-- a palm and five fingers closed around a wooden handle that never turned to stone
+		local handle = part(
+			m,
+			"Handle",
+			Vector3.new(0.35, 0.35, 5.4),
+			frame * CFrame.new(0, 0.55, 0.3),
+			Color3.fromRGB(122, 86, 54),
+			Enum.Material.Wood,
+			Enum.PartType.Cylinder
+		)
+		handle.CFrame = frame * CFrame.new(0, 0.55, 0.3) * CFrame.Angles(0, math.rad(90), 0)
+		handle.Size = Vector3.new(5.4, 0.35, 0.35)
+		handle.CanCollide = false
+		bone("Palm", Vector3.new(1.1, 0.35, 1.2), CFrame.new(0.45, 0.6, -0.9))
+		for f = 0, 3 do
+			bone(
+				"Finger",
+				Vector3.new(0.22, 0.22, 0.7),
+				CFrame.new(-0.05, 0.85, -1.4 + f * 0.33) * CFrame.Angles(0, 0, 0.9)
+			)
+		end
+		bone("Thumb", Vector3.new(0.24, 0.24, 0.8), CFrame.new(0.5, 0.95, -0.2) * CFrame.Angles(0.4, 0, -0.5))
+		bone("Wrist", Vector3.new(0.5, 0.4, 1.2), CFrame.new(0.9, 0.45, -1.7), BONE_DARK)
+	elseif model == "eye" then
+		-- an eye socket bigger than a door, looking up
+		bone("Socket", Vector3.new(3.6, 1, 3.6), CFrame.new(0, 0.5, 0), BONE_DARK, Enum.PartType.Cylinder).CFrame = frame
+			* CFrame.new(0, 0.5, 0)
+			* CFrame.Angles(0, 0, math.rad(90))
+		bone("Eye", Vector3.new(3, 3, 3), CFrame.new(0, 0.9, 0), Color3.fromRGB(214, 206, 188), Enum.PartType.Ball)
+		local iris = part(
+			m,
+			"Iris",
+			Vector3.new(0.12, 1.5, 1.5),
+			frame * CFrame.new(0, 2.4, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			Color3.fromRGB(26, 60, 58),
+			Enum.Material.Neon,
+			Enum.PartType.Cylinder
+		)
+		iris.CanCollide = false
+	elseif model == "rings" then
+		-- three rings of bone, six marks each: the Counter's machine, alive
+		for r = 1, 3 do
+			local radius = 0.8 + r * 0.35
+			for k = 0, 5 do
+				local a = k / 6 * math.pi * 2
+				bone(
+					"Ring",
+					Vector3.new(0.4, 0.4, 0.4),
+					CFrame.new(math.cos(a) * radius, 0.35 + r * 0.05, math.sin(a) * radius),
+					if k == 0 then BONE_DARK else nil,
+					Enum.PartType.Ball
+				)
+			end
+		end
+		bone("Core", Vector3.new(0.7, 0.7, 0.7), CFrame.new(0, 0.5, 0), BONE_DARK, Enum.PartType.Ball)
 	else -- "imprint": a slab of darker rock with the silhouette of a shovel pressed into it
 		local slab = part(
 			m,

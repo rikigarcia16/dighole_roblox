@@ -63,6 +63,11 @@ local Journal: { Entry } = {
 				text = "Los cristales de la criatura fósil vibran cuando pego la oreja a la roca. Tres golpes, una pausa.",
 				requires = { fossil = "crystal_creature" },
 			},
+			{
+				text = "En el Núcleo, tres anillos de hueso con seis marcas cada uno. La máquina no inventó nada: "
+					.. "copió algo que estaba vivo.",
+				requires = { fossil = "counting_bones" },
+			},
 		},
 	},
 	{
@@ -120,6 +125,11 @@ local Journal: { Entry } = {
 				text = "La huella fósil de pala encaja con el gancho vacío. Alguien colgó una pala aquí antes de que "
 					.. "la roca existiera.",
 				requires = { fossil = "shovel_imprint" },
+			},
+			{
+				text = "Más abajo, entre el basalto, una mano fosilizada agarraba un mango como los del estante. "
+					.. "La madera no era piedra. Alguien la había dejado allí hace poco.",
+				requires = { fossil = "tool_hand" },
 			},
 		},
 	},

@@ -273,3 +273,18 @@ Primera vez que las iteraciones 4–6 se ejecutan en Studio (`docs/STUDIO_REPORT
   puntales de las galerías guiadas acababan dentro de las salas. Ambos corregidos y vistos en Studio.
 - **Pendiente:** pasar `luaucheck` (tests nuevos de salas, diario y guardado del taller); revisar a
   ojo el taller y el Contador; el aviso narrativo ya no lo tapa un hallazgo épico [código, sin ver].
+
+### Fósiles de las capas profundas
+- Cuatro especies nuevas: Salamandra de ceniza (650–1 000 m), Mano con mango (700–1 100 m), Ojo del
+  abismo (1 000–1 500 m) y «El que cuenta» (1 500–2 200 m), cada una con su modelo y una ficha que
+  conecta con E., el gancho del taller o la máquina del Contador. Dos párrafos nuevos en el diario.
+- **Guardados:** la colección «Fósiles del agujero» queda fija en sus siete especies, así que quien
+  ya la había completado la sigue teniendo completa. Las nuevas forman «Fósiles del abismo»
+  (25 000 monedas). La misión «fossils_all» pasa a llamarse «Registra siete especies fósiles» (mismo
+  objetivo, mismo índice).
+- **Mundo:** por encima de 650 m no cambia nada (ninguna especie nueva es válida allí y las vetas se
+  resuelven de arriba abajo).
+- Studio, ejecutando la lógica real: las cuatro especies aparecen en el 100 % de 60 parcelas, unos 29
+  fósiles por parcela entre 650 y 2 200 m, ninguno fuera de su profundidad ni entre 400 y 650 m.
+  Modelos vistos en una captura; aspecto pendiente de tu revisión. Tests añadidos (pendiente
+  `luaucheck`).

@@ -17,7 +17,17 @@ export type Species = {
 	minDepth: number,
 	maxDepth: number,
 	weight: number,
-	model: "shell" | "coil" | "fish" | "mole" | "wing" | "crystal" | "imprint",
+	model: "shell"
+		| "coil"
+		| "fish"
+		| "mole"
+		| "wing"
+		| "crystal"
+		| "imprint"
+		| "salamander"
+		| "hand"
+		| "eye"
+		| "rings",
 	reward: number,
 	lore: string,
 	order: number,
@@ -101,13 +111,62 @@ local list: { Species } = {
 		reward = 700,
 		lore = "Los cristales no crecieron sobre sus huesos al morir. Crecieron dentro de ella mientras vivía.",
 	},
+	-- Deep layers (from 650 m). They form their own collection ("deep_fossils") so that the original
+	-- seven-species set stays complete for players who had already finished it.
+	{
+		id = "ash_salamander",
+		name = "Salamandra de ceniza",
+		rarity = "Rare",
+		minDepth = 650,
+		maxDepth = 1000,
+		weight = 6,
+		model = "salamander",
+		reward = 1500,
+		lore = "Huesos que no se fundieron a mil grados. Las vértebras tienen marcas de herramienta: "
+			.. "alguien la desenterró antes que tú y la volvió a enterrar.",
+	},
+	{
+		id = "tool_hand",
+		name = "Mano con mango",
+		rarity = "Epic",
+		minDepth = 700,
+		maxDepth = 1100,
+		weight = 4,
+		model = "hand",
+		reward = 3000,
+		lore = "Cinco dedos cerrados sobre un mango de madera. La piedra es de hace millones de años; "
+			.. "la madera no se ha fosilizado. Todavía huele a resina.",
+	},
+	{
+		id = "abyss_eye",
+		name = "Ojo del abismo",
+		rarity = "Epic",
+		minDepth = 1000,
+		maxDepth = 1500,
+		weight = 5,
+		model = "eye",
+		reward = 5000,
+		lore = "Un ojo del tamaño de una puerta, mirando hacia arriba. Hacia el agujero. Hacia ti.",
+	},
+	{
+		id = "counting_bones",
+		name = "El que cuenta",
+		rarity = "Legendary",
+		minDepth = 1500,
+		maxDepth = 2200,
+		weight = 4,
+		model = "rings",
+		reward = 12000,
+		lore = "Tres anillos de hueso, seis marcas en cada uno. La máquina del Contador no es una máquina: "
+			.. "es una copia de esto.",
+	},
 } :: any
 
 local Fossils = {}
 Fossils.List = list
 Fossils.ById = {} :: { [string]: Species }
 Fossils.MinDepth = 6
-Fossils.MaxDepth = 400
+Fossils.MaxDepth = 2200
 
 for index, species in list do
 	species.order = index

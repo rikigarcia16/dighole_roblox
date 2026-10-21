@@ -248,8 +248,8 @@ local Quests: { Quest } = {
 	},
 	{
 		id = "fossils_all",
-		title = "Completa la colección de fósiles",
-		hint = "Siete especies. La última no se parece a nada vivo.",
+		title = "Registra siete especies fósiles",
+		hint = "Siete especies. La última de las Cuevas de Cristal no se parece a nada vivo.",
 		kind = "fossils",
 		target = 7,
 		reward = 5000,

@@ -876,7 +876,9 @@ test("fossils: sealed two-cell pockets in rock, species valid for their depth", 
 	local perPlot = beds / 40
 	ok(perPlot > 12 and perPlot < 30, "fossils per plot (0-420 m): " .. perPlot)
 	for _, s in Fossils.List do
-		ok((species[s.id] or 0) > 0, s.id .. " never appears in 40 plots")
+		if s.minDepth < 420 then
+			ok((species[s.id] or 0) > 0, s.id .. " never appears in 40 plots")
+		end
 	end
 	-- every species must be collectable in most plots (each player only digs their own plot)
 	local coverage = {}
@@ -891,8 +893,10 @@ test("fossils: sealed two-cell pockets in rock, species valid for their depth", 
 	end
 	local parts = {}
 	for _, s in Fossils.List do
-		table.insert(parts, string.format("%s %d%%", s.id, coverage[s.id] or 0))
-		ok((coverage[s.id] or 0) >= 60, s.id .. " only in " .. tostring(coverage[s.id]) .. "% of plots")
+		if s.minDepth < 420 then
+			table.insert(parts, string.format("%s %d%%", s.id, coverage[s.id] or 0))
+			ok((coverage[s.id] or 0) >= 60, s.id .. " only in " .. tostring(coverage[s.id]) .. "% of plots")
+		end
 	end
 	print(
 		string.format(
@@ -901,6 +905,64 @@ test("fossils: sealed two-cell pockets in rock, species valid for their depth", 
 			table.concat(parts, ", ")
 		)
 	)
+end)
+
+test("deep fossils: valid depth, sealed, collectable in most plots, nothing new above 650 m", function()
+	local deep = {}
+	for _, s in Fossils.List do
+		if s.minDepth >= 650 then
+			table.insert(deep, s)
+		end
+	end
+	eq(#deep, 4, "four deep species")
+	local coverage = {}
+	for seed = 1, 60 do
+		local here = {}
+		for _, bed in FossilBeds.bedsInRange(seed + 900, 0, 2200) do
+			local s = Fossils.get(bed.speciesId)
+			ok(s and bed.d >= s.minDepth and bed.d < s.maxDepth, bed.speciesId .. " outside its depth at " .. bed.d)
+			ok(bed.d < 400 or bed.d >= 650, "no fossil appeared between 400 and 650 m (" .. bed.d .. ")")
+			if bed.d >= 650 then
+				eq(OreGeneration.resourceAt(seed + 900, bed.cx, bed.d, bed.cz), "air", "deep pocket is open")
+				here[bed.speciesId] = true
+			end
+		end
+		for id in here do
+			coverage[id] = (coverage[id] or 0) + 1
+		end
+	end
+	local parts = {}
+	for _, s in deep do
+		local pct = math.floor((coverage[s.id] or 0) / 60 * 100)
+		table.insert(parts, string.format("%s %d%%", s.id, pct))
+		ok(pct >= 60, s.id .. " only in " .. pct .. "% of plots")
+	end
+	print("       deep fossils, plots with each species: " .. table.concat(parts, ", "))
+	-- the original set keeps its seven species; the deep ones have their own set
+	local Collections = H.module("ReplicatedStorage", "Shared", "Config", "Collections")
+	local CollectionSets = H.module("ServerScriptService", "Server", "Logic", "CollectionSets")
+	local p = ProfileSchema.default(2)
+	for _, id in
+		{
+			"tunnel_beetle",
+			"ringed_worm",
+			"eyeless_fish",
+			"six_legged_mole",
+			"shovel_imprint",
+			"stone_wing",
+			"crystal_creature",
+		}
+	do
+		p.collection.fossils[id] = { count = 1, firstDepth = 10 }
+	end
+	for _, set in Collections do
+		local have, total = CollectionSets.progress(set, p)
+		if set.id == "fossils" then
+			ok(have == 7 and total == 7, "a finished fossil set stays finished")
+		elseif set.id == "deep_fossils" then
+			ok(have == 0 and total == 4, "deep set counts only the deep species")
+		end
+	end
 end)
 
 test("fossil collection: first registration pays once, repeats give fragments", function()

@@ -31,6 +31,10 @@ local CHANCE: { [string]: number } = {
 	forgotten_mines = 0.6,
 	crystal_caves = 0.5,
 	ancient_caverns = 0.35,
+	-- deep layers (no species existed below 400 m before, so the bands above 650 m are unchanged)
+	volcanic_depths = 0.35,
+	abyss = 0.3,
+	unknown_core = 0.3,
 }
 
 export type Bed = {

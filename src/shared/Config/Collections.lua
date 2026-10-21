@@ -8,7 +8,7 @@ export type Set = {
 	id: string,
 	name: string,
 	kind: "resources" | "fossils" | "exhibit", -- exhibit: kept pieces shown in the house display case
-	items: { string }?, -- resource ids (kind "resources"); fossils use every species
+	items: { string }?, -- resource or species ids; a "fossils" set without items counts every species
 	reward: number,
 	line: string, -- journal line once complete
 }
@@ -58,8 +58,26 @@ local Collections: { Set } = {
 		id = "fossils",
 		name = "Fósiles del agujero",
 		kind = "fossils",
+		-- fixed list: the deep species have their own set, so this one never becomes incomplete again
+		items = {
+			"tunnel_beetle",
+			"ringed_worm",
+			"eyeless_fish",
+			"six_legged_mole",
+			"shovel_imprint",
+			"stone_wing",
+			"crystal_creature",
+		},
 		reward = 2500,
 		line = "Siete especies. Ninguna tiene ojos. La huella de pala es la más antigua de todas.",
+	},
+	{
+		id = "deep_fossils",
+		name = "Fósiles del abismo",
+		kind = "fossils",
+		items = { "ash_salamander", "tool_hand", "abyss_eye", "counting_bones" },
+		reward = 25000,
+		line = "Una mano que agarra una pala, un ojo que mira hacia arriba, y la máquina, hecha de hueso.",
 	},
 }
 
