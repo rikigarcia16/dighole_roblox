@@ -29,6 +29,7 @@ local CaveProps = require(script.Parent.CaveProps)
 local AnomalyService = require(script.Parent.AnomalyService)
 local EnergyService = require(script.Parent.EnergyService)
 local Gear = require(ReplicatedStorage.Shared.Config.Gear)
+local Feats = require(ReplicatedStorage.Shared.Config.Feats)
 
 local MobilityService = {}
 
@@ -437,7 +438,7 @@ local function retrieveRope(player: Player, prompt: ProximityPrompt)
 	if not model or type(index) ~= "number" or not model:IsDescendantOf(objs.folder) then
 		return -- only ropes in your own plot
 	end
-	if profile.mobility.ropes >= Mobility.Rope.maxCarried then
+	if profile.mobility.ropes >= Feats.ropeCapacity(Mobility.Rope.maxCarried, profile.feats) then
 		StateService.notify(player, "info", "Ya llevas el máximo de cuerdas.", "rope_full", 3)
 		return
 	end
@@ -459,7 +460,8 @@ local function quoteFor(player: Player): MobilityRules.Quote?
 		depthOf(root.Position),
 		Inventory.value(profile.inventory),
 		profile.coins,
-		profile.mobility.stations
+		profile.mobility.stations,
+		Feats.rescueCostFactor(profile.feats)
 	)
 end
 

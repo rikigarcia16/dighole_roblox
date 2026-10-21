@@ -10,6 +10,7 @@ local Tools = require(ReplicatedStorage.Shared.Config.Tools)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local Mobility = require(ReplicatedStorage.Shared.Config.Mobility)
 local Gear = require(ReplicatedStorage.Shared.Config.Gear)
+local Feats = require(ReplicatedStorage.Shared.Config.Feats)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Format = require(ReplicatedStorage.Shared.Util.Format)
 local RateLimiter = require(ReplicatedStorage.Shared.Util.RateLimiter)
@@ -101,8 +102,9 @@ end
 -- Ropes are consumables: carried in a small stack, placed and picked up again in the hole.
 local function buyRope(player: Player, profile: any, _id: string): Result
 	local rope = Mobility.Rope
-	if profile.mobility.ropes >= rope.maxCarried then
-		return { ok = false, message = "Ya llevas " .. rope.maxCarried .. " cuerdas." }
+	local maxCarried = Feats.ropeCapacity(rope.maxCarried, profile.feats)
+	if profile.mobility.ropes >= maxCarried then
+		return { ok = false, message = "Ya llevas " .. maxCarried .. " cuerdas." }
 	end
 	if not nearShop(player) then
 		return { ok = false, message = "Vuelve al garaje para comprar." }
@@ -113,7 +115,7 @@ local function buyRope(player: Player, profile: any, _id: string): Result
 	profile.coins -= rope.price
 	profile.mobility.ropes += 1
 	StateService.push(player)
-	return { ok = true, message = string.format("Cuerda comprada (%d/%d).", profile.mobility.ropes, rope.maxCarried) }
+	return { ok = true, message = string.format("Cuerda comprada (%d/%d).", profile.mobility.ropes, maxCarried) }
 end
 
 local function buyGear(player: Player, profile: any, gearId: string): Result

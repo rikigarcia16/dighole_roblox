@@ -47,4 +47,9 @@ function FxService.special(actor: Player, position: Vector3, kind: string, resou
 	end
 end
 
+-- A moment only `player` sees and hears (a feat): same effect channel, nobody else is told.
+function FxService.personal(player: Player, position: Vector3, kind: string)
+	specialFx:FireClient(player, player, position, kind, nil)
+end
+
 return FxService

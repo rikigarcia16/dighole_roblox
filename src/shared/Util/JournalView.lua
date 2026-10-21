@@ -49,6 +49,21 @@ local function holds(requires: { [string]: any }?, state: any): boolean
 			if not (state.clues and state.clues[value]) then
 				return false
 			end
+		elseif key == "feat" or key == "noFeat" then
+			local earned = state.feats ~= nil and state.feats[value] == true
+			if earned ~= (key == "feat") then
+				return false
+			end
+		elseif key == "geodes" then
+			local stats = state.stats or {}
+			if (stats.geodesOpened or 0) < value then
+				return false
+			end
+		elseif key == "stations" then
+			local stations = state.mobility and state.mobility.stations or {}
+			if #stations < value then
+				return false
+			end
 		elseif key == "set" or key == "anySet" then
 			local found = false
 			for _, set in state.sets or {} do

@@ -34,7 +34,14 @@ function MobilityRules.nearestStationAbove(stations: { Station }, depth: number)
 	return best
 end
 
-function MobilityRules.quote(depth: number, backpackValue: number, coins: number, stations: { Station }): Quote
+-- `costFactor` lowers the price (the "unaided_climb" feat, Config/Feats); 1 when omitted.
+function MobilityRules.quote(
+	depth: number,
+	backpackValue: number,
+	coins: number,
+	stations: { Station },
+	costFactor: number?
+): Quote
 	local station = MobilityRules.nearestStationAbove(stations, depth)
 	local destination = if station then station.id else "surface"
 	local def = station and Mobility.StationById[station.id]
@@ -49,7 +56,7 @@ function MobilityRules.quote(depth: number, backpackValue: number, coins: number
 			destinationName = destinationName,
 		}
 	end
-	local cost = MobilityRules.rescueCost(depth, backpackValue)
+	local cost = math.floor(MobilityRules.rescueCost(depth, backpackValue) * (costFactor or 1) + 0.5)
 	local pay = math.min(cost, math.max(0, math.floor(coins)))
 	return {
 		free = false,

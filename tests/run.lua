@@ -2031,4 +2031,111 @@ do
 	end)
 end
 
+test("feats: one descent, earned on foot, lost with any lift, beacon or respawn", function()
+	local Feats = H.module("ReplicatedStorage", "Shared", "Config", "Feats")
+	local Descent = H.module("ServerScriptService", "Server", "Logic", "Descent")
+	local function has(list: { string }, id: string): boolean
+		return table.find(list, id) ~= nil
+	end
+	-- a pulso: from the surface down to the Caverns without help
+	local d = Descent.new(false)
+	ok(#Descent.step(d, 0, 0) == 0, "standing at the surface earns nothing")
+	ok(#Descent.step(d, 200, 0) == 0, "not deep enough yet")
+	ok(has(Descent.step(d, Feats.BareDescentDepth, 0), "bare_descent"), "reached the Caverns on foot")
+	-- a lift ride in the middle spoils it
+	d = Descent.new(false)
+	Descent.step(d, 100, 0)
+	Descent.assist(d)
+	ok(#Descent.step(d, 400, 0) == 0, "assisted descent earns nothing")
+	-- joining or respawning starts assisted; walking back out of the house starts a clean one
+	d = Descent.new(true)
+	ok(#Descent.step(d, 400, 0) == 0, "spawned below: no feat")
+	Descent.step(d, 0, 0)
+	ok(has(Descent.step(d, 360, 0), "bare_descent"), "clean after reaching the surface")
+	-- la subida: back to the surface from 150 m, loaded, unaided
+	d = Descent.new(false)
+	Descent.step(d, Feats.ClimbDepth + 5, 0.9)
+	ok(has(Descent.step(d, 0, 0.9), "unaided_climb"), "climbed out loaded")
+	d = Descent.new(false)
+	Descent.step(d, 200, 0.5)
+	ok(#Descent.step(d, 0, 0.5) == 0, "a half-empty backpack is not the feat")
+	d = Descent.new(false)
+	Descent.step(d, 200, 1)
+	Descent.assist(d) -- the beacon
+	ok(#Descent.step(d, 0, 1) == 0, "the beacon is not a climb")
+	d = Descent.new(false)
+	Descent.step(d, 100, 1)
+	ok(#Descent.step(d, 0, 1) == 0, "not deep enough to count")
+	-- three geodes, the count resets at the surface
+	d = Descent.new(true)
+	Descent.step(d, 300, 0)
+	Descent.geode(d)
+	Descent.geode(d)
+	Descent.step(d, 0, 0)
+	ok(#Descent.geode(d) == 0, "count restarted at the surface")
+	Descent.step(d, 300, 0)
+	Descent.geode(d)
+	ok(has(Descent.geode(d), "three_geodes"), "three in one descent, lifts allowed")
+end)
+
+test("feats: rewards are useful and only apply once earned", function()
+	local Feats = H.module("ReplicatedStorage", "Shared", "Config", "Feats")
+	local Mobility = H.module("ReplicatedStorage", "Shared", "Config", "Mobility")
+	local Gear = H.module("ReplicatedStorage", "Shared", "Config", "Gear")
+	local MobilityRules = H.module("ReplicatedStorage", "Shared", "Util", "MobilityRules")
+	eq(#Feats.List, 3)
+	for _, feat in Feats.List do
+		ok(Feats.ById[feat.id] == feat and #feat.name > 0 and #feat.reward > 0, feat.id .. " complete")
+	end
+	local none = {}
+	local all = { three_geodes = true, bare_descent = true, unaided_climb = true }
+	eq(Feats.ropeCapacity(Mobility.Rope.maxCarried, none), Mobility.Rope.maxCarried)
+	eq(Feats.ropeCapacity(Mobility.Rope.maxCarried, all), Mobility.Rope.maxCarried + 2)
+	eq(Feats.detectorCooldown(Gear.Detector.cooldown, nil), Gear.Detector.cooldown)
+	ok(Feats.detectorCooldown(Gear.Detector.cooldown, all) < Gear.Detector.cooldown, "faster detector")
+	local full = MobilityRules.quote(600, 5000, 1e6, {})
+	local half = MobilityRules.quote(600, 5000, 1e6, {}, Feats.rescueCostFactor(all))
+	eq(half.cost, math.floor(full.cost * 0.5 + 0.5), "beacon at half price")
+	ok(MobilityRules.quote(30, 0, 0, {}, 0.5).free, "still free near the surface")
+end)
+
+test("feats: saved, sanitised, older saves load without them", function()
+	local p = ProfileSchema.default(4)
+	eq(next(p.feats), nil, "nothing earned at first")
+	p.feats = { bare_descent = true, made_up = true, three_geodes = "yes" } :: any
+	local loaded = ProfileSchema.reconcile(dataStoreRoundTrip(p), 1)
+	eq(loaded.feats.bare_descent, true, "earned feat survives a round trip")
+	eq(loaded.feats.made_up, nil, "unknown feat dropped")
+	eq(loaded.feats.three_geodes, nil, "non-boolean dropped")
+	local old = ProfileSchema.default(4) :: any
+	old.feats = nil
+	eq(next(ProfileSchema.reconcile(dataStoreRoundTrip(old), 1).feats), nil, "older saves get the default")
+end)
+
+test("feats: only hinted in the journal after something related, confirmed when earned", function()
+	local JournalView = H.module("ReplicatedStorage", "Shared", "Util", "JournalView")
+	local p = ProfileSchema.default(6)
+	local function chalk(): string?
+		for _, e in JournalView.entries(p) do
+			if e.id == "chalk" then
+				return e.body
+			end
+		end
+		return nil
+	end
+	eq(chalk(), nil, "nothing in the garden")
+	p.zonesReached.forgotten_mines = true
+	local body = chalk() :: string
+	ok(body and not body:find("geodas") and not body:find("montacargas"), "no hints before anything related")
+	p.stats.geodesOpened = 1
+	ok((chalk() :: string):find("Tres geodas sin ver el cielo"), "geode hint after the first geode")
+	p.feats.three_geodes = true
+	body = chalk() :: string
+	ok(not body:find("sin ver el cielo") and body:find("El detector responde antes"), "hint replaced when earned")
+	table.insert(p.mobility.stations, { id = "mines", cx = 1, d = 60, cz = 1 })
+	ok((chalk() :: string):find("sin montacargas"), "descent hint after the first station")
+	p.zonesReached.crystal_caves = true
+	ok((chalk() :: string):find("sin baliza"), "climb hint from the Crystal Caves")
+end)
+
 H.finish()

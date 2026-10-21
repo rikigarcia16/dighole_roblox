@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Gear = require(ReplicatedStorage.Shared.Config.Gear)
+local Feats = require(ReplicatedStorage.Shared.Config.Feats)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local RateLimiter = require(ReplicatedStorage.Shared.Util.RateLimiter)
 local Resonance = require(script.Parent.Parent.Logic.Resonance)
@@ -76,7 +77,9 @@ local function pulse(player: Player): any
 		return { ok = false, message = "No tienes el detector." }
 	end
 	local now = os.clock()
-	if lastPulse[player] and now - lastPulse[player] < Gear.Detector.cooldown then
+	local profile = PlayerDataService.get(player)
+	local cooldown = Feats.detectorCooldown(Gear.Detector.cooldown, profile and profile.feats)
+	if lastPulse[player] and now - lastPulse[player] < cooldown then
 		return { ok = false, message = "El detector se está recargando." }
 	end
 	local h = head(player)

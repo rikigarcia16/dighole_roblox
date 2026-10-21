@@ -335,3 +335,7 @@ durante la prueba (no en el repositorio).
 | X11 | Entrar en la casa tras llegar a una capa nueva | El mapa «EL AGUJERO» ilumina esa capa y muestra el récord; no hay césped atravesando el suelo. |
 | X12 | Completar una colección | Aparece su trofeo girando en el estante de la pared oeste, con su nombre legible. |
 | X13 | Cavar entre 650 y 2 200 m | Aparecen las cuatro especies nuevas de fósil; «Fósiles del abismo» se completa con las cuatro. |
+| X14 | Abrir tu primera geoda y mirar el diario | Entrada «Frases a tiza» con la pista de las tres geodas. |
+| X15 | Bajar desde la superficie hasta 350 m sin montacargas | Aviso «HAZAÑA» y «A pulso»; en el garaje, cuerdas «x/7». Si usas el montacargas por el camino, no se concede. |
+| X16 | Subir andando y con cuerdas desde 150 m con la mochila casi llena | Hazaña «La subida»; después la baliza cuesta la mitad. |
+| X17 | Abrir tres geodas sin volver a la superficie | Hazaña; el detector se puede usar cada 1,5 s. |

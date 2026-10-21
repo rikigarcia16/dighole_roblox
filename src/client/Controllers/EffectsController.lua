@@ -356,6 +356,7 @@ local SPECIAL_SOUNDS = {
 	counter_found = "counter_found",
 	counter_lock = "counter_lock",
 	workshop_found = "counter_found", -- placeholder until the workshop has its own sound
+	feat = "discover_epic",
 }
 
 function EffectsController.special(position: Vector3, kind: string, resourceId: string?)
@@ -365,6 +366,8 @@ function EffectsController.special(position: Vector3, kind: string, resourceId: 
 		EffectsController.narrative:Fire("UNA SALA QUE NADIE EXCAVÓ")
 	elseif kind == "workshop_found" then
 		EffectsController.narrative:Fire("ALGUIEN TRABAJABA AQUÍ")
+	elseif kind == "feat" then
+		EffectsController.narrative:Fire("HAZAÑA")
 	end
 	if kind ~= "cave" and kind ~= "counter_found" and kind ~= "workshop_found" then
 		local e = nextEmitter(position)

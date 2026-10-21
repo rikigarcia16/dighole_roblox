@@ -112,6 +112,17 @@ function PlotService.updateBoard(plot: Plot)
 	end
 end
 
+-- Called on every teleport (lift ride, beacon, respawn placement): FeatService ends unaided descents.
+local teleportCallbacks: { (Player) -> () } = {}
+function PlotService.onTeleport(callback: (Player) -> ())
+	table.insert(teleportCallbacks, callback)
+end
+local function teleported(player: Player)
+	for _, callback in teleportCallbacks do
+		task.spawn(callback, player)
+	end
+end
+
 -- Moves the character to `target` after asking the client to stream that area in.
 function PlotService.teleportTo(player: Player, target: CFrame)
 	local character = player.Character
@@ -127,6 +138,7 @@ function PlotService.teleportTo(player: Player, target: CFrame)
 		if root then
 			root.AssemblyLinearVelocity = Vector3.zero
 		end
+		teleported(player)
 	end
 end
 
@@ -152,6 +164,7 @@ function PlotService.teleportToSurface(player: Player)
 		if root then
 			root.AssemblyLinearVelocity = Vector3.zero
 		end
+		teleported(player)
 	end
 end
 

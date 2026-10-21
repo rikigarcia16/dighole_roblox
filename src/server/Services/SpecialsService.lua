@@ -33,6 +33,7 @@ local TerrainChunkService = require(script.Parent.TerrainChunkService)
 local InventoryService = require(script.Parent.InventoryService)
 local StateService = require(script.Parent.StateService)
 local FxService = require(script.Parent.FxService)
+local FeatService = require(script.Parent.FeatService)
 local CaveProps = require(script.Parent.CaveProps)
 local CaveScenes = require(script.Parent.CaveScenes)
 local DecorStreaming = require(script.Parent.Parent.Logic.DecorStreaming)
@@ -615,6 +616,7 @@ local function openGeode(player: Player, plot: any, special: Special)
 		InventoryService.collect(player, crystal.id, amount, true)
 	end
 	opener.stats.geodesOpened += 1
+	FeatService.geodeOpened(player)
 	StateService.notify(
 		player,
 		"find",

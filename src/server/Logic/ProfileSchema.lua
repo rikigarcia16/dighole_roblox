@@ -11,6 +11,7 @@ local Story = require(Shared.Config.Story)
 local Fossils = require(Shared.Config.Fossils)
 local Mobility = require(Shared.Config.Mobility)
 local Gear = require(Shared.Config.Gear)
+local Feats = require(Shared.Config.Feats)
 local CellSet = require(Shared.Util.CellSet)
 
 local ProfileSchema = {}
@@ -48,6 +49,7 @@ export type Profile = {
 	-- player preferences (added without a version bump: older saves get the defaults)
 	settings: { effects: number, shake: boolean, tutorialDone: boolean },
 	gear: { [string]: boolean }, -- special equipment owned (Config/Gear); additive like settings
+	feats: { [string]: boolean }, -- optional challenges earned (Config/Feats); additive like gear
 	stats: {
 		cellsDug: number,
 		maxDepth: number,
@@ -90,6 +92,7 @@ function ProfileSchema.default(seed: number): Profile
 		quests = { index = 1, completed = {} },
 		settings = { effects = 0, shake = true, tutorialDone = false },
 		gear = {},
+		feats = {},
 		stats = {
 			cellsDug = 0,
 			maxDepth = 0,
@@ -310,6 +313,14 @@ function ProfileSchema.reconcile(data: any, seed: number): Profile
 		for id, owned in data.gear do
 			if owned == true and type(id) == "string" and Gear.ById[id] then
 				profile.gear[id] = true
+			end
+		end
+	end
+
+	if type(data.feats) == "table" then
+		for id, earned in data.feats do
+			if earned == true and type(id) == "string" and Feats.ById[id] then
+				profile.feats[id] = true
 			end
 		end
 	end

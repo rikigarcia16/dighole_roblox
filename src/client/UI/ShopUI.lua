@@ -8,6 +8,7 @@ local Tools = require(ReplicatedStorage.Shared.Config.Tools)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local Mobility = require(ReplicatedStorage.Shared.Config.Mobility)
 local Gear = require(ReplicatedStorage.Shared.Config.Gear)
+local Feats = require(ReplicatedStorage.Shared.Config.Feats)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Format = require(ReplicatedStorage.Shared.Util.Format)
 local Grid = require(ReplicatedStorage.Shared.Util.Grid)
@@ -275,6 +276,7 @@ function ShopUI.new(parent: Instance, deps: Deps)
 			grid.CellSize = UDim2.fromOffset(250, 200)
 			local rope = Mobility.Rope
 			local carried = if state.mobility then state.mobility.ropes else 0
+			local maxCarried = Feats.ropeCapacity(rope.maxCarried, state.feats)
 			local c = card(1)
 			Build.label({
 				Text = "Cuerda",
@@ -297,7 +299,7 @@ function ShopUI.new(parent: Instance, deps: Deps)
 				Parent = c,
 			})
 			Build.label({
-				Text = string.format("Llevas <b>%d/%d</b> · tecla <b>Q</b> para colgarla", carried, rope.maxCarried),
+				Text = string.format("Llevas <b>%d/%d</b> · tecla <b>Q</b> para colgarla", carried, maxCarried),
 				RichText = true,
 				Font = Theme.bodyFont,
 				Size = UDim2.new(1, 0, 0, 22),
@@ -306,7 +308,7 @@ function ShopUI.new(parent: Instance, deps: Deps)
 				Parent = c,
 			})
 			local button
-			if carried >= rope.maxCarried then
+			if carried >= maxCarried then
 				button = Build.button("Llevas el máximo", Theme.panelLight, { AutoButtonColor = false })
 			else
 				local affordable = state.coins >= rope.price

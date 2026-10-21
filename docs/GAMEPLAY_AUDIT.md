@@ -322,9 +322,33 @@ Primera vez que las iteraciones 4–6 se ejecutan en Studio (`docs/STUDIO_REPORT
   antiguo sin publicar código nuevo. Memoria, red con varios jugadores y móvil siguen sin medir.
   **Decisión tuya.**
 
+### Hazañas (retos opcionales)
+- Tres hazañas que nadie te pide y que no aparecen en ninguna lista: solo se insinúan en una entrada
+  nueva del diario, «Frases a tiza», cuando ya ha pasado algo relacionado, y se confirman al
+  conseguirlas. Cada una se gana una vez y da una ventaja duradera en vez de monedas:
+  - «Tres geodas en una bajada» (pista tras la primera geoda): el detector recarga en 1,5 s en vez
+    de 2,5.
+  - «A pulso»: llegar a 350 m desde la superficie sin montacargas (pista tras tener una estación):
+    7 cuerdas en vez de 5.
+  - «La subida»: volver a la superficie desde 150 m o más, con la mochila al 80 % y sin montacargas
+    ni baliza (pista al llegar a las Cuevas de Cristal): la baliza cuesta la mitad.
+- Una «bajada» va de salir de la superficie a volver a ella. Cualquier teletransporte (montacargas,
+  baliza, reaparecer) la marca como asistida. Todo lo decide el servidor (sondeo cada 0,5 s, sin
+  remotos nuevos); la lógica pura está en `Logic/Descent`.
+- **Guardados:** campo nuevo `feats` (por defecto vacío, saneado: solo ids conocidos con `true`).
+  Una versión anterior del juego lo ignoraría y perdería las hazañas al guardar: es lo único que se
+  pierde si hay que volver atrás.
+- Studio: concedidas las tres (bajar a 362 m a pulso, subir desde 160 m con la mochila llena y tres
+  geodas en una bajada); bajar con teletransporte no cuenta; aviso «HAZAÑA» y notificación vistos;
+  recompensas comprobadas (detector 1,5 s, baliza a 600 m 420 → 210, 7 cuerdas); diario con las
+  pistas y las confirmaciones. Atajos usados en Play: mover al personaje anclado, llenar la mochila
+  y llamar a la apertura de geoda desde el servidor. Tests añadidos (pendiente `luaucheck`).
+- La sensación de golpe por material y por herramienta ya existía (`Config/DigFeel`: perfiles por
+  material y peso, chispas y sacudida por herramienta); no la he tocado.
+
 ### Problemas abiertos de la fase 3
 - `luaucheck` no se ha pasado en local sobre los tests nuevos (no hay cargo en este equipo): falta
   ejecutarlo en la nube o instalando Rust.
 - Lanzamiento largo del gancho motorizado sin comprobar en Studio.
 - Revisión visual y sonora tuya: grietas, taller de E., fósiles nuevos, mapa de capas y trofeos.
-- Pendiente opcional: desafíos opcionales (punto 7) y variación del golpe por material.
+- Revisión tuya de las hazañas: si las pistas se entienden y si las recompensas compensan.

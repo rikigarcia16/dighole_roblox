@@ -12,6 +12,9 @@
 --   zone = id                    : zone reached
 --   clue = id                    : note read
 --   set = id / anySet = true     : collection set complete (Config/Collections)
+--   feat = id / noFeat = id      : feat earned / not earned yet (Config/Feats)
+--   geodes = n                   : at least n geodes opened
+--   stations = n                 : at least n lift stations owned
 
 export type Paragraph = { text: string, requires: { [string]: any }? }
 export type Entry = { id: string, title: string, requires: { [string]: any }, paragraphs: { Paragraph } }
@@ -134,6 +137,44 @@ local Journal: { Entry } = {
 		},
 	},
 }
+
+-- E.'s chalk marks: the feats (Config/Feats) are only ever hinted here, once something related has
+-- happened, and confirmed when earned. Never a checklist.
+table.insert(Journal, {
+	id = "chalk",
+	title = "Frases a tiza",
+	requires = { zone = "forgotten_mines" },
+	paragraphs = {
+		{
+			text = "En las paredes de las Minas alguien escribió con tiza, con la misma letra que la placa del "
+				.. "Contador. No son avisos. Parecen apuestas.",
+		},
+		{
+			text = "«Tres geodas sin ver el cielo. Después, el detector ya no duda.» — E.",
+			requires = { geodes = 1, noFeat = "three_geodes" },
+		},
+		{
+			text = "Tres geodas en una sola bajada. El detector responde antes, como si ya supiera qué busco.",
+			requires = { feat = "three_geodes" },
+		},
+		{
+			text = "«Hasta las Cavernas desde arriba, sin montacargas. Las manos aprenden a enrollar la cuerda.» — E.",
+			requires = { stations = 1, noFeat = "bare_descent" },
+		},
+		{
+			text = "Bajé hasta las Cavernas a pulso. Ahora caben dos cuerdas más en la mochila.",
+			requires = { feat = "bare_descent" },
+		},
+		{
+			text = "«Desde las Cuevas de Cristal hasta el cielo, cargado y sin baliza. Luego la baliza cobra la mitad.» — E.",
+			requires = { zone = "crystal_caves", noFeat = "unaided_climb" },
+		},
+		{
+			text = "Subí desde las Cuevas de Cristal con la mochila llena y sin ayuda. La baliza me cobra la mitad.",
+			requires = { feat = "unaided_climb" },
+		},
+	},
+})
 
 -- One entry that grows with every completed collection set.
 local Collections = require(script.Parent.Collections)
