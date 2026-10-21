@@ -40,6 +40,30 @@ plano. Incluye los costes únicos (sectores de cuevas, capas de fósiles) donde 
 replicación de `WriteVoxels` (una capa de 42×42×4 son ~7 000 vóxeles por escritura), coste del
 cliente para mallar y colisionar terreno más ancho, y rendimiento en móvil.
 
+## 2b. Mediciones reales en Roblox Studio (servidor de Studio, `os.clock`)
+
+| Medida | 16 celdas (hoy) | 24 celdas | 40 celdas |
+|---|---|---|---|
+| `WriteVoxels` de una capa de 4 m (con borde), mediana / máx. | 0,20 / 0,26 ms | 0,28 / 0,34 ms | 0,43 / 0,54 ms |
+| Material de una celda (`OreGeneration.resourceAt`) | 1,14 µs | igual | igual |
+| Capa de 4 m completa (`THNE.GenerateSlab`), medida | mediana 1,48 ms, máx. 3,51 ms (informe 2) | — | — |
+| Capa de 4 m, **proyección** (celdas × 1,14 µs + escritura) | 1,5 ms | ~3,2 ms | **~8,5 ms** |
+| Sector de cuevas en frío (`Caves.sector`), medido | mediana 1,62 ms, máx. 2,19 ms | — | — |
+| Sector de cuevas, **proyección** (área ×6,25) | — | — | **~10–14 ms** |
+
+**Qué cambia respecto a la VM:**
+- Studio es unas **4 veces más rápido** que la VM de Luau del contenedor: la capa de 16 celdas tarda
+  1,5 ms en Studio frente a 5,7–8,9 ms en la VM.
+- La escritura de terreno no es el problema: con 40 celdas sigue por debajo de 0,6 ms. El coste está
+  en calcular el material de cada celda en Lua, que crece con el área (×5,4 para la capa con borde).
+- Con 40 celdas, una capa (~8,5 ms) y un sector de cuevas (~10–14 ms) superan el presupuesto de 4 ms
+  por fotograma. Hay que partir la capa en ~3 trozos y repartir la generación del sector. Con
+  **24 celdas** la capa cabe todavía en un trozo (~3,2 ms).
+
+**Sigue sin medir en Studio:** memoria del terreno por vóxel, ancho de banda de replicación con
+varios jugadores cavando a la vez, mallado en el cliente y rendimiento en móvil. Necesita un lugar de
+pruebas con 8 parcelas profundas y un móvil modesto.
+
 ## 3. Impacto por área
 
 | Área | Impacto | Trabajo necesario |
@@ -89,6 +113,9 @@ calcula con el ancho del layout guardado.
    cambiarán, y eso hay que avisarlo en las notas de la actualización.
 6. **Despliegue por fases**: primero un lugar de pruebas con la opción activada, medición en Studio
    con 8 jugadores simulados y un móvil modesto, y solo después producción.
+7. **Interruptor**: `GameConfig.WideUnderground = false` por defecto. Con el interruptor apagado el
+   juego lee y escribe el layout 1 aunque el perfil tenga ya el layout 2 (usa `legacy`), así que se
+   puede desactivar en caliente sin publicar otra versión del código de guardado.
 
 ## 6. Recomendación
 
@@ -99,3 +126,8 @@ y reescalar las recetas de cuevas.
 Propongo hacerlo **después** de validar en Studio la versión actual de 16 de ancho, para tener una
 línea base real de memoria y red con la que comparar. Si las mediciones en Studio resultan
 ajustadas, 32 celdas (128 studs) es un punto intermedio con la mitad de coste que 40.
+
+**Actualización con números de Studio:** la versión de 16 celdas ya está medida (sección 2b). El
+coste de CPU de 40 celdas es asumible si se trocea la generación; **24 celdas** no necesitaría
+trocear nada. Lo que decide ahora es la memoria y la red con varios jugadores, que sigue sin medir.
+La decisión es tuya; no hay nada implementado.

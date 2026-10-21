@@ -440,21 +440,27 @@ function ShopUI.new(parent: Instance, deps: Deps)
 		end
 	end
 
+	-- Highlight inside the tab switch itself: a separate Activated connection could run before the
+	-- switch and paint the previous tab (Studio test 2 and 3).
+	local highlightTabs: () -> () = function() end
 	local toolsTab = modal:addTab("Herramientas", 1, function()
 		currentTab = "tools"
+		highlightTabs()
 		render()
 	end)
 	local upgradesTab = modal:addTab("Mejoras", 2, function()
 		currentTab = "upgrades"
+		highlightTabs()
 		render()
 	end)
 
 	local gearTab = modal:addTab("Equipo", 3, function()
 		currentTab = "gear"
+		highlightTabs()
 		render()
 	end)
 
-	local function highlightTabs()
+	highlightTabs = function()
 		toolsTab.BackgroundColor3 = if currentTab == "tools" then Theme.accent else Theme.card
 		upgradesTab.BackgroundColor3 = if currentTab == "upgrades" then Theme.accent else Theme.card
 		gearTab.BackgroundColor3 = if currentTab == "gear" then Theme.accent else Theme.card
@@ -496,9 +502,6 @@ function ShopUI.new(parent: Instance, deps: Deps)
 			render()
 		end
 	end
-	toolsTab.Activated:Connect(highlightTabs)
-	upgradesTab.Activated:Connect(highlightTabs)
-	gearTab.Activated:Connect(highlightTabs)
 	return api
 end
 

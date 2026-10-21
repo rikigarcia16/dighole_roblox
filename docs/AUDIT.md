@@ -257,7 +257,8 @@ la parcela, como mucho 12). Cuenta de piezas de la sala.
 
 ### Ensanchamiento del subsuelo
 **No se ha tocado**, por decisión tuya. Los números de `PROPOSAL_WIDE_UNDERGROUND.md` salen de la VM
-de Luau y son **orientativos**: no son rendimiento confirmado en Roblox. El siguiente paso es medir
+de Luau y son **orientativos**. **Actualización (fase 3):** ya está medido en Studio; ver la sección
+2b de la propuesta. Antes se proponía medir
 en Studio (MicroProfiler: `THNE.GenerateSlab` con 16 celdas, y el mismo benchmark en un servidor
 real) antes de diseñar la migración. Cualquier migración necesitará claves de celda versionadas,
 una copia del perfil anterior para poder volver atrás, verificación al cargar y un interruptor para
@@ -328,3 +329,9 @@ durante la prueba (no en el repositorio).
 | X5 | F en el gancho vacío | Tu herramienta cuelga, las palas se balancean, el libro muestra tu número; batería +50 %. |
 | X6 | Salir y volver (guardado real) | El taller sigue resuelto, tu herramienta en el gancho y el libro escrito. |
 | X7 | Sala del Contador | Suelo negro con líneas de luz visible; ningún puntal dentro. |
+| X8 | Garaje → cambiar entre pestañas | La pestaña pulsada queda resaltada y las demás no. |
+| X9 | Tener el gancho y comprar el gancho motorizado (12 000) | Sin gancho: «Primero necesitas: Gancho.». Con él: el botón pasa a «Gancho ⚡». |
+| X10 | Gancho ⚡ a una pared entre 40 y 80 studs, con batería | Tirón más rápido y la batería baja 6. Sin batería: «Sin batería, el motor no llega tan lejos.». A menos de 40 studs no gasta batería. |
+| X11 | Entrar en la casa tras llegar a una capa nueva | El mapa «EL AGUJERO» ilumina esa capa y muestra el récord; no hay césped atravesando el suelo. |
+| X12 | Completar una colección | Aparece su trofeo girando en el estante de la pared oeste, con su nombre legible. |
+| X13 | Cavar entre 650 y 2 200 m | Aparecen las cuatro especies nuevas de fósil; «Fósiles del abismo» se completa con las cuatro. |

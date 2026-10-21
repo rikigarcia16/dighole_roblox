@@ -307,3 +307,24 @@ Primera vez que las iteraciones 4–6 se ejecutan en Studio (`docs/STUDIO_REPORT
   lanzamiento largo no se pudo comprobar (no encontré una cámara con pared a más de 40 studs).
 - Mochila propulsora: **no**. Con el gancho, la cuerda y el gancho motorizado ya hay tres formas de
   moverse en vertical; una cuarta no añade decisiones.
+
+### Pestañas de la tienda
+- La pestaña activa no se resaltaba al cambiar: el resaltado se conectaba antes de que la pestaña
+  cambiara. Ahora cada pestaña cambia, resalta y redibuja en ese orden [código; StyLua; sin ver en
+  Studio].
+
+### Ensanchar el subsuelo: medido, no implementado
+- Medido en Studio (sección 2b de `docs/PROPOSAL_WIDE_UNDERGROUND.md`): escribir terreno cuesta
+  0,20 / 0,28 / 0,43 ms por capa con 16 / 24 / 40 celdas; el material de cada celda en Lua cuesta
+  1,14 µs y es lo que crece. Proyección con 40 celdas: ~8,5 ms por capa y ~10–14 ms por sector de
+  cuevas, por encima del presupuesto de 4 ms (habría que trocear); con 24 celdas cabe sin trocear.
+- Añadidos a la propuesta: interruptor `WideUnderground` apagado por defecto que vuelve al formato
+  antiguo sin publicar código nuevo. Memoria, red con varios jugadores y móvil siguen sin medir.
+  **Decisión tuya.**
+
+### Problemas abiertos de la fase 3
+- `luaucheck` no se ha pasado en local sobre los tests nuevos (no hay cargo en este equipo): falta
+  ejecutarlo en la nube o instalando Rust.
+- Lanzamiento largo del gancho motorizado sin comprobar en Studio.
+- Revisión visual y sonora tuya: grietas, taller de E., fósiles nuevos, mapa de capas y trofeos.
+- Pendiente opcional: desafíos opcionales (punto 7) y variación del golpe por material.
