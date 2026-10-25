@@ -388,9 +388,30 @@ mirar la cámara). Lo que estaba mal, por orden de gravedad:
    tú].
 - El ciclo cavar → llenar la mochila (20) → subir (R) → vender funciona: ~1,5 min hasta la primera
   venta (simulación: 0,9). Venta: 21 monedas + 20 de la misión.
-- **Abierto:** dentro de un pozo de una celda la cámara se pega a las paredes; a 2 m se ve, más
-  abajo llega a ser ilegible. Propuesta: cámara más alta y mirando hacia abajo cuando el jugador
-  está en un pozo estrecho. Necesita tu criterio.
+- Cámara en pozos estrechos: ver el bloque siguiente.
+
+### Pozos estrechos: cámara elevada y nada de quedarse encajado
+- **Cámara elevada** (`Util/ShaftCamera`, `CameraController`): con paredes en casi todos los lados
+  (6 de 8 rayos a menos de 6 studs), cielo abierto encima (10 studs o más) y la cabeza al menos 6
+  studs bajo la superficie, la cámara sube hasta 16 studs sobre la cabeza (por debajo de cualquier
+  techo) y mira hacia abajo con una ligera inclinación, para que «adelante» siga siendo adelante.
+  Entra tras 0,25 s y sale tras 0,6 s (no salta al pasar por el borde). Si algo se interpone entre
+  la cabeza y la cámara, la cámara se acerca: en la primera versión se metía en la roca. Al salir o
+  teletransportarse vuelve la cámara normal [Studio: vista a 2 m; entrar y salir con R verificado].
+- **Paredes más finas junto a lo cavado** (`GameConfig.DugWallOccupancy = 0.5`): el terreno suave
+  redondeaba las paredes 1–2 studs hacia dentro y un pozo de una celda era una rendija. Medido: el
+  personaje quedaba encajado sobre 24 studs de hueco o con la raíz dentro de la pared, y E no
+  encontraba nada que cavar (0 golpes enviados). Ahora las celdas sólidas al lado de una celda cavada
+  (misma capa) se escriben con ocupación 0,5; los suelos no cambian. El servidor reescribe una
+  celda más alrededor de cada golpe para actualizar esas paredes.
+- **Desencajar**: si aun así el personaje queda quieto, rodeado de paredes y con el suelo a más de 6
+  studs bajo el centro de su celda, el cliente lo baja a ese suelo, centrado (no si trepa una cuerda).
+- E lanza sus rayos desde la cabeza (desde la raíz fallaban si estaba dentro de la pared).
+- Medido en Studio con E mantenida: antes 32 bloques y atascado a 2 m; ahora 24 m en 60 s.
+- **Sin verificar a ojo:** el aspecto de las paredes más finas y de la cámara a más de 5 m. En mitad
+  de la prueba, la vista 3D de Studio dejó de dibujarse, incluso nada más arrancar Play en la
+  superficie y con mi cámara desactivada (la interfaz sí se veía). Es un problema de Studio, no del
+  juego, pero impide juzgarlo por captura. Míralo tú.
 
 ### Problemas abiertos de la fase 3
 - Resuelto: los tests pasan en local con Lune.

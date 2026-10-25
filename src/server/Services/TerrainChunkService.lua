@@ -38,6 +38,19 @@ export type PlotTerrain = {
 	generatedDepth: number, -- number of cell layers generated so far
 }
 
+local SIDES = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
+
+-- Whether a cell has a dug cell beside it on the same layer (its wall faces an opening).
+local function besideDug(plot: PlotTerrain, cx: number, d: number, cz: number): boolean
+	for _, side in SIDES do
+		local nx, nz = cx + side[1], cz + side[2]
+		if Grid.inDigArea(nx, d, nz) and plot.dug[Grid.key(nx, d, nz)] then
+			return true
+		end
+	end
+	return false
+end
+
 -- Material and occupancy of a single cell given the plot state.
 function TerrainChunkService.cellState(plot: PlotTerrain, cx: number, d: number, cz: number): (Enum.Material, number)
 	local diggable = Grid.inDigArea(cx, d, cz)
@@ -60,13 +73,15 @@ function TerrainChunkService.cellState(plot: PlotTerrain, cx: number, d: number,
 	if not resource or not material then
 		return Enum.Material.Rock, 1
 	end
+	local occupancy = if besideDug(plot, cx, d, cz) then GameConfig.DugWallOccupancy else 1
 	if diggable then
 		local damage = plot.damage[Grid.key(cx, d, cz)]
 		if damage then
-			return material, math.max(GameConfig.MinOccupancyWhileDamaged, 1 - damage / resource.hardness)
+			local damaged = math.max(GameConfig.MinOccupancyWhileDamaged, 1 - damage / resource.hardness)
+			return material, math.min(occupancy, damaged)
 		end
 	end
-	return material, 1
+	return material, occupancy
 end
 
 -- Rewrites the inclusive cell box [x0..x1] x [d0..d1] x [z0..z1] from the plot state.

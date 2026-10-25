@@ -235,7 +235,8 @@ local function handleDig(player: Player, position: any, normal: any)
 		minD, maxD = math.min(minD, hit.d), math.max(maxD, hit.d)
 		minZ, maxZ = math.min(minZ, hit.cz), math.max(maxZ, hit.cz)
 	end
-	TerrainChunkService.writeBox(plot, minX, maxX, minD, maxD, minZ, maxZ)
+	-- one cell wider: the walls beside a newly opened cell are written thinner (DugWallOccupancy)
+	TerrainChunkService.writeBox(plot, minX - 1, maxX + 1, minD, maxD, minZ - 1, maxZ + 1)
 
 	-- Rewards and progression.
 	local best: Resources.Resource? = nil

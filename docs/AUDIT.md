@@ -343,3 +343,6 @@ durante la prueba (no en el repositorio).
 | X19 | Entrar en una partida nueva | La cámara mira hacia el agujero, con el personaje de espaldas; «▼ CAVA AQUÍ» flota sobre el centro del agujero. |
 | X20 | Mantener clic sobre el fondo de tu pozo durante 30 s | Unos 30 bloques y varios metros de bajada sin quedarte atascado. |
 | X21 | Mirar la parcela desde fuera | Un marco de tierra con el borde de madera rodea la zona de cavar. |
+| X22 | Mantener E (o clic al suelo) hasta bajar 20 m por un pozo de una celda | No te quedas encajado; a partir de ~1,5 bloques bajo el césped la cámara sube y mira hacia abajo, sin meterse en la roca. |
+| X23 | Pulsar R desde el fondo del pozo | Vuelves arriba con la cámara normal detrás del personaje. |
+| X24 | Mirar las paredes de un pozo y de una cámara grande | Las paredes cavadas se ven bien (más rectas que antes); sin agujeros raros en el terreno. |

@@ -246,13 +246,16 @@ local function computeTarget(reach: number): (Vector3?, Vector3?, Enum.Material?
 	-- Fallback: dig beneath the feet, then in front of them. Straight down first: standing on the rim
 	-- of a hole the screen-centre ray falls past the edge, and "in front and down" pointed into the
 	-- hole too, so E / gamepad / touch did nothing at all (Studio test 2).
-	local below = workspace:Raycast(root.Position, Vector3.new(0, -reach, 0), rayParams)
+	-- From the head, not the root: in a narrow shaft the rounded walls can swallow the root, and a
+	-- ray that starts inside terrain finds nothing (Studio playtest: E stopped digging at 2 m).
+	local origin = root.Position + Vector3.new(0, 1.5, 0)
+	local below = workspace:Raycast(origin, Vector3.new(0, -reach, 0), rayParams)
 	if below then
 		return below.Position, below.Normal, below.Material
 	end
 	local forward = root.CFrame.LookVector * Vector3.new(1, 0, 1)
 	local direction = (forward.Unit * 0.45 - Vector3.yAxis).Unit
-	local fallback = workspace:Raycast(root.Position, direction * reach, rayParams)
+	local fallback = workspace:Raycast(origin, direction * reach, rayParams)
 	if fallback then
 		return fallback.Position, fallback.Normal, fallback.Material
 	end

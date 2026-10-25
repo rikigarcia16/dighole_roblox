@@ -2165,4 +2165,56 @@ test("feats: each Mines camp chalks one of E.'s bets", function()
 	ok(seen[1] and seen[2] and seen[3], "all three bets appear somewhere")
 end)
 
+test("shaft camera: only in narrow open shafts underground, with hysteresis, never straight down", function()
+	local previous = H.globals.CFrame
+	H.globals.CFrame = {
+		lookAt = function(eye, at)
+			ok(eye ~= at, "look-at of a point onto itself")
+			return { Position = eye }
+		end,
+	}
+	local ShaftCamera = H.module("ReplicatedStorage", "Shared", "Util", "ShaftCamera")
+	H.globals.CFrame = previous
+	eq(#ShaftCamera.directions(), ShaftCamera.SideRays)
+	ok(ShaftCamera.inShaft(8, math.huge, 20), "walls all round, sky above, deep enough")
+	ok(not ShaftCamera.inShaft(8, math.huge, 2), "a dent in the lawn is not a shaft")
+	ok(not ShaftCamera.inShaft(3, math.huge, 20), "a chamber is not a shaft")
+	ok(not ShaftCamera.inShaft(8, 4, 20), "a tunnel with a low roof is not a shaft")
+	-- hysteresis: enter after EnterSeconds, leave after ExitSeconds
+	local active, timer = ShaftCamera.step(false, true, 0, 0.1)
+	ok(not active, "not at once")
+	active, timer = ShaftCamera.step(active, true, timer, ShaftCamera.EnterSeconds)
+	ok(active, "after the enter delay")
+	active, timer = ShaftCamera.step(active, false, timer, ShaftCamera.ExitSeconds / 2)
+	ok(active, "a short glimpse out does not leave")
+	active = ShaftCamera.step(active, true, timer, 0.1)
+	ok(active, "back in: timer reset")
+	-- the view: above the head, below the ceiling, slightly tilted (never a degenerate look-at)
+	local head = H.Vector3.new(10, -40, 10)
+	local forward = H.Vector3.new(0, 0, 1)
+	local cf = ShaftCamera.target(head, forward, 8)
+	ok(cf.Position.Y > head.Y + 3 and cf.Position.Y <= head.Y + 8, "under an 8-stud ceiling")
+	ok(cf.Position.Z < head.Z, "pulled back against forward")
+	ok(ShaftCamera.target(head, forward, math.huge).Position.Y <= head.Y + ShaftCamera.MaxHeight, "capped height")
+	-- wedged: still, in a shaft, floor far below
+	ok(ShaftCamera.wedged(true, 0, 20, false), "held up over a drop")
+	ok(not ShaftCamera.wedged(true, 0, 3, false), "standing on the floor")
+	ok(not ShaftCamera.wedged(true, 0, 20, true), "climbing a rope")
+	ok(not ShaftCamera.wedged(false, 0, 20, false), "a ledge in a chamber")
+	ok(not ShaftCamera.wedged(true, 5, 20, false), "falling already")
+end)
+
+test("dug walls: solid cells beside an opening are thinner, the rest stay full", function()
+	local TerrainChunkService = H.module("ServerScriptService", "Server", "Services", "TerrainChunkService")
+	local GridM = H.module("ReplicatedStorage", "Shared", "Util", "Grid")
+	local plot = { originX = 0, originZ = 0, seed = 7, dug = {}, damage = {}, generatedDepth = 0 }
+	plot.dug[GridM.key(5, 3, 5)] = true
+	local _, beside = TerrainChunkService.cellState(plot, 6, 3, 5)
+	local _, far = TerrainChunkService.cellState(plot, 8, 3, 5)
+	local _, below = TerrainChunkService.cellState(plot, 5, 4, 5)
+	eq(beside, GameConfig.DugWallOccupancy, "wall beside the opening")
+	eq(far, 1, "untouched rock")
+	eq(below, 1, "the floor keeps full occupancy")
+end)
+
 H.finish()

@@ -28,6 +28,10 @@ GameConfig.MaxDepthCells = 2200 -- hard floor; below this there is unbreakable b
 GameConfig.DigReachPadding = 3 -- extra studs tolerated on top of a tool's reach (latency)
 GameConfig.CooldownTolerance = 0.8 -- server accepts hits this fraction of the tool cooldown apart
 GameConfig.MinOccupancyWhileDamaged = 0.25 -- partially damaged cells shrink down to this occupancy
+-- Solid cells beside a dug cell (same layer) are written thinner, so walls recede to the cell edge.
+-- At full occupancy smooth terrain rounds them 1-2 studs into the opening and a one-cell shaft became
+-- a slit the character got wedged in (Studio playtest).
+GameConfig.DugWallOccupancy = 0.5
 
 -- Energy -------------------------------------------------------------------
 GameConfig.SurfaceRechargeDepth = 3 -- metres; above this depth the battery recharges
