@@ -352,3 +352,5 @@ durante la prueba (no en el repositorio).
 | X28 | Golpear la roca madre (2 200 m) sin la herramienta ancestral | Aviso «La roca madre no se deja rayar…», nada más. |
 | X29 | Golpearla 6 veces con la herramienta ancestral | Luz blanca, apareces en tu jardín mirando al agujero, «DEBAJO DEL FONDO ESTABA EL JARDÍN», el diario lo cuenta. Repetirlo. |
 | X30 | Salir y volver (guardado real) | La pared conserva tu número, tienes la herramienta y el diario sigue igual. |
+| X31 | Volver a casa tras grabar tu número (y tras romper la roca madre) | Piedra negra con grieta de luz junto al mapa, «El fondo» y «Vueltas: N». |
+| X32 | Grabar y romper la roca madre con sonido | Raspado al grabar; crujido grave y campanillas con la luz blanca. ¿Encajan? |

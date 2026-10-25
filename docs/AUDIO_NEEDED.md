@@ -60,3 +60,11 @@ añadirán a `Config/Sounds` cuando haya audio para ellas; hoy el equipo usa `ui
 
 `ui_click`, `error`, `pickup`, `sell` y `purchase`: clics y campanillas cortas (0,1–0,4 s) con la
 misma familia de timbre.
+
+## Integrados (biblioteca de Roblox, provisionales)
+
+| Clave | ID | Efecto |
+|---|---|---|
+| `core_engrave` | 9118656994 | Rock Movement 21 (ProSoundEffects), la pared graba tu número |
+| `core_break` | 9118666800 | Rock Scrape Deep Grinding Impacts 16 (ProSoundEffects), la roca madre cede |
+| `core_light` | 9125635430 | Magical Exit Sparkling Chimes 5 (ProSoundEffects), la luz blanca |

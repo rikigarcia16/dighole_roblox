@@ -8,8 +8,9 @@
 -- house reflects how far the player has gone.
 --
 -- The house also shows progress derived from the profile (no new saved fields): a map of the seven
--- layers on the back wall, lit as each one is reached, with the depth record; and a trophy for each
--- completed collection set on the west wall shelf.
+-- layers on the back wall, lit as each one is reached, with the depth record; a trophy for each
+-- completed collection set on the west wall shelf; and, under the map, the stone of "El fondo" with
+-- the times the hole turned round.
 
 local CollectionService = game:GetService("CollectionService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -103,6 +104,8 @@ local function signatureOf(profile: any): string
 		table.insert(parts, if setDone(profile, set.id) then "1" else "0")
 	end
 	table.insert(parts, tostring(math.floor(profile.stats.maxDepth)))
+	local core = profile.anomalies.core
+	table.insert(parts, if core.engraved then "E" .. core.loops else "-")
 	return table.concat(parts)
 end
 
@@ -252,6 +255,61 @@ local function buildTrophies(plot: any, profile: any, folder: Folder)
 	end
 end
 
+-- The bottom: once the player's number is on the wall of "El fondo", a black polished stone with a
+-- crack of white light stands on a pedestal beside the layer map, with the times the hole turned round.
+local function buildCoreTrophy(plot: any, profile: any, folder: Folder)
+	local core = profile.anomalies.core
+	if not core.engraved then
+		return
+	end
+	local map = plot.points.layerMap :: CFrame
+	-- beside the map, between it and the display case (the table with the note stands in front of it)
+	local base = map.Position + map.RightVector * 7.5 + map.LookVector * 1.4 - Vector3.new(0, 5.3, 0)
+	newPart(
+		"CorePedestal",
+		Vector3.new(1.6, 1.2, 1.6),
+		CFrame.new(base + Vector3.new(0, 0.6, 0)),
+		Color3.fromRGB(40, 32, 26),
+		Enum.Material.Marble,
+		folder
+	)
+	local stone = newPart(
+		"Trophy_core",
+		Vector3.new(1, 1.4, 1),
+		CFrame.new(base + Vector3.new(0, 2, 0)),
+		Color3.fromRGB(22, 22, 26),
+		Enum.Material.Marble,
+		folder
+	)
+	stone.CanCollide = false
+	stone.Reflectance = 0.15 -- still, unlike the set trophies: the bottom does not turn
+	local crack = newPart(
+		"CoreCrack",
+		Vector3.new(0.08, 1.2, 1.02),
+		stone.CFrame * CFrame.Angles(0, 0, math.rad(12)),
+		Color3.fromRGB(214, 236, 255),
+		Enum.Material.Neon,
+		folder
+	)
+	crack.CanCollide = false
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromOffset(160, 44)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, 1.6, 0)
+	gui.MaxDistance = 22
+	gui.LightInfluence = 0
+	gui.Parent = stone
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 1)
+	label.Text = if core.loops > 0 then string.format("El fondo\nVueltas: %d", core.loops) else "El fondo"
+	label.TextScaled = true
+	label.TextWrapped = true
+	label.Font = Enum.Font.GothamBold
+	label.TextColor3 = Color3.fromRGB(214, 236, 255)
+	label.TextStrokeTransparency = 0.4
+	label.Parent = gui
+end
+
 -- Rebuilds the layer map and the trophies when something they show has changed.
 local function refreshProgress(plot: any, profile: any)
 	if not plot.folder or not plot.points or not plot.points.layerMap then
@@ -269,6 +327,7 @@ local function refreshProgress(plot: any, profile: any)
 	folder.Name = "Progress"
 	buildLayerMap(plot, profile, folder)
 	buildTrophies(plot, profile, folder)
+	buildCoreTrophy(plot, profile, folder)
 	folder.Parent = plot.folder
 	progress[plot] = { folder = folder, signature = signature }
 end

@@ -448,6 +448,21 @@ mirar la cámara). Lo que estaba mal, por orden de gravedad:
   la pared; el aspecto del basalto. Al mover al personaje con mi atajo, sin pasar por el sistema de
   teletransporte, saltó la hazaña «A pulso»: es efecto del atajo, no del juego.
 
+### El final en la casa y con sonido
+- **Trofeo del fondo** (`ExhibitService`): al grabar tu número, entre el mapa de capas y la vitrina
+  aparece una piedra negra pulida con una grieta de luz sobre un pedestal, con «El fondo» y, si ya
+  has roto la roca madre, «Vueltas: N». Se reconstruye cuando cambian el grabado o las vueltas. Sin
+  campos nuevos: sale de `anomalies.core` [Studio: visto; la primera posición quedaba tapada por la
+  mesa de la nota y se movió].
+- **Sonidos del final:** tres efectos de la biblioteca de Roblox, de ProSoundEffects (creador
+  verificado, gratis y con licencia para experiencias de Roblox), encontrados con el buscador de
+  Studio y comprobado que cargan: grabado («Rock Movement 21», 5,3 s), la roca madre cediendo («Rock
+  Scrape Deep Grinding Impacts 16», 2,5 s) y la luz blanca («Magical Exit Sparkling Chimes 5»,
+  3,5 s). Son la primera excepción a «solo sonidos internos»; no son audio propio y se cambian en
+  `Config/Sounds` [cargan en Studio; cómo suenan, a tu oído].
+- **Guardado real y dos jugadores:** preparada la prueba en `docs/TEST_SAVES_TWO_PLAYERS.md`.
+  Necesita publicar el sitio (decisión y cuenta tuyas) y abrir dos clientes desde Studio.
+
 ### Problemas abiertos de la fase 3
 - Resuelto: los tests pasan en local con Lune.
 - Lanzamiento largo del gancho motorizado sin comprobar en Studio.

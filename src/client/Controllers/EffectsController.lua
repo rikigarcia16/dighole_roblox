@@ -358,8 +358,8 @@ local SPECIAL_SOUNDS = {
 	workshop_found = "counter_found", -- placeholder until the workshop has its own sound
 	feat = "discover_epic",
 	core_found = "counter_found",
-	core_engraved = "counter_lock",
-	bedrock_break = "discover_legendary",
+	core_engraved = "core_engrave",
+	bedrock_break = "core_break",
 }
 
 -- White light that fills the screen while the bedrock gives way (the server moves the player to the
@@ -406,6 +406,7 @@ function EffectsController.special(position: Vector3, kind: string, resourceId: 
 		EffectsController.narrative:Fire("EL AGUJERO SE HEREDA")
 	elseif kind == "bedrock_break" then
 		whiteLight()
+		EffectsController.playAt("core_light", position)
 		task.delay(2.6, function()
 			EffectsController.narrative:Fire("DEBAJO DEL FONDO ESTABA EL JARDÍN")
 		end)

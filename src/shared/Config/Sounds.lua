@@ -9,6 +9,11 @@
 -- A missing file never breaks the game: the Sound simply stays silent and a warning is printed.
 -- For release, replace them with your own uploaded audio (keep the keys, change `id`).
 --
+-- Exception: the ending ("El fondo") uses three library effects from the Roblox Creator Store by
+-- ProSoundEffects (verified creator, free, licensed for use in Roblox experiences). Found with the
+-- Studio asset search and checked to LOAD in Studio (lengths 5.3 / 2.5 / 3.5 s); not original audio,
+-- so replace them like the rest if you upload your own.
+--
 -- Pitch ranges are randomised per play so repeated hits never sound identical.
 
 export type SoundDef = {
@@ -60,6 +65,22 @@ local Sounds: { [string]: SoundDef } = {
 	-- The Counter. NEEDS ORIGINAL AUDIO: a deep three-knock rhythm and a low hum are its identity;
 	-- these built-in placeholders only make the timing testable.
 	counter_knock = def(COLLIDE, 0.9, 0.32, 0.36, "El Contador: golpe del ritmo (placeholder)"),
+	-- The ending (library audio, see above).
+	core_engrave = def(
+		"rbxassetid://9118656994",
+		0.7,
+		1.05,
+		1.1,
+		"El fondo: la pared graba tu número (Rock Movement 21)"
+	),
+	core_break = def(
+		"rbxassetid://9118666800",
+		1,
+		0.85,
+		0.9,
+		"La roca madre cede (Rock Scrape Deep Grinding Impacts 16)"
+	),
+	core_light = def("rbxassetid://9125635430", 0.8, 0.9, 0.9, "La luz blanca (Magical Exit Sparkling Chimes 5)"),
 	counter_lock = def(PING, 0.5, 0.55, 0.55, "El Contador: un anillo encaja"),
 	counter_hum = def(CLICK, 0.12, 0.22, 0.22, "El Contador: zumbido de la sala (placeholder, en bucle)"),
 	counter_found = def(SPLASH, 0.5, 0.35, 0.35, "Entrar en la sala del Contador"),
