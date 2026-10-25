@@ -413,6 +413,41 @@ mirar la cámara). Lo que estaba mal, por orden de gravedad:
   superficie y con mi cámara desactivada (la interfaz sí se veía). Es un problema de Studio, no del
   juego, pero impide juzgarlo por captura. Míralo tú.
 
+### El final: «El fondo» y la roca madre (opción B de `PROPOSAL_CORE_ENDING.md`)
+- **Qué faltaba:** la Herramienta ancestral no se podía conseguir, la roca madre de 2200 m no
+  llevaba a nada y la historia no tenía desenlace.
+- **La sala** (`Anomalies.Rooms.core`, sector 67, 2154–2158 m; `CoreRoomBuilder`, `CoreService`):
+  mismo patrón que el Contador y el taller (caja reservada, cimiento, dos galerías guiadas). Paredes
+  negras pulidas, grietas de luz fría en el suelo y tres columnas grabadas: excavadores anteriores
+  con el nombre borrado (18 402, 11 930, 9 771, 6 215), «E. — 3 912» y una tercera vacía con la
+  forma de una mano. Al abrir una puerta: «EL FONDO» y entrada de diario.
+- **Interacción:** mantener F sobre la mano (solo el dueño de la parcela). La pared graba «Nombre —
+  bloques excavados» letra a letra, los dos ritmos se paran, aparece «EL AGUJERO SE HEREDA» y la
+  Herramienta ancestral pasa a ser tuya (se equipa en el garaje).
+- **Señales previas** (`CoreController`): desde ~1 780 m se oyen a la vez los golpes del Contador y
+  el martillo de E.; desacompasados de lejos, a la vez al llegar. Callan tras el grabado.
+- **La roca madre:** la capa 2200 es ahora basalto negro (antes era materia del núcleo, sin
+  distinguirse). Se puede golpear en cuanto la capa de encima está abierta. Sin la herramienta
+  ancestral: «La roca madre no se deja rayar…». Con ella, 6 golpes seguidos: luz blanca a pantalla
+  completa, «DEBAJO DEL FONDO ESTABA EL JARDÍN» y apareces en el césped de tu parcela, mirando al
+  agujero. Se puede repetir. No se cava ninguna celda por debajo de 2200: es una interacción que el
+  servidor valida (parcela, alcance, cadencia y herramienta equipada).
+- **Diario:** entrada «El fondo», que crece con tu número, con el taller si colgaste la pala y con
+  cada vuelta («Ya van N veces. El agujero nunca se acaba: da la vuelta.»).
+- **Misiones:** tres al final de la cadena (35 en total): «Encuentra el fondo», «Deja tu número en
+  la pared» y «Rompe la roca madre». Quien ya tenía la cadena terminada sigue con ellas.
+- **Guardados:** `anomalies.core = { found, engraved, engravedCount, engravedAt, loops }` con valores
+  por defecto, saneado (las vueltas exigen el grabado) y con prueba de guardar y recargar. La
+  herramienta se guarda en `tools` como cualquier otra. Una versión anterior del juego perdería el
+  estado del fondo, pero conservaría la herramienta.
+- **Studio** (atajos en Play: generar el terreno hasta 2201, Perforadora abisal, mover al
+  personaje, abrir una columna sobre la roca madre): la sala se construye y se revela; grabado con
+  602 bloques, herramienta concedida; con la herramienta, la roca madre cede y apareces en el jardín
+  (`loops = 1`, el diario lo cuenta); sin ella, el aviso y nada más [verificado y visto].
+- **Pendiente de tu revisión:** los ritmos (no se oyen en capturas); las columnas empiezan altas en
+  la pared; el aspecto del basalto. Al mover al personaje con mi atajo, sin pasar por el sistema de
+  teletransporte, saltó la hazaña «A pulso»: es efecto del atajo, no del juego.
+
 ### Problemas abiertos de la fase 3
 - Resuelto: los tests pasan en local con Lune.
 - Lanzamiento largo del gancho motorizado sin comprobar en Studio.

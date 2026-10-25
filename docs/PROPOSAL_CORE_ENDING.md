@@ -1,6 +1,6 @@
 # Propuesta: el final del agujero (tercera anomalía, Núcleo)
 
-**Estado:** propuesta, nada implementado. Decides tú.
+**Estado:** elegida la opción B e implementada (ver `GAMEPLAY_AUDIT.md`, «El final»).
 
 ## Qué falta hoy
 

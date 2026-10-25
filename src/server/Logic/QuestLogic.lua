@@ -35,6 +35,12 @@ function QuestLogic.progress(quest: Quests.Quest, profile: any): number
 		return CollectionSets.fossilCount(profile)
 	elseif quest.kind == "counter" then
 		return if profile.anomalies.counter[key :: string] == true then 1 else 0
+	elseif quest.kind == "core" then
+		local core = profile.anomalies.core
+		if key == "looped" then
+			return if core.loops > 0 then 1 else 0
+		end
+		return if core[key :: string] == true then 1 else 0
 	elseif quest.kind == "stations" then
 		return #profile.mobility.stations
 	elseif quest.kind == "set" then

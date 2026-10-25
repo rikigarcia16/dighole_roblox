@@ -357,7 +357,39 @@ local SPECIAL_SOUNDS = {
 	counter_lock = "counter_lock",
 	workshop_found = "counter_found", -- placeholder until the workshop has its own sound
 	feat = "discover_epic",
+	core_found = "counter_found",
+	core_engraved = "counter_lock",
+	bedrock_break = "discover_legendary",
 }
+
+-- White light that fills the screen while the bedrock gives way (the server moves the player to the
+-- surface during the hold), then clears over the lawn.
+local function whiteLight()
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "THNE_WhiteLight"
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 50
+	gui.ResetOnSpawn = false
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.fromScale(1, 1)
+	frame.BackgroundColor3 = Color3.fromRGB(250, 252, 255)
+	frame.BackgroundTransparency = 1
+	frame.BorderSizePixel = 0
+	frame.Parent = gui
+	gui.Parent = localPlayer:WaitForChild("PlayerGui")
+	TweenService:Create(frame, TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		BackgroundTransparency = 0,
+	}):Play()
+	task.delay(2.4, function()
+		local fade = TweenService:Create(frame, TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundTransparency = 1,
+		})
+		fade.Completed:Connect(function()
+			gui:Destroy()
+		end)
+		fade:Play()
+	end)
+end
 
 function EffectsController.special(position: Vector3, kind: string, resourceId: string?)
 	local resource = resourceId and Resources.get(resourceId)
@@ -368,8 +400,17 @@ function EffectsController.special(position: Vector3, kind: string, resourceId: 
 		EffectsController.narrative:Fire("ALGUIEN TRABAJABA AQUÍ")
 	elseif kind == "feat" then
 		EffectsController.narrative:Fire("HAZAÑA")
+	elseif kind == "core_found" then
+		EffectsController.narrative:Fire("EL FONDO")
+	elseif kind == "core_engraved" then
+		EffectsController.narrative:Fire("EL AGUJERO SE HEREDA")
+	elseif kind == "bedrock_break" then
+		whiteLight()
+		task.delay(2.6, function()
+			EffectsController.narrative:Fire("DEBAJO DEL FONDO ESTABA EL JARDÍN")
+		end)
 	end
-	if kind ~= "cave" and kind ~= "counter_found" and kind ~= "workshop_found" then
+	if kind ~= "cave" and kind ~= "counter_found" and kind ~= "workshop_found" and kind ~= "core_found" then
 		local e = nextEmitter(position)
 		e.sparkle.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
 		e.sparkle:Emit(if kind == "geode" then 45 else 25)

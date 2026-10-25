@@ -9,6 +9,7 @@
 --
 --   counter   The Counter, at the bottom of the Forgotten Mines (136-141 m).
 --   workshop  E.'s workshop, in the Ancient Caverns (456-460 m).
+--   core      "El fondo", in the Unknown Core just above the bedrock (2154-2158 m).
 
 local GameConfig = require(script.Parent.GameConfig)
 
@@ -55,6 +56,14 @@ Anomalies.Rooms = {
 		d0 = 456,
 		d1 = 460,
 	}),
+	core = room("core", "El fondo", 67, { -- 2144..2175 m, above the bedrock at 2200 m
+		x0 = C - 3,
+		x1 = C + 2,
+		z0 = C - 3,
+		z1 = C + 2,
+		d0 = 2154,
+		d1 = 2158,
+	}),
 } :: { [string]: Room }
 
 -- Smooth terrain bulges about half a cell into a room from every wall, the floor and the ceiling
@@ -62,7 +71,7 @@ Anomalies.Rooms = {
 -- inside the cell box; before that the Counter's glass floor and lining were buried in rock.
 Anomalies.TerrainBulge = 2
 
-Anomalies.RoomList = { Anomalies.Rooms.counter, Anomalies.Rooms.workshop } :: { Room }
+Anomalies.RoomList = { Anomalies.Rooms.counter, Anomalies.Rooms.workshop, Anomalies.Rooms.core } :: { Room }
 
 -- The Counter keeps its original names (used across the code and the tests).
 Anomalies.CounterRoom = Anomalies.Rooms.counter.box
@@ -156,5 +165,14 @@ Anomalies.Rings = 3
 -- E.'s count in the ledger, and the battery bonus the workbench gives once you hang your shovel.
 Anomalies.WorkshopEBlocks = 3912
 Anomalies.WorkshopBatteryBonus = 0.5 -- +50 % battery capacity
+
+-- The bottom ---------------------------------------------------------------------------------------
+-- The wall of "El fondo": three columns of engraved counts. The first holds diggers older than E.
+-- (names worn away), the second E., the third is empty until the player lays a hand on it; then
+-- the ancestral tool is theirs, and with it the bedrock gives way (CoreService): the crack opens
+-- onto white light and the player comes out on the lawn of their own plot.
+Anomalies.CoreOlderCounts = { 18402, 11930, 9771, 6215 }
+Anomalies.CoreToolId = "ancestral_tool"
+Anomalies.BedrockHits = 6 -- swings of the ancestral tool before the bedrock gives way
 
 return Anomalies

@@ -2,12 +2,15 @@
 -- Journal entries that grow with later discoveries. Each paragraph can require conditions; the
 -- client composes the visible text (Util/JournalView). Placeholders: {solvedCount}, {cellsDug},
 -- {hungCount} (blocks dug when the shovel was hung in E.'s workshop), {workshopShort} (how many
--- E. still had over you then).
+-- E. still had over you then), {engravedCount} (your number on the wall of "El fondo"), {loops}
+-- (times the bedrock was broken).
 --
 -- requires keys (all must hold):
 --   counterFound / counterSolved : the Counter room state
 --   workshopFound / workshopHung : E.'s workshop state
 --   workshopBeyondE              : you had dug more than E. when you hung your shovel
+--   coreFound / coreEngraved     : "El fondo" found / your number engraved on its wall
+--   coreLoops = n                : the bedrock broken at least n times
 --   fossil = id                  : species registered in the collection
 --   zone = id                    : zone reached
 --   clue = id                    : note read
@@ -137,6 +140,52 @@ local Journal: { Entry } = {
 		},
 	},
 }
+
+-- The bottom: the third anomaly and the end of the story (Config/Anomalies.Rooms.core).
+table.insert(Journal, {
+	id = "core_found",
+	title = "El fondo",
+	requires = { coreFound = true },
+	paragraphs = {
+		{
+			text = "Debajo de todo, la roca deja de parecer roca: una pared negra y pulida, más dura que cualquier "
+				.. "cosa que haya tocado. En ella hay tres columnas de números grabados.",
+		},
+		{
+			text = "La primera tiene los nombres borrados y cifras enormes: 18 402, 11 930, 9 771, 6 215. La segunda "
+				.. "dice «E. — 3 912». La tercera está vacía, salvo por la forma de una mano.",
+			requires = { coreEngraved = false },
+		},
+		{
+			text = "Apoyé la mano. La pared grabó {engravedCount} en la tercera columna, con la misma letra que el "
+				.. "libro del taller. Los dos ritmos, el de la máquina y el del martillo, se pararon a la vez.",
+			requires = { coreEngraved = true },
+		},
+		{
+			text = "En el taller colgué mi pala debajo de la de E. Aquí abajo, mi número vuelve a quedar debajo del suyo.",
+			requires = { coreEngraved = true, workshopHung = true },
+		},
+		{
+			text = "Ahora lo entiendo. El agujero no es de nadie: se hereda. Cada uno llega hasta donde llegó el "
+				.. "anterior y sigue un poco más. La máquina cuenta a quien cava, el taller guarda sus palas y el "
+				.. "fondo guarda sus números.",
+			requires = { coreEngraved = true },
+		},
+		{
+			text = "La herramienta que salió de la pared no rebota contra la roca madre. Debajo del fondo hay algo.",
+			requires = { coreEngraved = true, coreLoops = 0 },
+		},
+		{
+			text = "Rompí la roca madre. Detrás no había más roca, sino luz, y después el césped de mi parcela, con el "
+				.. "agujero delante, como el primer día. Debajo del fondo estaba el jardín.",
+			requires = { coreLoops = 1 },
+		},
+		{
+			text = "Ya van {loops} veces. El agujero nunca se acaba: da la vuelta.",
+			requires = { coreLoops = 2 },
+		},
+	},
+})
 
 -- E.'s chalk marks: the feats (Config/Feats) are only ever hinted here, once something related has
 -- happened, and confirmed when earned. Never a checklist.

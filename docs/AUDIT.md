@@ -346,3 +346,9 @@ durante la prueba (no en el repositorio).
 | X22 | Mantener E (o clic al suelo) hasta bajar 20 m por un pozo de una celda | No te quedas encajado; a partir de ~1,5 bloques bajo el césped la cámara sube y mira hacia abajo, sin meterse en la roca. |
 | X23 | Pulsar R desde el fondo del pozo | Vuelves arriba con la cámara normal detrás del personaje. |
 | X24 | Mirar las paredes de un pozo y de una cámara grande | Las paredes cavadas se ven bien (más rectas que antes); sin agujeros raros en el terreno. |
+| X25 | Bajar de 1 800 a 2 150 m | Se oyen dos ritmos (golpes y martillo) que se van sincronizando. |
+| X26 | Abrir una puerta de la sala a ~2 158 m | «EL FONDO», entrada de diario; la mano de la tercera columna admite F. |
+| X27 | Mantener F en la mano | Tu nombre y número se graban letra a letra, callan los ritmos, «EL AGUJERO SE HEREDA», Herramienta ancestral en el garaje. |
+| X28 | Golpear la roca madre (2 200 m) sin la herramienta ancestral | Aviso «La roca madre no se deja rayar…», nada más. |
+| X29 | Golpearla 6 veces con la herramienta ancestral | Luz blanca, apareces en tu jardín mirando al agujero, «DEBAJO DEL FONDO ESTABA EL JARDÍN», el diario lo cuenta. Repetirlo. |
+| X30 | Salir y volver (guardado real) | La pared conserva tu número, tienes la herramienta y el diario sigue igual. |

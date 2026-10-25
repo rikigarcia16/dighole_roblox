@@ -13,6 +13,7 @@
 --   "counter"   the Counter: key "found" or "solved"
 --   "stations"  lift stations owned >= target
 --   "set"       collection set `key` (Config/Collections) complete
+--   "core"      "El fondo": key "found", "engraved" or "looped" (bedrock broken at least once)
 --
 -- The chain only ever grows at the end: a saved `quests.index` keeps pointing at the same quest, and
 -- players who had finished the old chain continue with the first new one.
@@ -21,7 +22,7 @@ export type Quest = {
 	id: string,
 	title: string,
 	hint: string,
-	kind: "stat" | "depth" | "collect" | "tool" | "clue" | "fossils" | "counter" | "stations" | "set",
+	kind: "stat" | "depth" | "collect" | "tool" | "clue" | "fossils" | "counter" | "stations" | "set" | "core",
 	key: string?,
 	target: number,
 	reward: number,
@@ -305,6 +306,33 @@ local Quests: { Quest } = {
 		kind = "depth",
 		target = 1500,
 		reward = 100000,
+	},
+	{
+		id = "core_found",
+		title = "Encuentra el fondo",
+		hint = "Los dos ritmos suenan juntos cerca de los 2 150 m.",
+		kind = "core",
+		key = "found",
+		target = 1,
+		reward = 150000,
+	},
+	{
+		id = "core_engraved",
+		title = "Deja tu número en la pared",
+		hint = "La tercera columna está vacía.",
+		kind = "core",
+		key = "engraved",
+		target = 1,
+		reward = 200000,
+	},
+	{
+		id = "core_looped",
+		title = "Rompe la roca madre",
+		hint = "Con la herramienta ancestral, a 2 200 m.",
+		kind = "core",
+		key = "looped",
+		target = 1,
+		reward = 250000,
 	},
 }
 

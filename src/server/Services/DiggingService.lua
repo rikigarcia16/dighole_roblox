@@ -36,6 +36,13 @@ local PROBE_DEPTHS = { 0.5, 2, 3.5 }
 local LOS_TOLERANCE = 3 -- studs between the reported hit point and what the server's ray meets
 
 local lastHit: { [Player]: number } = {}
+
+-- The bedrock (layer GameConfig.MaxDepthCells) is never dug; CoreService decides what a swing at
+-- it does (registered here to avoid a require cycle).
+local bedrockHandler: ((Player, any, Vector3) -> ())? = nil
+function DiggingService.setBedrockHandler(handler: (Player, any, Vector3) -> ())
+	bedrockHandler = handler
+end
 local zoneEvent = Remotes.event("ZoneEntered")
 
 local function isFiniteVector(v: Vector3): boolean
@@ -103,6 +110,25 @@ local function handleDig(player: Player, position: any, normal: any)
 			4
 		)
 		return
+	end
+
+	-- A swing at the bedrock under the plot's own dig area (only reachable once the layer above it
+	-- is open): not a cell to dig, an interaction.
+	for _, depthIn in PROBE_DEPTHS do
+		local cx, d, cz = Grid.worldToCell(plot.originX, plot.originZ, position - unitNormal * depthIn)
+		if
+			d >= GameConfig.MaxDepthCells
+			and cx >= 0
+			and cx < GameConfig.PlotDigCells
+			and cz >= 0
+			and cz < GameConfig.PlotDigCells
+		then
+			lastHit[player] = now
+			if bedrockHandler then
+				bedrockHandler(player, plot, position)
+			end
+			return
+		end
 	end
 
 	-- Resolve the target cell: the first solid, diggable cell just behind the hit surface.

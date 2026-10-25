@@ -57,6 +57,10 @@ function TerrainChunkService.cellState(plot: PlotTerrain, cx: number, d: number,
 	if diggable and plot.dug[Grid.key(cx, d, cz)] then
 		return AIR, 0
 	end
+	-- the bedrock: one black layer at the very bottom that no tool digs (CoreService)
+	if d >= GameConfig.MaxDepthCells then
+		return Enum.Material.Basalt, 1
+	end
 	-- the protected ring around the hole is bare earth on top, so the hole reads as a hole from the
 	-- surface (grass blades hid it completely: Studio playtest)
 	if d == 0 and not diggable then

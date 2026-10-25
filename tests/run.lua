@@ -786,6 +786,13 @@ test("quest chain advances in order and never pays twice", function()
 	p.stats.maxDepth = 1600
 	local before = p.coins
 	QuestLogic.advance(p)
+	eq(QuestLogic.view(p).id, "core_found", "the ending waits at the bottom")
+	p.anomalies.core.found = true
+	p.anomalies.core.engraved = true
+	QuestLogic.advance(p)
+	eq(QuestLogic.view(p).id, "core_looped", "engraved, the bedrock is next")
+	p.anomalies.core.loops = 1
+	QuestLogic.advance(p)
 	eq(QuestLogic.view(p), nil, "chain finished")
 	eq(p.quests.index, #Quests + 1)
 	local expected = 0
@@ -2037,6 +2044,7 @@ do
 		eq(TerrainChunkService.cellState(plot, -1, 0, 5), Enum.Material.Ground, "ring cell")
 		eq(TerrainChunkService.cellState(plot, GameConfig.PlotDigCells, 0, 5), Enum.Material.Ground)
 		eq(TerrainChunkService.cellState(plot, 5, 0, 5), Enum.Material.Grass, "dig cell stays grass")
+		eq(TerrainChunkService.cellState(plot, 5, GameConfig.MaxDepthCells, 5), Enum.Material.Basalt, "black bedrock")
 	end)
 end
 
@@ -2215,6 +2223,72 @@ test("dug walls: solid cells beside an opening are thinner, the rest stay full",
 	eq(beside, GameConfig.DugWallOccupancy, "wall beside the opening")
 	eq(far, 1, "untouched rock")
 	eq(below, 1, "the floor keeps full occupancy")
+end)
+
+test("the bottom: room above the bedrock, bedrock undiggable and black, state saved and sanitised", function()
+	local Anomalies = H.module("ReplicatedStorage", "Shared", "Config", "Anomalies")
+	local GridM = H.module("ReplicatedStorage", "Shared", "Util", "Grid")
+	local core = Anomalies.Rooms.core
+	ok(core.box.d1 + 8 < GameConfig.MaxDepthCells, "room and foundation above the bedrock")
+	eq(math.floor(core.box.d0 / Caves.SectorHeight), core.sector, "room inside its sector")
+	eq(math.floor(core.box.d1 / Caves.SectorHeight), core.sector)
+	ok(table.find(Anomalies.RoomList, core) ~= nil, "listed with the other rooms")
+	ok(not GridM.inDigArea(5, GameConfig.MaxDepthCells, 5), "the bedrock is never a dig cell")
+	ok(GridM.inDigArea(5, GameConfig.MaxDepthCells - 1, 5), "the layer above is")
+	-- the sector really holds the room and its guided galleries
+	local sector = Caves.sector(31, core.sector)
+	eq(sector.anomalyId, "core")
+	local guided = 0
+	for _, f in sector.features do
+		if f.guided then
+			guided += 1
+		end
+	end
+	ok(guided >= 2, "two guided galleries lead to the doorways")
+	-- saved state
+	local p = ProfileSchema.default(8)
+	eq(p.anomalies.core.engraved, false)
+	p.anomalies.core = { found = true, engraved = true, engravedCount = 61234, engravedAt = 1790000000, loops = 2 }
+	p.tools.ancestral_tool = true
+	local loaded = ProfileSchema.reconcile(dataStoreRoundTrip(p), 1)
+	eq(loaded.anomalies.core.engravedCount, 61234)
+	eq(loaded.anomalies.core.loops, 2)
+	eq(loaded.tools.ancestral_tool, true, "the ancestral tool is kept like any other")
+	local bad = ProfileSchema.default(8)
+	bad.anomalies.core = { found = "no", engraved = false, engravedCount = -3, engravedAt = "x", loops = 9 } :: any
+	local fixed = ProfileSchema.reconcile(bad, 1).anomalies.core
+	eq(fixed.found, false)
+	eq(fixed.engravedCount, 0)
+	eq(fixed.loops, 0, "no loops without the engraving")
+	local old = ProfileSchema.default(8) :: any
+	old.anomalies.core = nil
+	eq(ProfileSchema.reconcile(dataStoreRoundTrip(old), 1).anomalies.core.loops, 0, "older saves get the default")
+end)
+
+test("the bottom: journal grows with the engraving and with each time the hole turns round", function()
+	local JournalView = H.module("ReplicatedStorage", "Shared", "Util", "JournalView")
+	local p = ProfileSchema.default(9)
+	local function body(): string?
+		for _, e in JournalView.entries(p) do
+			if e.id == "core_found" then
+				return e.body
+			end
+		end
+		return nil
+	end
+	eq(body(), nil, "nothing before finding it")
+	p.anomalies.core.found = true
+	ok((body() :: string):find("forma de una mano"), "the empty column")
+	p.anomalies.core.engraved = true
+	p.anomalies.core.engravedCount = 45678
+	local b = body() :: string
+	ok(b:find("45678") and b:find("se hereda") and b:find("Debajo del fondo hay algo"), "engraved")
+	ok(not b:find("forma de una mano"), "the empty column is gone")
+	p.anomalies.core.loops = 1
+	b = body() :: string
+	ok(b:find("estaba el jardín") and not b:find("hay algo") and not b:find("Ya van"), "first time round")
+	p.anomalies.core.loops = 3
+	ok((body() :: string):find("Ya van 3 veces"), "again and again")
 end)
 
 H.finish()

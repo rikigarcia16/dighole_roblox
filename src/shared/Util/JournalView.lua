@@ -14,8 +14,23 @@ local function holds(requires: { [string]: any }?, state: any): boolean
 	end
 	local counter = state.anomalies and state.anomalies.counter or {}
 	local workshop = state.anomalies and state.anomalies.workshop or {}
+	local core = state.anomalies and state.anomalies.core or {}
 	for key, value in requires do
-		if key == "workshopFound" then
+		if key == "coreFound" then
+			if (core.found == true) ~= value then
+				return false
+			end
+		elseif key == "coreEngraved" then
+			if (core.engraved == true) ~= value then
+				return false
+			end
+		elseif key == "coreLoops" then
+			-- 0 means "never broken"; n > 0 means "broken at least n times"
+			local loops = core.loops or 0
+			if (value == 0 and loops ~= 0) or (value > 0 and loops < value) then
+				return false
+			end
+		elseif key == "workshopFound" then
 			if (workshop.found == true) ~= value then
 				return false
 			end
@@ -85,6 +100,7 @@ JournalView.holds = holds
 local function fill(text: string, state: any): string
 	local counter = state.anomalies and state.anomalies.counter or {}
 	local workshop = state.anomalies and state.anomalies.workshop or {}
+	local core = state.anomalies and state.anomalies.core or {}
 	local stats = state.stats or {}
 	return (
 		text:gsub("{(%w+)}", function(name: string): string
@@ -96,6 +112,10 @@ local function fill(text: string, state: any): string
 				return tostring(math.max(0, Anomalies.WorkshopEBlocks - (workshop.hungCount or 0)))
 			elseif name == "cellsDug" then
 				return tostring(stats.cellsDug or 0)
+			elseif name == "engravedCount" then
+				return tostring(core.engravedCount or 0)
+			elseif name == "loops" then
+				return tostring(core.loops or 0)
 			end
 			return "{" .. name .. "}"
 		end)

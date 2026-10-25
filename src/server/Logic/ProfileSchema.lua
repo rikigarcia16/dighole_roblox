@@ -38,6 +38,9 @@ export type Profile = {
 		counter: { found: boolean, solved: boolean, rings: { number }, solvedCount: number, solvedAt: number },
 		-- E.'s workshop (Ancient Caverns). Added without a version bump: older saves get the default.
 		workshop: { found: boolean, hung: boolean, hungCount: number, hungAt: number, toolId: string },
+		-- "El fondo" (Unknown Core) and the bedrock under it. Added without a version bump: older saves
+		-- get the default. loops = times the player broke the bedrock and came out in the garden.
+		core: { found: boolean, engraved: boolean, engravedCount: number, engravedAt: number, loops: number },
 	},
 	mobility: {
 		ropes: number, -- ropes carried
@@ -87,6 +90,7 @@ function ProfileSchema.default(seed: number): Profile
 		anomalies = {
 			counter = { found = false, solved = false, rings = {}, solvedCount = 0, solvedAt = 0 },
 			workshop = { found = false, hung = false, hungCount = 0, hungAt = 0, toolId = "" },
+			core = { found = false, engraved = false, engravedCount = 0, engravedAt = 0, loops = 0 },
 		},
 		mobility = { ropes = 0, placedRopes = {}, stations = {}, rescues = 0 },
 		quests = { index = 1, completed = {} },
@@ -263,6 +267,16 @@ function ProfileSchema.reconcile(data: any, seed: number): Profile
 		workshop.hungCount = math.floor(finiteNonNegative(w.hungCount, 0))
 		workshop.hungAt = math.floor(finiteNonNegative(w.hungAt, 0))
 		workshop.toolId = if type(w.toolId) == "string" and Tools.get(w.toolId) then w.toolId else ""
+	end
+	if type(data.anomalies) == "table" and type(data.anomalies.core) == "table" then
+		local c = data.anomalies.core
+		local core = profile.anomalies.core
+		core.engraved = c.engraved == true
+		core.found = c.found == true or core.engraved
+		core.engravedCount = math.floor(finiteNonNegative(c.engravedCount, 0))
+		core.engravedAt = math.floor(finiteNonNegative(c.engravedAt, 0))
+		-- breaking the bedrock needs the engraving first
+		core.loops = if core.engraved then math.min(math.floor(finiteNonNegative(c.loops, 0)), 1e6) else 0
 	end
 
 	if type(data.mobility) == "table" then
