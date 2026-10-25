@@ -480,6 +480,26 @@ mirar la cámara). Lo que estaba mal, por orden de gravedad:
   personaje (antes no se notaba porque todo estaba 2 studs más alto). Se puede bajar desactivando la
   decoración del terreno en Studio (Terreno → `Decoration`), que no se puede tocar desde código.
 
+### Primera compra y bajada a las Minas (partida real, tercera parte)
+- **La batería era una trampa para novatos:** se ofrecía desde el principio por 120 monedas, cuando
+  aún no tienes nada que la gaste (cavar no la usa). Ahora el garaje muestra «Primero, equipo con
+  batería» hasta tener linterna, detector o gancho motorizado, y el servidor también lo rechaza
+  (`Gear.needsBattery`). La simulación tampoco la compra: sin ese gasto, el Núcleo llega a ~103 min
+  en vez de ~115 [Studio: bloqueada sin equipo y en venta con la linterna].
+- **E se atascaba en dos sitios al bajar a las Minas:**
+  1. En el filo de una cornisa (galería de mina) los rayos de E caían al vacío y no cavaba nada. Ahora
+     también mira justo debajo de los pies, alrededor.
+  2. Si lo de debajo era un mineral demasiado duro (una veta de plata con la pala reforzada), E lo
+     golpeaba para siempre aunque al lado hubiera tierra. Ahora, sin ratón, elige una celda que la
+     herramienta pueda romper si hay alguna a su alcance; si todo es demasiado duro, sigue
+     apuntando a ello y sale el aviso de potencia.
+  Medido con E mantenida y la pala reforzada: antes, parado a 71 m y a 89 m; ahora, 135 m en 100 s,
+  hasta la carcasa del Contador (que por diseño no se cava: se entra por sus puertas).
+- Visto también: la compra de la pala reforzada en un clic (100 monedas + 35 de la misión) y el
+  resaltado de pestañas del garaje.
+- Para quien prueba: Escape abre el menú de Roblox y, mientras está abierto, ninguna tecla del juego
+  responde (fue mi atajo, no un fallo del juego).
+
 ### Problemas abiertos de la fase 3
 - Resuelto: los tests pasan en local con Lune.
 - Lanzamiento largo del gancho motorizado sin comprobar en Studio.

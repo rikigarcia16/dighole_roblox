@@ -68,6 +68,20 @@ Gear.Detector = { pulseCost = 12, cooldown = 2.5, range = 120 } -- studs (30 m)
 Gear.Hook = { range = 40, cooldown = 1.6, speed = 70, maxSeconds = 1, hangSeconds = 1.5 } -- studs, s, studs/s, s
 Gear.MotorHook = { range = 80, speed = 100, batteryCost = 6 } -- studs, studs/s, battery per throw
 
+-- Pieces that draw on the battery (the plain hook does not). Until the player owns one, a bigger
+-- battery is useless, so the shop does not sell it yet (a new player could spend their first coins on
+-- it: Studio playtest).
+Gear.UsesBattery = { lamp = true, detector = true, motor_hook = true } :: { [string]: boolean }
+
+function Gear.needsBattery(owned: { [string]: boolean }?): boolean
+	for id in Gear.UsesBattery do
+		if owned and owned[id] == true then
+			return true
+		end
+	end
+	return false
+end
+
 -- Where the battery recharges besides the surface: within this many studs of an owned station.
 Gear.StationRechargeDistance = 14
 

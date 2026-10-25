@@ -222,8 +222,18 @@ function DigController.setHeld(source: string, held: boolean)
 	holdSources[source] = held
 end
 
--- Returns the aimed surface point, normal and terrain material within reach, or nil.
-local function computeTarget(reach: number): (Vector3?, Vector3?, Enum.Material?)
+local FOOT_OFFSETS = {
+	Vector3.new(1.6, 0, 0),
+	Vector3.new(-1.6, 0, 0),
+	Vector3.new(0, 0, 1.6),
+	Vector3.new(0, 0, -1.6),
+}
+
+-- Returns the aimed surface point, normal and terrain material within reach, or nil. `power` is the
+-- tool's: when E / gamepad / touch aim on their own (no mouse), a cell the tool cannot break is only
+-- chosen if nothing breakable is in reach (Studio playtest: E hammered a silver vein under the feet
+-- forever while dirt beside it could be dug).
+local function computeTarget(reach: number, power: number): (Vector3?, Vector3?, Enum.Material?)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local camera = workspace.CurrentCamera
@@ -248,16 +258,32 @@ local function computeTarget(reach: number): (Vector3?, Vector3?, Enum.Material?
 	-- hole too, so E / gamepad / touch did nothing at all (Studio test 2).
 	-- From the head, not the root: in a narrow shaft the rounded walls can swallow the root, and a
 	-- ray that starts inside terrain finds nothing (Studio playtest: E stopped digging at 2 m).
+	-- Candidates in order: straight down, in front and down, then straight down around the feet
+	-- (standing on the lip of a drop the first two miss the ledge under the feet: Studio playtest).
 	local origin = root.Position + Vector3.new(0, 1.5, 0)
-	local below = workspace:Raycast(origin, Vector3.new(0, -reach, 0), rayParams)
-	if below then
-		return below.Position, below.Normal, below.Material
-	end
 	local forward = root.CFrame.LookVector * Vector3.new(1, 0, 1)
-	local direction = (forward.Unit * 0.45 - Vector3.yAxis).Unit
-	local fallback = workspace:Raycast(origin, direction * reach, rayParams)
-	if fallback then
-		return fallback.Position, fallback.Normal, fallback.Material
+	local rays = {
+		Vector3.new(0, -reach, 0),
+		(forward.Unit * 0.45 - Vector3.yAxis).Unit * reach,
+	}
+	local starts = { origin, origin }
+	for _, offset in FOOT_OFFSETS do
+		table.insert(rays, Vector3.new(0, -reach, 0))
+		table.insert(starts, origin + offset)
+	end
+	local first: RaycastResult? = nil
+	for i, direction in rays do
+		local hit = workspace:Raycast(starts[i], direction, rayParams)
+		if hit then
+			local resource = Resources.fromMaterial(hit.Material)
+			if not resource or resource.requiredPower <= power then
+				return hit.Position, hit.Normal, hit.Material
+			end
+			first = first or hit
+		end
+	end
+	if first then
+		return first.Position, first.Normal, first.Material -- only unbreakable rock around: say so
 	end
 	return nil, nil, nil
 end
@@ -353,7 +379,7 @@ function DigController.start()
 	-- The hit is predicted from the terrain material under the cursor, so it sounds instantly;
 	-- the server's answer only adds breaks and discoveries (EffectsController, DigFx).
 	local function strike(tool: Tools.Tool)
-		local position, normal, material = computeTarget(tool.reach)
+		local position, normal, material = computeTarget(tool.reach, tool.power)
 		if not position or not normal then
 			return
 		end
@@ -379,7 +405,7 @@ function DigController.start()
 			updateHighlight(nil, nil, nil, nil)
 			return
 		end
-		local position, normal, material = computeTarget(tool.reach)
+		local position, normal, material = computeTarget(tool.reach, tool.power)
 		updateHighlight(position, normal, material, tool)
 
 		if not isHolding() or not position or not normal then

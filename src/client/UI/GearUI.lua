@@ -259,12 +259,10 @@ function GearUI.new(gui: ScreenGui, deps: Deps)
 	function api.refresh()
 		local state = deps.getState()
 		local gear = state and state.gear or {}
-		local usesBattery = false
 		for id, button in buttonFor do
 			button.Visible = gear[id] == true
-			usesBattery = usesBattery or (gear[id] == true and id ~= "hook")
 		end
-		usesBattery = usesBattery or gear.motor_hook == true
+		local usesBattery = Gear.needsBattery(gear)
 		buttonFor.hook.Text = if gear.motor_hook then "Gancho ⚡" else "Gancho"
 		deps.showEnergy(usesBattery)
 	end

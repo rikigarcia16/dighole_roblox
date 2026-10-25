@@ -81,6 +81,9 @@ local function buyUpgrade(player: Player, profile: any, trackId: string): Result
 	if not nextLevel then
 		return { ok = false, message = "Ya está al máximo." }
 	end
+	if trackId == "battery" and not Gear.needsBattery(profile.gear) then
+		return { ok = false, message = "Primero necesitas equipo que use batería (linterna o detector)." }
+	end
 	if not nearShop(player) then
 		return { ok = false, message = "Vuelve al garaje para comprar." }
 	end

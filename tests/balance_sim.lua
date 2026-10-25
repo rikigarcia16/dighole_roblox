@@ -90,7 +90,10 @@ local function simulate(seed, maxMinutes)
 				end
 			end
 			for _, track in Upgrades.List do
-				local nextLevel = not track.hidden and track.levels[(levels[track.id] or 1) + 1]
+				-- the bot owns no gear, so the shop does not sell it a battery (Gear.needsBattery)
+				local nextLevel = not track.hidden
+					and track.id ~= "battery"
+					and track.levels[(levels[track.id] or 1) + 1]
 				if nextLevel and nextLevel.price < bestCost then
 					bestCost, bestAction =
 						nextLevel.price, function()

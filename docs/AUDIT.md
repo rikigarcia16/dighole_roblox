@@ -356,3 +356,5 @@ durante la prueba (no en el repositorio).
 | X32 | Grabar y romper la roca madre con sonido | Raspado al grabar; crujido grave y campanillas con la luz blanca. ¿Encajan? |
 | X33 | Mirar la parcela, la casa y el carro de venta | Caminos, plataformas y suelos a ras del terreno, sin hierba atravesándolos. |
 | X34 | Garaje → Herramientas | Cada herramienta gira entera dentro de su recuadro. |
+| X35 | Garaje → Mejoras sin equipo | Batería: «Primero, equipo con batería». Tras comprar la linterna: «Mejorar · 120». |
+| X36 | Mantener E desde la superficie con la pala reforzada | Bajas sin atascarte hasta el techo del Contador (~135 m); al topar con plata, sigue cavando al lado. |

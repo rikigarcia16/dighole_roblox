@@ -425,7 +425,9 @@ function ShopUI.new(parent: Instance, deps: Deps)
 					Parent = c,
 				})
 				local button
-				if nextLevel then
+				if track.id == "battery" and not Gear.needsBattery(state.gear) then
+					button = Build.button("Primero, equipo con batería", Theme.panelLight, { AutoButtonColor = false })
+				elseif nextLevel then
 					local affordable = state.coins >= nextLevel.price
 					button = Build.button(
 						"Mejorar · ● " .. Format.number(nextLevel.price),
