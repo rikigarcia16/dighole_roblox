@@ -356,9 +356,16 @@ Primera vez que las iteraciones 4–6 se ejecutan en Studio (`docs/STUDIO_REPORT
 - Studio: las tres variantes construidas con el constructor real y vistas en captura; corregido
   que el saco de dormir atravesaba la pizarra. Test añadido (pendiente `luaucheck`).
 
+### Tests automáticos en local (Lune)
+- Los tests ya se pueden pasar en este equipo sin Rust: `tools/lune/run.luau` da a Lune las mismas
+  funciones que `luaucheck` (ver `tests/README.md`). Resultado: 71/71 tests, 62 usos de remotos
+  verificados, todos los scripts compilan y la simulación de economía corre.
+- Al pasarlos por primera vez salieron dos fallos, ambos en tests míos de esta fase y no en el
+  juego: el del taller metía NaN en un guardado simulado (que lo rechaza, como haría DataStore) y el
+  de colecciones buscaba las especies fósiles entre los minerales. Corregidos.
+
 ### Problemas abiertos de la fase 3
-- `luaucheck` no se ha pasado en local sobre los tests nuevos (no hay cargo en este equipo): falta
-  ejecutarlo en la nube o instalando Rust.
+- Resuelto: los tests pasan en local con Lune.
 - Lanzamiento largo del gancho motorizado sin comprobar en Studio.
 - Revisión visual y sonora tuya: grietas, taller de E., fósiles nuevos, mapa de capas y trofeos.
 - Revisión tuya de las hazañas: si las pistas se entienden y si las recompensas compensan.

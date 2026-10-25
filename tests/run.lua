@@ -1186,7 +1186,8 @@ test("workshop state: defaults, sanitised, survives a DataStore round trip", fun
 	-- garbage is cleaned, never trusted
 	local bad = ProfileSchema.default(9)
 	bad.anomalies.workshop = { found = "yes", hung = 1, hungCount = 0 / 0, hungAt = -5, toolId = "laser_sword" } :: any
-	local fixed = ProfileSchema.reconcile(dataStoreRoundTrip(bad), 1).anomalies.workshop
+	-- (straight to reconcile: a DataStore would refuse to store NaN in the first place)
+	local fixed = ProfileSchema.reconcile(bad, 1).anomalies.workshop
 	ok(fixed.found == false and fixed.hung == false, "non-boolean flags are false")
 	eq(fixed.hungCount, 0)
 	eq(fixed.hungAt, 0)
@@ -1278,7 +1279,8 @@ test("collection sets: pay once when complete, progress visible, journal grows",
 	local p = ProfileSchema.default(3)
 	for _, set in Collections do
 		for _, id in set.items or {} do
-			ok(Resources.get(id), set.id .. ": unknown item " .. id)
+			local known = if set.kind == "fossils" then Fossils.get(id) else Resources.get(id)
+			ok(known, set.id .. ": unknown item " .. id)
 		end
 		ok(set.reward > 0, set.id .. " reward")
 	end

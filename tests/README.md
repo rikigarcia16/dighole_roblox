@@ -20,6 +20,20 @@ luaucheck check $(find src -name '*.lua')   # compile every script (syntax check
 
 Run them from the repository root.
 
+### Without Rust: Lune
+
+[Lune](https://github.com/lune-org/lune) (a single Luau executable) runs the same files through
+`tools/lune/run.luau`, which provides the same globals as `luaucheck`:
+
+```bash
+lune run tools/lune/run.luau run tests/run.lua
+lune run tools/lune/run.luau run tests/static_checks.lua
+lune run tools/lune/run.luau check $(find src -name '*.lua')
+```
+
+Benchmarks (`bench_*.lua`) are slower under Lune because the scripts run with a custom
+environment; use `luaucheck` for timing.
+
 ## What is NOT covered here
 
 Anything that needs the engine: physics, collisions, replication, UI layout, DataStores,
