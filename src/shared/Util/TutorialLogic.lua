@@ -7,7 +7,7 @@ local Tools = require(script.Parent.Parent.Config.Tools)
 
 local TutorialLogic = {}
 
-export type Step = { id: string, text: string, target: string? } -- target: "sell" | "shop"
+export type Step = { id: string, text: string, target: string? } -- target: "dig" | "sell" | "shop"
 
 TutorialLogic.FinishDepth = 25 -- metres: past this the quest chain takes over
 
@@ -22,6 +22,7 @@ function TutorialLogic.step(state: any, touch: boolean?): Step?
 	if (stats.cellsDug or 0) < 3 then
 		return {
 			id = "dig",
+			target = "dig",
 			text = if touch
 				then "Mantén pulsado CAVAR apuntando al suelo del agujero."
 				else "Apunta al suelo del agujero y mantén pulsado el clic izquierdo (o E) para cavar.",

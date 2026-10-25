@@ -280,19 +280,24 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 	local half = GameConfig.PlotFootprint / 2
 
 	-- Hole rim: wooden frame on the protected border ring --------------------------------------
+	-- Smooth terrain rounds the flat ground up ~2 studs above SurfaceY (Anomalies.TerrainBulge), so
+	-- the frame sits on that surface and stands above the grass; at y 0..0.8 it was buried (Studio
+	-- playtest: a new player could not tell where the hole was).
 	local rimOuter = HALF_DIG + CELL
+	local RIM_HEIGHT = 1.2
+	local RIM_Y = 2 - 0.3 + RIM_HEIGHT / 2
 	for _, side in { -1, 1 } do
 		make(folder, {
 			name = "Rim",
-			size = Vector3.new(rimOuter * 2, 0.8, CELL - 0.4),
-			cframe = CFrame.new(at(0, 0.4, side * (HALF_DIG + CELL / 2))),
+			size = Vector3.new(rimOuter * 2, RIM_HEIGHT, CELL - 0.4),
+			cframe = CFrame.new(at(0, RIM_Y, side * (HALF_DIG + CELL / 2))),
 			color = Palette.wood,
 			material = Enum.Material.WoodPlanks,
 		})
 		make(folder, {
 			name = "Rim",
-			size = Vector3.new(CELL - 0.4, 0.8, HALF_DIG * 2),
-			cframe = CFrame.new(at(side * (HALF_DIG + CELL / 2), 0.4, 0)),
+			size = Vector3.new(CELL - 0.4, RIM_HEIGHT, HALF_DIG * 2),
+			cframe = CFrame.new(at(side * (HALF_DIG + CELL / 2), RIM_Y, 0)),
 			color = Palette.wood,
 			material = Enum.Material.WoodPlanks,
 		})
@@ -301,6 +306,18 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 		local base = at(corner[1] * (HALF_DIG + CELL / 2), 0, corner[2] * (HALF_DIG + CELL / 2))
 		lamp(folder, base, 6)
 	end
+	-- invisible anchor for the tutorial's "CAVA AQUÍ" marker (TutorialUI); never hit by digging
+	local digMarker = make(folder, {
+		name = "DigMarker",
+		size = Vector3.new(1, 1, 1),
+		cframe = CFrame.new(at(0, 0.5, 0)),
+		color = Palette.wood,
+		transparency = 1,
+		collide = false,
+		shadow = false,
+	})
+	digMarker.CanQuery = false
+	digMarker.CanTouch = false
 
 	-- Paths ------------------------------------------------------------------------------------
 	local function path(from: Vector3, to: Vector3, width: number)

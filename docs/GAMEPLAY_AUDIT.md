@@ -364,6 +364,34 @@ Primera vez que las iteraciones 4–6 se ejecutan en Studio (`docs/STUDIO_REPORT
   juego: el del taller metía NaN en un guardado simulado (que lo rechaza, como haría DataStore) y el
   de colecciones buscaba las especies fósiles entre los minerales. Corregidos.
 
+### Partida real de los primeros minutos (Studio, ratón y teclado)
+Jugado como un jugador nuevo, sin atajos salvo el último paso (meter al personaje en el pozo para
+mirar la cámara). Lo que estaba mal, por orden de gravedad:
+1. **Cavar hacia abajo se atascaba** (era el «se queda atascado» del informe de Studio 2, no
+   resuelto del todo). El servidor comprobaba la línea de visión hasta el *centro* de la celda; en
+   un pozo de una celda las paredes redondeadas del terreno suave la cortan y el golpe se descartaba
+   sin aviso. Medido: 18 golpes enviados, 0 aplicados; 4 bloques en 30 s y sin pasar de 0 m. Ahora
+   se comprueba hasta el punto golpeado (margen 3 studs; sigue sin poder cavarse a través de una
+   pared). Medido después: 43 bloques en 40 s, 9 m de profundidad [Studio: verificado].
+2. **La cámara empezaba mirando al revés**: el personaje aparece en el SpawnLocation común y el
+   servidor lo lleva a su parcela; la cámara no giraba, así que veías tu cara y no el agujero. Igual
+   tras el montacargas, la baliza o reaparecer. Nuevo `CameraController`: tras cualquier salto de
+   más de 24 studs (y al empezar) coloca la cámara detrás del personaje [Studio: verificado al
+   entrar y al subir con R].
+3. **No se veía dónde cavar**: la zona era césped como todo lo demás y el borde de madera quedaba
+   enterrado (el terreno suave sube ~2 studs) y tapado por la hierba. Ahora el anillo que rodea el
+   agujero es tierra sin hierba y el borde está apoyado encima; desde arriba se ve un marco claro
+   [Studio: visto]. A ras de suelo la hierba alta aún lo disimula.
+4. El primer aviso del tutorial pone «▼ CAVA AQUÍ» sobre el centro del agujero, como «▼ VENDER» y
+   «▼ GARAJE»; busca la parcela otra vez si aún no estaba lista [Studio: activo y colocado en
+   pantalla; la herramienta de capturas no muestra estas etiquetas, tampoco una de prueba: mírala
+   tú].
+- El ciclo cavar → llenar la mochila (20) → subir (R) → vender funciona: ~1,5 min hasta la primera
+  venta (simulación: 0,9). Venta: 21 monedas + 20 de la misión.
+- **Abierto:** dentro de un pozo de una celda la cámara se pega a las paredes; a 2 m se ve, más
+  abajo llega a ser ilegible. Propuesta: cámara más alta y mirando hacia abajo cuando el jugador
+  está en un pozo estrecho. Necesita tu criterio.
+
 ### Problemas abiertos de la fase 3
 - Resuelto: los tests pasan en local con Lune.
 - Lanzamiento largo del gancho motorizado sin comprobar en Studio.

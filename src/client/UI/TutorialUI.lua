@@ -1,6 +1,7 @@
 --!strict
 -- First-minutes hints (Util/TutorialLogic): one short line above the buttons and, when the step is
--- about a place, a marker over it ("VENDER" on the sell cart, "GARAJE" on the shop counter). When
+-- about a place, a marker over it ("CAVA AQUÍ" over the hole, "VENDER" on the sell cart, "GARAJE" on
+-- the shop counter). When
 -- the player passes the tutorial depth it is marked done in the settings and never shows again.
 
 local Players = game:GetService("Players")
@@ -16,10 +17,11 @@ local Theme = require(script.Parent.Theme)
 local TutorialUI = {}
 
 local player = Players.LocalPlayer
-local TARGET_ACTION = { sell = "Sell", shop = "Shop" }
-local TARGET_TEXT = { sell = "▼ VENDER", shop = "▼ GARAJE" }
+local TARGET_ACTION = { sell = "Sell", shop = "Shop", dig = "DigMarker" }
+local TARGET_TEXT = { sell = "▼ VENDER", shop = "▼ GARAJE", dig = "▼ CAVA AQUÍ" }
 
--- The prompt part of an action inside the local player's own plot folder.
+-- The prompt part of an action inside the local player's own plot folder ("DigMarker": the part of
+-- that name at the centre of the hole).
 local function targetPart(action: string): BasePart?
 	local world = workspace:FindFirstChild("World")
 	if not world then
@@ -27,6 +29,9 @@ local function targetPart(action: string): BasePart?
 	end
 	for _, folder in world:GetChildren() do
 		if folder:GetAttribute("Owner") == player.UserId then
+			if action == "DigMarker" then
+				return folder:FindFirstChild("DigMarker", true) :: BasePart?
+			end
 			for _, d in folder:GetDescendants() do
 				if
 					d:IsA("ProximityPrompt")
@@ -64,7 +69,7 @@ function TutorialUI.new(gui: ScreenGui)
 	local marker = Instance.new("BillboardGui")
 	marker.Name = "THNE_TutorialMarker"
 	marker.AlwaysOnTop = true
-	marker.Size = UDim2.fromOffset(150, 46)
+	marker.Size = UDim2.fromOffset(190, 46)
 	marker.StudsOffset = Vector3.new(0, 6, 0)
 	marker.Enabled = false
 	local markerLabel = Build.label({
@@ -79,9 +84,12 @@ function TutorialUI.new(gui: ScreenGui)
 	local currentId: string? = nil
 	local savedDone = false
 	local bob: Tween? = nil
+	local retrying = false
+	local latest: any = nil
 
 	local api = {}
 	function api.update(state: any)
+		latest = state
 		local step = TutorialLogic.step(state, UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled)
 		if not step then
 			hint.Visible = false
@@ -110,6 +118,14 @@ function TutorialUI.new(gui: ScreenGui)
 		local part = target and targetPart(target)
 		marker.Adornee = part
 		marker.Enabled = part ~= nil
+		-- the plot may not be assigned or streamed in yet: look again shortly
+		if target and not part and not retrying then
+			retrying = true
+			task.delay(1, function()
+				retrying = false
+				api.update(latest)
+			end)
+		end
 		if part and step.target then
 			markerLabel.Text = TARGET_TEXT[step.target]
 			if not bob then

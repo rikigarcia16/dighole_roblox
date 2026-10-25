@@ -44,6 +44,11 @@ function TerrainChunkService.cellState(plot: PlotTerrain, cx: number, d: number,
 	if diggable and plot.dug[Grid.key(cx, d, cz)] then
 		return AIR, 0
 	end
+	-- the protected ring around the hole is bare earth on top, so the hole reads as a hole from the
+	-- surface (grass blades hid it completely: Studio playtest)
+	if d == 0 and not diggable then
+		return Enum.Material.Ground, 1
+	end
 	local id = OreGeneration.resourceAt(plot.seed, cx, d, cz)
 	if id == "air" then
 		return AIR, 0

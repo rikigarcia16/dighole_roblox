@@ -340,3 +340,6 @@ durante la prueba (no en el repositorio).
 | X16 | Subir andando y con cuerdas desde 150 m con la mochila casi llena | Hazaña «La subida»; después la baliza cuesta la mitad. |
 | X17 | Abrir tres geodas sin volver a la superficie | Hazaña; el detector se puede usar cada 1,5 s. |
 | X18 | Encontrar un campamento de E. en las Minas (saco rojo, caja con farol y «E.») | Pizarra con una apuesta en tiza y «— E.», legible y sin piezas atravesándola. |
+| X19 | Entrar en una partida nueva | La cámara mira hacia el agujero, con el personaje de espaldas; «▼ CAVA AQUÍ» flota sobre el centro del agujero. |
+| X20 | Mantener clic sobre el fondo de tu pozo durante 30 s | Unos 30 bloques y varios metros de bajada sin quedarte atascado. |
+| X21 | Mirar la parcela desde fuera | Un marco de tierra con el borde de madera rodea la zona de cavar. |

@@ -1368,6 +1368,7 @@ test("tutorial: each hint follows what the player has done and ends for good", f
 		settings = { tutorialDone = false },
 	}
 	eq(TutorialLogic.step(state).id, "dig")
+	eq(TutorialLogic.step(state).target, "dig", "the first hint points at the hole")
 	ok(TutorialLogic.step(state, true).text:find("CAVAR"), "touch wording")
 	state.stats.cellsDug = 5
 	state.used = 4
@@ -2030,6 +2031,12 @@ do
 		eq(size.X, (2 - -1 + 1) * 4)
 		eq(size.Y, 2 * 4)
 		eq(size.Z, (GameConfig.PlotDigCells - 14 + 1) * 4)
+	end)
+
+	test("the ring around the hole is bare earth on top, the hole itself keeps its grass", function()
+		eq(TerrainChunkService.cellState(plot, -1, 0, 5), Enum.Material.Ground, "ring cell")
+		eq(TerrainChunkService.cellState(plot, GameConfig.PlotDigCells, 0, 5), Enum.Material.Ground)
+		eq(TerrainChunkService.cellState(plot, 5, 0, 5), Enum.Material.Grass, "dig cell stays grass")
 	end)
 end
 

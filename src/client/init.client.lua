@@ -5,6 +5,7 @@ local Controllers = script:WaitForChild("Controllers")
 
 local order = {
 	"ClientState",
+	"CameraController",
 	"EffectsController",
 	"AmbienceController",
 	"AmbientLifeController",

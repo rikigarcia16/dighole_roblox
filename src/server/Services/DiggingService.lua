@@ -32,8 +32,8 @@ local Mobility = require(ReplicatedStorage.Shared.Config.Mobility)
 
 local DiggingService = {}
 
-local CELL = GameConfig.CellSize
 local PROBE_DEPTHS = { 0.5, 2, 3.5 }
+local LOS_TOLERANCE = 3 -- studs between the reported hit point and what the server's ray meets
 
 local lastHit: { [Player]: number } = {}
 local zoneEvent = Remotes.event("ZoneEntered")
@@ -144,14 +144,17 @@ local function handleDig(player: Player, position: any, normal: any)
 		return
 	end
 
-	-- Line of sight: nothing solid may sit between the player's head and the target cell.
+	-- Line of sight: nothing solid may sit between the player's head and the surface they hit. Checked
+	-- against the hit point, not the cell centre: in a narrow shaft the rounded terrain walls cut the
+	-- line to the centre of the floor cell and every swing was dropped silently (Studio playtest: 18
+	-- swings, 0 applied). The target cell is still at most a few studs behind that visible surface.
 	local head = character:FindFirstChild("Head") :: BasePart?
 	local eye = if head then head.Position else root.Position
 	local targetCenter = Grid.cellCenter(plot.originX, plot.originZ, tx, td, tz)
-	local toTarget = targetCenter - eye
-	if toTarget.Magnitude > 1 then
-		local result = workspace:Raycast(eye, toTarget, losParams)
-		if result and (result.Position - targetCenter).Magnitude > CELL * 1.5 then
+	local toPoint = position - eye
+	if toPoint.Magnitude > 1 then
+		local result = workspace:Raycast(eye, toPoint, losParams)
+		if result and (result.Position - position).Magnitude > LOS_TOLERANCE then
 			return
 		end
 	end
