@@ -354,3 +354,5 @@ durante la prueba (no en el repositorio).
 | X30 | Salir y volver (guardado real) | La pared conserva tu número, tienes la herramienta y el diario sigue igual. |
 | X31 | Volver a casa tras grabar tu número (y tras romper la roca madre) | Piedra negra con grieta de luz junto al mapa, «El fondo» y «Vueltas: N». |
 | X32 | Grabar y romper la roca madre con sonido | Raspado al grabar; crujido grave y campanillas con la luz blanca. ¿Encajan? |
+| X33 | Mirar la parcela, la casa y el carro de venta | Caminos, plataformas y suelos a ras del terreno, sin hierba atravesándolos. |
+| X34 | Garaje → Herramientas | Cada herramienta gira entera dentro de su recuadro. |

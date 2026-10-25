@@ -65,6 +65,9 @@ local function preview(parent: Instance, toolId: string): (ViewportFrame, Model)
 	model:PivotTo(CFrame.Angles(0, math.rad(90), math.rad(-35)))
 	model.Parent = viewport
 	local cf, size = model:GetBoundingBox()
+	-- spin about the middle of the tool: around the handle (its pivot) the blade swung out of frame
+	model.PrimaryPart = nil
+	model.WorldPivot = CFrame.new(cf.Position)
 	local camera = Instance.new("Camera")
 	camera.FieldOfView = 30
 	camera.CFrame = CFrame.lookAt(cf.Position + Vector3.new(0, 0, size.Magnitude * 1.7), cf.Position)

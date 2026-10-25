@@ -7,6 +7,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
+local TerrainChunkService = require(script.Parent.TerrainChunkService)
 
 local WorldBuilder = {}
 
@@ -245,9 +246,12 @@ end
 -- Grass terrain grows blades through thin floors (Studio test 3: tall grass inside the house):
 -- under buildings the top layer of the ground is plain earth.
 local function bareGround(center: Vector3, sizeX: number, sizeZ: number)
-	workspace.Terrain:FillBlock(
-		CFrame.new(center.X, GameConfig.SurfaceY - 2, center.Z),
-		Vector3.new(sizeX + 8, 4, sizeZ + 8),
+	local halfX, halfZ = sizeX / 2 + 4, sizeZ / 2 + 4
+	TerrainChunkService.writeTopLayer(
+		center.X - halfX,
+		center.X + halfX,
+		center.Z - halfZ,
+		center.Z + halfZ,
 		Enum.Material.Ground
 	)
 end
@@ -280,12 +284,12 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 	local half = GameConfig.PlotFootprint / 2
 
 	-- Hole rim: wooden frame on the protected border ring --------------------------------------
-	-- Smooth terrain rounds the flat ground up ~2 studs above SurfaceY (Anomalies.TerrainBulge), so
-	-- the frame sits on that surface and stands above the grass; at y 0..0.8 it was buried (Studio
-	-- playtest: a new player could not tell where the hole was).
+	-- Tall enough to stand above the grass, on the ground (whose surface is at SurfaceY:
+	-- GameConfig.TopLayerOccupancy) and on bare earth (the ring around the hole, TerrainChunkService).
+	-- Before both, a new player could not tell where the hole was (Studio playtest).
 	local rimOuter = HALF_DIG + CELL
 	local RIM_HEIGHT = 1.2
-	local RIM_Y = 2 - 0.3 + RIM_HEIGHT / 2
+	local RIM_Y = RIM_HEIGHT / 2
 	for _, side in { -1, 1 } do
 		make(folder, {
 			name = "Rim",
@@ -639,6 +643,7 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 			color = Palette.wood,
 			material = Enum.Material.WoodPlanks,
 		})
+		bareGround(at(sx, 0, sz), 14, 12)
 		for _, c in { { -6, -5 }, { 6, -5 }, { -6, 5 }, { 6, 5 } } do
 			make(folder, {
 				name = "SellPost",

@@ -64,7 +64,7 @@ function TerrainChunkService.cellState(plot: PlotTerrain, cx: number, d: number,
 	-- the protected ring around the hole is bare earth on top, so the hole reads as a hole from the
 	-- surface (grass blades hid it completely: Studio playtest)
 	if d == 0 and not diggable then
-		return Enum.Material.Ground, 1
+		return Enum.Material.Ground, GameConfig.TopLayerOccupancy
 	end
 	local id = OreGeneration.resourceAt(plot.seed, cx, d, cz)
 	if id == "air" then
@@ -78,6 +78,9 @@ function TerrainChunkService.cellState(plot: PlotTerrain, cx: number, d: number,
 		return Enum.Material.Rock, 1
 	end
 	local occupancy = if besideDug(plot, cx, d, cz) then GameConfig.DugWallOccupancy else 1
+	if d == 0 then
+		occupancy = math.min(occupancy, GameConfig.TopLayerOccupancy) -- flush with the ground around
+	end
 	if diggable then
 		local damage = plot.damage[Grid.key(cx, d, cz)]
 		if damage then
@@ -227,16 +230,40 @@ function TerrainChunkService.onDugTo(plot: PlotTerrain, depth: number)
 	TerrainChunkService.requestDepth(plot, depth + GameConfig.GenerateAheadCells)
 end
 
+-- Writes the top layer of the ground over a world-space rectangle with `material`, at
+-- GameConfig.TopLayerOccupancy so its surface sits at SurfaceY (FillBlock can only write full cells).
+function TerrainChunkService.writeTopLayer(
+	minX: number,
+	maxX: number,
+	minZ: number,
+	maxZ: number,
+	material: Enum.Material
+)
+	local top = GameConfig.SurfaceY
+	local region = Region3.new(Vector3.new(minX, top - CELL, minZ), Vector3.new(maxX, top, maxZ)):ExpandToGrid(CELL)
+	local nx = math.floor(region.Size.X / CELL + 0.5)
+	local ny = math.floor(region.Size.Y / CELL + 0.5)
+	local nz = math.floor(region.Size.Z / CELL + 0.5)
+	local materials = table.create(nx)
+	local occupancies = table.create(nx)
+	for x = 1, nx do
+		local matX, occX = table.create(ny), table.create(ny)
+		for y = 1, ny do
+			-- only the highest row is the top layer (ExpandToGrid never shrinks the region)
+			matX[y] = table.create(nz, material)
+			occX[y] = table.create(nz, if y == ny then GameConfig.TopLayerOccupancy else 1)
+		end
+		materials[x], occupancies[x] = matX, occX
+	end
+	Terrain:WriteVoxels(region, CELL, materials, occupancies)
+end
+
 -- Fills the flat ground slab (grass over dirt) covering a world-space rectangle.
 function TerrainChunkService.fillSurfaceSlab(minX: number, maxX: number, minZ: number, maxZ: number)
 	local sizeX, sizeZ = maxX - minX, maxZ - minZ
 	local centerX, centerZ = (minX + maxX) / 2, (minZ + maxZ) / 2
 	local top = GameConfig.SurfaceY
-	Terrain:FillBlock(
-		CFrame.new(centerX, top - CELL / 2, centerZ),
-		Vector3.new(sizeX, CELL, sizeZ),
-		Enum.Material.Grass
-	)
+	TerrainChunkService.writeTopLayer(minX, maxX, minZ, maxZ, Enum.Material.Grass)
 	Terrain:FillBlock(
 		CFrame.new(centerX, top - CELL * 1.5, centerZ),
 		Vector3.new(sizeX, CELL, sizeZ),

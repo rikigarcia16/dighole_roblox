@@ -463,6 +463,23 @@ mirar la cámara). Lo que estaba mal, por orden de gravedad:
 - **Guardado real y dos jugadores:** preparada la prueba en `docs/TEST_SAVES_TWO_PLAYERS.md`.
   Necesita publicar el sitio (decisión y cuenta tuyas) y abrir dos clientes desde Studio.
 
+### Superficie a ras y miniaturas del garaje (partida real, segunda parte)
+- **El suelo estaba 2 studs más alto que todo lo construido.** El terreno suave con ocupación
+  completa pone su superficie a y 2, y la casa, los caminos, la plataforma del carro, el borde del
+  agujero y los cimientos están a y 0, así que quedaban enterrados y la hierba los atravesaba (casa,
+  carro de venta). Medido en Studio: ocupación 1 → y 2, 0,75 → y 1, **0,5 → y 0**. Ahora la capa
+  superior se escribe a media ocupación (`GameConfig.TopLayerOccupancy`,
+  `TerrainChunkService.writeTopLayer`) en todo el mundo, bajo los edificios y en la primera capa del
+  agujero. El borde vuelve a y 0 y el carro de venta tiene tierra debajo [Studio: visto desde
+  arriba; caminos, plataformas y edificios asientan en el suelo].
+- **Miniaturas del garaje:** las herramientas giraban sobre el mango y la hoja salía del recuadro.
+  Ahora giran sobre su centro [Studio: visto].
+- Partida: segundo y tercer ciclo de cavar y vender, 128 monedas a los ~4 min y el tutorial manda al
+  garaje (simulación: 3,2 min). Con el suelo nuevo, E baja 16 m en 30 s.
+- **A tu criterio:** la hierba del terreno de Roblox mide ~3 studs y ahora llega a la cintura del
+  personaje (antes no se notaba porque todo estaba 2 studs más alto). Se puede bajar desactivando la
+  decoración del terreno en Studio (Terreno → `Decoration`), que no se puede tocar desde código.
+
 ### Problemas abiertos de la fase 3
 - Resuelto: los tests pasan en local con Lune.
 - Lanzamiento largo del gancho motorizado sin comprobar en Studio.

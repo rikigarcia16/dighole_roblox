@@ -32,6 +32,11 @@ GameConfig.MinOccupancyWhileDamaged = 0.25 -- partially damaged cells shrink dow
 -- At full occupancy smooth terrain rounds them 1-2 studs into the opening and a one-cell shaft became
 -- a slit the character got wedged in (Studio playtest).
 GameConfig.DugWallOccupancy = 0.5
+-- The top layer of the ground (cells from SurfaceY - CellSize to SurfaceY) is written at half
+-- occupancy so smooth terrain puts its surface exactly at SurfaceY, where every floor, path, deck and
+-- the hole's rim are built. At full occupancy it sat 2 studs higher and buried them, and the grass
+-- grew through them (measured in Studio: occupancy 1 -> y 2, 0.75 -> y 1, 0.5 -> y 0).
+GameConfig.TopLayerOccupancy = 0.5
 
 -- Energy -------------------------------------------------------------------
 GameConfig.SurfaceRechargeDepth = 3 -- metres; above this depth the battery recharges
