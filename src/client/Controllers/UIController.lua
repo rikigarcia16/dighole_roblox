@@ -192,19 +192,26 @@ function UIController.start()
 		Parent = buttons,
 	})
 	-- Invite friends: Roblox's own invite prompt. Playing together is one of the signals Roblox uses
-	-- to recommend games (docs/marketing/09). Shown only where Roblox allows invites.
+	-- to recommend games (docs/marketing/09). Shown only where Roblox allows invites, and only at the
+	-- surface: underground the row is full of rope, beacon and gear buttons.
 	local inviteButton = Build.button("Invitar amigos", Color3.fromRGB(90, 160, 90), {
 		Name = "InviteButton",
 		Size = UDim2.fromOffset(160, 50),
-		LayoutOrder = 3,
+		LayoutOrder = 99,
 		Visible = false,
 		Parent = buttons,
 	})
+	local canInvite = false
+	local function refreshInvite()
+		inviteButton.Visible = canInvite and not surfaceButton.Visible
+	end
+	surfaceButton:GetPropertyChangedSignal("Visible"):Connect(refreshInvite)
 	task.spawn(function()
-		local ok, canInvite = pcall(function()
+		local ok, allowed = pcall(function()
 			return SocialService:CanSendGameInviteAsync(Players.LocalPlayer)
 		end)
-		inviteButton.Visible = ok and canInvite == true
+		canInvite = ok and allowed == true
+		refreshInvite()
 	end)
 	inviteButton.Activated:Connect(function()
 		EffectsController.playUi("ui_click")
