@@ -545,7 +545,367 @@ local function shard(c: Ctx)
 	tag(s, "THNE_Spin")
 end
 
+-- Zone props added with the visual redesign: each layer gets things of its own in the galleries
+-- (where the player spends most of the time), not only in the chambers.
+
+-- Mines: a bulb hanging on its wire from the ceiling, warm and a little unsteady.
+local function mineLamp(c: Ctx)
+	local wire = 1.2 + c.variant * 0.6
+	decor(
+		part(
+			c.model,
+			"LampWire",
+			Vector3.new(0.1, wire, 0.1),
+			c.at * CFrame.new(0, -wire / 2, 0),
+			IRON,
+			Enum.Material.Metal
+		)
+	)
+	local bulb = decor(
+		part(
+			c.model,
+			"MineBulb",
+			Vector3.new(0.6, 0.6, 0.6),
+			c.at * CFrame.new(0, -wire - 0.3, 0),
+			Color3.fromRGB(255, 214, 140),
+			Enum.Material.Neon,
+			Enum.PartType.Ball
+		)
+	)
+	decor(
+		part(
+			c.model,
+			"LampShade",
+			Vector3.new(1, 0.3, 1),
+			bulb.CFrame * CFrame.new(0, 0.4, 0),
+			RUST,
+			Enum.Material.Metal
+		)
+	)
+	light(bulb, Color3.fromRGB(255, 196, 120), 16, 0.9)
+	tag(bulb, "THNE_Flicker")
+end
+
+-- Mines: crates, a barrel and an ore sack left by the miners.
+local function crates(c: Ctx)
+	part(
+		c.model,
+		"Crate",
+		Vector3.new(2.2, 2, 2.2) * c.scale,
+		c.at * CFrame.new(0, c.scale, 0) * CFrame.Angles(0, 0.3, 0),
+		WOOD,
+		Enum.Material.WoodPlanks
+	)
+	decor(
+		part(
+			c.model,
+			"Crate",
+			Vector3.new(1.6, 1.5, 1.6) * c.scale,
+			c.at * CFrame.new(0.2, 2.75 * c.scale, 0.1) * CFrame.Angles(0, -0.4, 0),
+			DARK_WOOD,
+			Enum.Material.WoodPlanks
+		)
+	)
+	part(
+		c.model,
+		"Barrel",
+		Vector3.new(2.4, 1.6, 1.6) * c.scale,
+		c.at * CFrame.new(2.3 * c.scale, 1.2 * c.scale, 0.4) * CFrame.Angles(0, 0, math.rad(90)),
+		RUST,
+		Enum.Material.Metal,
+		Enum.PartType.Cylinder
+	)
+	decor(
+		part(
+			c.model,
+			"OreSack",
+			Vector3.new(1.4, 1.4, 1.4) * c.scale,
+			c.at * CFrame.new(-1.9 * c.scale, 0.6 * c.scale, 0.8),
+			Color3.fromRGB(170, 140, 96),
+			Enum.Material.Fabric,
+			Enum.PartType.Ball
+		)
+	)
+	for k = 1, 3 do
+		decor(
+			part(
+				c.model,
+				"OreChunk",
+				Vector3.new(0.5, 0.5, 0.5) * c.scale,
+				c.at * CFrame.new(-1.9 * c.scale + (k - 2) * 0.4, 1.4 * c.scale, 0.8) * CFrame.Angles(k, k * 2, 0),
+				c.accent,
+				Enum.Material.Neon
+			)
+		)
+	end
+end
+
+-- Crystal Caves: a cluster of glowing crystals growing out of the floor.
+local function crystalCluster(c: Ctx)
+	local count = 3 + c.variant
+	for k = 1, count do
+		local h = (1 + ((k * 53) % 7) * 0.35) * c.scale
+		local angle = k * 2.4
+		local r = if k == 1 then 0 else 0.6 + (k % 3) * 0.3
+		local p = decor(
+			part(
+				c.model,
+				"FloorCrystal",
+				Vector3.new(0.6, h, 0.6) * Vector3.new(c.scale, 1, c.scale),
+				c.at
+					* CFrame.new(math.cos(angle) * r, h / 2 - 0.1, math.sin(angle) * r)
+					* CFrame.Angles(
+						math.cos(angle) * 0.35 * (if k == 1 then 0 else 1),
+						angle,
+						math.sin(angle) * 0.35 * (if k == 1 then 0 else 1)
+					),
+				if k % 2 == 0 then c.accent else c.accent:Lerp(Color3.new(1, 1, 1), 0.35),
+				Enum.Material.Neon
+			)
+		)
+		p.Transparency = 0.1
+		if k == 1 then
+			light(p, c.accent, 14, 0.8)
+			p:SetAttribute("PulsePeriod", 3.6)
+			tag(p, "THNE_Pulse")
+		end
+	end
+end
+
+-- Ancient Caverns: a stone brazier with a living fire.
+local function brazier(c: Ctx)
+	part(
+		c.model,
+		"BrazierFoot",
+		Vector3.new(1.4, 1.8, 1.4) * c.scale,
+		c.at * CFrame.new(0, 0.9 * c.scale, 0),
+		SANDSTONE,
+		Enum.Material.Sandstone
+	)
+	local bowl = part(
+		c.model,
+		"BrazierBowl",
+		Vector3.new(0.8, 2.6, 2.6) * c.scale,
+		c.at * CFrame.new(0, 2.1 * c.scale, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		Color3.fromRGB(120, 96, 70),
+		Enum.Material.Sandstone,
+		Enum.PartType.Cylinder
+	)
+	local flame = decor(
+		part(
+			c.model,
+			"Flame",
+			Vector3.new(1.2, 1.2, 1.2) * c.scale,
+			bowl.CFrame * CFrame.new(0.7 * c.scale, 0, 0),
+			EMBER,
+			Enum.Material.Neon,
+			Enum.PartType.Ball
+		)
+	)
+	flame.Transparency = 0.25
+	light(flame, Color3.fromRGB(255, 150, 70), 24, 1.4)
+	tag(flame, "THNE_Flicker")
+	local fire = Instance.new("Fire")
+	fire.Heat = 6
+	fire.Size = 3 * c.scale
+	fire.Color = Color3.fromRGB(255, 140, 50)
+	fire.SecondaryColor = Color3.fromRGB(255, 220, 120)
+	fire.Parent = flame
+end
+
+-- Ancient Caverns: the carved head of somebody nobody remembers.
+local function idol(c: Ctx)
+	local s = c.scale * 1.2
+	part(
+		c.model,
+		"IdolBase",
+		Vector3.new(3.2, 1, 3.2) * s,
+		c.at * CFrame.new(0, 0.5 * s, 0),
+		SANDSTONE,
+		Enum.Material.Sandstone
+	)
+	local head = part(
+		c.model,
+		"IdolHead",
+		Vector3.new(2.6, 3.4, 2.4) * s,
+		c.at * CFrame.new(0, 2.7 * s, 0),
+		Color3.fromRGB(186, 160, 120),
+		Enum.Material.Sandstone
+	)
+	for _, side in { -1, 1 } do
+		local eye = decor(
+			part(
+				c.model,
+				"IdolEye",
+				Vector3.new(0.5, 0.35, 0.2) * s,
+				head.CFrame * CFrame.new(side * 0.6 * s, 0.5 * s, -1.21 * s),
+				c.accent,
+				Enum.Material.Neon
+			)
+		)
+		eye:SetAttribute("PulsePeriod", 6)
+		tag(eye, "THNE_Pulse")
+	end
+	decor(
+		part(
+			c.model,
+			"IdolMouth",
+			Vector3.new(1.2, 0.25, 0.2) * s,
+			head.CFrame * CFrame.new(0, -0.8 * s, -1.21 * s),
+			Color3.fromRGB(90, 70, 52),
+			Enum.Material.Sandstone
+		)
+	)
+	decor(
+		part(
+			c.model,
+			"IdolBrow",
+			Vector3.new(2.8, 0.5, 0.6) * s,
+			head.CFrame * CFrame.new(0, 1.1 * s, -1.1 * s),
+			Color3.fromRGB(160, 136, 100),
+			Enum.Material.Sandstone
+		)
+	)
+end
+
+-- Volcanic Depths: a pool of glowing lava in a basalt rim, breathing embers.
+local function lavaPool(c: Ctx)
+	local d = (3 + c.variant) * c.scale
+	part(
+		c.model,
+		"LavaRim",
+		Vector3.new(0.6, d + 1, d + 1),
+		c.at * CFrame.new(0, 0.25, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		BASALT,
+		Enum.Material.Basalt,
+		Enum.PartType.Cylinder
+	)
+	local lava = decor(
+		part(
+			c.model,
+			"Lava",
+			Vector3.new(0.3, d, d),
+			c.at * CFrame.new(0, 0.45, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			Color3.fromRGB(255, 110, 30),
+			Enum.Material.Neon,
+			Enum.PartType.Cylinder
+		)
+	)
+	light(lava, EMBER, 20, 1.5)
+	tag(lava, "THNE_Flicker")
+	local embers = Instance.new("ParticleEmitter")
+	embers.Rate = 3
+	embers.Lifetime = NumberRange.new(1.5, 3)
+	embers.Speed = NumberRange.new(1.5, 3)
+	embers.SpreadAngle = Vector2.new(25, 25)
+	embers.Acceleration = Vector3.new(0, 1, 0)
+	embers.Size = NumberSequence.new(0.18, 0.04)
+	embers.Color = ColorSequence.new(EMBER)
+	embers.LightEmission = 1
+	embers.EmissionDirection = Enum.NormalId.Right
+	embers.Parent = lava
+end
+
+-- The Abyss: a giant glowing mushroom, cap dotted with lights.
+local function mushroom(c: Ctx)
+	local h = (2.4 + c.variant * 0.9) * c.scale
+	local capD = (2.6 + c.variant * 0.8) * c.scale
+	part(
+		c.model,
+		"MushroomStem",
+		Vector3.new(h, 0.8 * c.scale, 0.8 * c.scale),
+		c.at * CFrame.new(0, h / 2, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		Color3.fromRGB(214, 226, 236),
+		Enum.Material.SmoothPlastic,
+		Enum.PartType.Cylinder
+	)
+	local cap = decor(
+		part(
+			c.model,
+			"MushroomCap",
+			Vector3.new(capD * 0.32, capD, capD),
+			c.at * CFrame.new(0, h, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			c.accent,
+			Enum.Material.Neon,
+			Enum.PartType.Cylinder
+		)
+	)
+	cap.Transparency = 0.15
+	decor(
+		part(
+			c.model,
+			"MushroomTop",
+			Vector3.new(capD * 0.75, capD * 0.75, capD * 0.75),
+			c.at * CFrame.new(0, h + capD * 0.05, 0),
+			c.accent:Lerp(Color3.new(0, 0, 0), 0.25),
+			Enum.Material.SmoothPlastic,
+			Enum.PartType.Ball
+		)
+	).Transparency =
+		0
+	for k = 1, 4 do
+		local a = k * math.pi / 2 + c.variant
+		decor(
+			part(
+				c.model,
+				"CapSpot",
+				Vector3.new(0.4, 0.4, 0.4) * c.scale,
+				c.at * CFrame.new(math.cos(a) * capD * 0.28, h + capD * 0.3, math.sin(a) * capD * 0.28),
+				Color3.fromRGB(240, 255, 250),
+				Enum.Material.Neon,
+				Enum.PartType.Ball
+			)
+		)
+	end
+	light(cap, c.accent, 16, 0.9)
+	cap:SetAttribute("PulsePeriod", 5 + c.variant)
+	tag(cap, "THNE_Pulse")
+end
+
+-- The Core: a tall pillar of light, ringed with floating stones.
+local function pillar(c: Ctx)
+	local h = (6 + c.variant * 2) * c.scale
+	local beam = decor(
+		part(
+			c.model,
+			"LightPillar",
+			Vector3.new(1.2, h, 1.2) * Vector3.new(c.scale, 1, c.scale),
+			c.at * CFrame.new(0, h / 2, 0),
+			Color3.fromRGB(236, 250, 255),
+			Enum.Material.Neon
+		)
+	)
+	beam.Transparency = 0.2
+	beam:SetAttribute("PulsePeriod", 3)
+	tag(beam, "THNE_Pulse")
+	light(beam, Color3.fromRGB(210, 240, 255), 22, 1.2)
+	for k = 1, 3 do
+		local stone = decor(
+			part(
+				c.model,
+				"OrbitStone",
+				Vector3.new(0.9, 0.9, 0.9) * c.scale,
+				c.at
+					* CFrame.new(math.cos(k * 2.1) * 2.2, h * (0.3 + k * 0.18), math.sin(k * 2.1) * 2.2)
+					* CFrame.Angles(k, k, 0),
+				Color3.fromRGB(176, 196, 204),
+				Enum.Material.Glass
+			)
+		)
+		stone:SetAttribute("SpinSpeed", 0.5 + k * 0.2)
+		tag(stone, "THNE_Spin")
+	end
+end
+
 local BUILDERS: { [string]: (Ctx) -> () } = {
+	mine_lamp = mineLamp,
+	crates = crates,
+	crystal_cluster = crystalCluster,
+	brazier = brazier,
+	idol = idol,
+	lava_pool = lavaPool,
+	mushroom = mushroom,
+	pillar = pillar,
 	rails = rails,
 	cart = cart,
 	camp = camp,

@@ -13,6 +13,7 @@
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
 
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Mobility = require(ReplicatedStorage.Shared.Config.Mobility)
@@ -29,6 +30,7 @@ local CaveProps = require(script.Parent.CaveProps)
 local AnomalyService = require(script.Parent.AnomalyService)
 local EnergyService = require(script.Parent.EnergyService)
 local Gear = require(ReplicatedStorage.Shared.Config.Gear)
+local Zones = require(ReplicatedStorage.Shared.Config.Zones)
 local Feats = require(ReplicatedStorage.Shared.Config.Feats)
 
 local MobilityService = {}
@@ -88,56 +90,134 @@ local function stationArrival(plot: any, station: MobilityRules.Station): CFrame
 end
 
 -- Station model ---------------------------------------------------------------------------------
--- Timber platform with steel edges, a winch frame whose cable disappears into the rock above, a
--- lantern and a sign with the depth: the same visual language as the surface winch.
+-- An industrial lift landing in the same 7x7 footprint as before (never more: it is built where the
+-- player stands, often in a narrow gallery): steel grating with hazard edges, a yellow gantry with
+-- braces and a turning pulley whose cable disappears into the rock, side railings, caged lamps,
+-- a control panel with blinking lights and a lit sign in the colour of the zone.
 
 local function buildStation(plot: any, station: MobilityRules.Station, parent: Instance): Model
 	local def = Mobility.StationById[station.id]
 	local floor = stationFloor(plot, station)
 	local model = Instance.new("Model")
 	model.Name = "Station_" .. station.id
-	local wood = Color3.fromRGB(112, 78, 50)
+	local accent = Zones.at(station.d).accent
+	local yellow = Color3.fromRGB(255, 196, 40)
+	local black = Color3.fromRGB(40, 40, 44)
 	local steel = Color3.fromRGB(120, 128, 138)
-	part(model, "Platform", Vector3.new(7, 0.6, 7), floor * CFrame.new(0, 0.3, 0), wood, Enum.Material.WoodPlanks)
+	local iron = Color3.fromRGB(54, 58, 66)
+	local function deco(name: string, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material): BasePart
+		local p = part(model, name, size, cf, color, material)
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		return p
+	end
+
+	-- grating platform with hazard stripes on every edge
+	part(model, "Platform", Vector3.new(7, 0.6, 7), floor * CFrame.new(0, 0.3, 0), steel, Enum.Material.DiamondPlate)
+	for i = 0, 3 do
+		local edge = floor * CFrame.Angles(0, i * math.pi / 2, 0)
+		for k = 0, 4 do
+			deco(
+				"Hazard",
+				Vector3.new(1.4, 0.12, 0.45),
+				edge * CFrame.new(-2.8 + k * 1.4, 0.66, 3.25),
+				if (k + i) % 2 == 0 then yellow else black,
+				Enum.Material.SmoothPlastic
+			)
+		end
+	end
+
+	-- gantry at the back: two posts, braces, a beam and a pulley
 	for _, side in { -1, 1 } do
 		part(
 			model,
-			"Edge",
-			Vector3.new(7.2, 0.3, 0.3),
-			floor * CFrame.new(0, 0.65, side * 3.5),
-			steel,
+			"Post",
+			Vector3.new(0.7, 9.4, 0.7),
+			floor * CFrame.new(side * 3, 4.7, -3),
+			yellow,
 			Enum.Material.Metal
 		)
-		part(model, "Post", Vector3.new(0.6, 9, 0.6), floor * CFrame.new(side * 3, 4.5, -3), wood, Enum.Material.Wood)
+		local a = floor * CFrame.new(side * 3, 8.4, -3.4)
+		local b = floor * CFrame.new(side * 1.6, 9.4, -3.4)
+		deco(
+			"Brace",
+			Vector3.new(0.4, 0.4, (b.Position - a.Position).Magnitude),
+			CFrame.lookAt((a.Position + b.Position) / 2, b.Position),
+			yellow,
+			Enum.Material.Metal
+		)
+		-- railing along each side, open at the front so the player steps on
+		deco("Rail", Vector3.new(0.25, 0.25, 4.6), floor * CFrame.new(side * 3.3, 3, -0.6), yellow, Enum.Material.Metal)
+		deco(
+			"RailPost",
+			Vector3.new(0.3, 2.7, 0.3),
+			floor * CFrame.new(side * 3.3, 1.65, 1.6),
+			yellow,
+			Enum.Material.Metal
+		)
+		-- cable bundle down the post
+		deco(
+			"Cables",
+			Vector3.new(0.2, 8.8, 0.2),
+			floor * CFrame.new(side * 3.45, 4.7, -2.55),
+			black,
+			Enum.Material.Plastic
+		)
+		-- caged lamp on each post
+		local lamp = deco(
+			"Lantern",
+			Vector3.new(0.7, 0.9, 0.7),
+			floor * CFrame.new(side * 2.4, 7.4, -2.6),
+			Color3.fromRGB(255, 210, 130),
+			Enum.Material.Neon
+		)
+		CaveProps.light(lamp, Color3.fromRGB(255, 196, 110), 20, 1.2)
+		if side > 0 then
+			CollectionService:AddTag(lamp, "THNE_Flicker")
+		end
+		deco("LampCage", Vector3.new(0.9, 0.15, 0.9), lamp.CFrame * CFrame.new(0, 0.5, 0), iron, Enum.Material.Metal)
+		deco("LampCage", Vector3.new(0.9, 0.15, 0.9), lamp.CFrame * CFrame.new(0, -0.5, 0), iron, Enum.Material.Metal)
 	end
-	part(model, "Beam", Vector3.new(7, 0.7, 0.7), floor * CFrame.new(0, 9, -3), steel, Enum.Material.Metal)
-	local cable = part(
-		model,
-		"Cable",
-		Vector3.new(0.15, 30, 0.15),
-		floor * CFrame.new(0, 9 + 15, -3),
-		Color3.fromRGB(40, 40, 44),
-		Enum.Material.Metal
-	)
-	cable.CanCollide = false
-	local lantern = part(
-		model,
-		"Lantern",
-		Vector3.new(0.7, 0.9, 0.7),
-		floor * CFrame.new(2.2, 7.6, -3),
-		Color3.fromRGB(255, 200, 110),
-		Enum.Material.Neon
-	)
-	lantern.CanCollide = false
-	CaveProps.light(lantern, Color3.fromRGB(255, 190, 100), 22, 1.3)
+	part(model, "Beam", Vector3.new(7.2, 0.8, 0.8), floor * CFrame.new(0, 9.4, -3), iron, Enum.Material.Metal)
+	local pulleyCf = floor * CFrame.new(0, 10.6, -3)
+	for i, size in { 2.6, 1.6 } do
+		local wheel = deco(
+			"Pulley",
+			Vector3.new(0.5 + i * 0.1, size, size),
+			pulleyCf * CFrame.Angles(0, math.rad(90), 0),
+			if i == 1 then Color3.fromRGB(226, 84, 60) else iron,
+			Enum.Material.Metal
+		)
+		wheel.Shape = Enum.PartType.Cylinder
+		wheel:SetAttribute("RotorSpeed", 0.8)
+		CollectionService:AddTag(wheel, "THNE_Rotor")
+	end
+	local cable =
+		deco("Cable", Vector3.new(0.15, 30, 0.15), floor * CFrame.new(0, 10.6 + 15, -1.8), black, Enum.Material.Metal)
+	_ = cable
+
+	-- control panel (the lift prompt) with two blinking lights
 	local panel = part(
 		model,
 		"LiftPanel",
 		Vector3.new(1.2, 2.6, 0.8),
 		floor * CFrame.new(-2.2, 1.9, -2.6),
-		Color3.fromRGB(200, 160, 60),
+		yellow,
 		Enum.Material.Metal
 	)
+	for i, color in { Color3.fromRGB(80, 255, 120), Color3.fromRGB(255, 70, 70) } do
+		local light = deco(
+			"PanelLamp",
+			Vector3.new(0.35, 0.35, 0.35),
+			panel.CFrame * CFrame.new(-0.25 + (i - 1) * 0.5, 0.8, 0.45),
+			color,
+			Enum.Material.Neon
+		)
+		light.Shape = Enum.PartType.Ball
+		light:SetAttribute("PulsePeriod", 1.1 + i * 0.6)
+		CollectionService:AddTag(light, "THNE_Pulse")
+	end
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "Viajar"
 	prompt.ObjectText = if def then def.name else "Estación"
@@ -147,19 +227,17 @@ local function buildStation(plot: any, station: MobilityRules.Station, parent: I
 	prompt.RequiresLineOfSight = false
 	prompt:SetAttribute("Action", "Lift")
 	prompt.Parent = panel
-	local sign = part(
-		model,
-		"Sign",
-		Vector3.new(4.5, 1.4, 0.3),
-		floor * CFrame.new(0, 7.8, -3.3),
-		Color3.fromRGB(60, 46, 34),
-		Enum.Material.Wood
-	)
+
+	-- lit sign: dark box, a glowing strip in the zone's colour, the name and depth
+	local sign =
+		part(model, "Sign", Vector3.new(5, 1.6, 0.4), floor * CFrame.new(0, 8, -3.3), iron, Enum.Material.Metal)
+	sign.CanCollide = false
+	deco("SignGlow", Vector3.new(5.2, 0.2, 0.5), floor * CFrame.new(0, 7.1, -3.3), accent, Enum.Material.Neon)
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = Enum.NormalId.Back
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
 	gui.PixelsPerStud = 40
-	gui.LightInfluence = 0.3
+	gui.LightInfluence = 0
 	gui.Parent = sign
 	local text = Instance.new("TextLabel")
 	text.BackgroundTransparency = 1
@@ -167,7 +245,7 @@ local function buildStation(plot: any, station: MobilityRules.Station, parent: I
 	text.Text = string.format("%s · %d m", if def then def.name else station.id, station.d)
 	text.TextScaled = true
 	text.Font = Enum.Font.FredokaOne
-	text.TextColor3 = Color3.fromRGB(255, 196, 64)
+	text.TextColor3 = accent:Lerp(Color3.new(1, 1, 1), 0.35)
 	text.Parent = gui
 	model.PrimaryPart = panel
 	model:SetAttribute("StationId", station.id)

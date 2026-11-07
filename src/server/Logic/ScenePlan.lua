@@ -44,12 +44,12 @@ ScenePlan.MaxRails = 6
 
 -- Kinds that can only appear in their style (used by the coverage test and the docs).
 ScenePlan.Signature = {
-	mine = { "rails", "cart", "camp", "chalk" },
-	crystal = { "crystal_hang", "crystal_heart" },
-	ruin = { "arch", "fallen_column" },
-	lava = { "basalt", "vent" },
-	abyss = { "vine", "spores" },
-	core = { "shard" },
+	mine = { "rails", "cart", "camp", "chalk", "mine_lamp", "crates" },
+	crystal = { "crystal_hang", "crystal_heart", "crystal_cluster" },
+	ruin = { "arch", "fallen_column", "brazier", "idol" },
+	lava = { "basalt", "vent", "lava_pool" },
+	abyss = { "vine", "spores", "mushroom" },
+	core = { "shard", "pillar" },
 }
 
 local function air(seed: number, x: number, d: number, z: number): boolean
@@ -203,6 +203,22 @@ function ScenePlan.plan(seed: number, sector: Caves.Sector): { Prop }
 					elseif style == "crystal" and rand() < 0.5 then
 						onCeiling("crystal_hang", mx, md, mz, 1 + math.floor(rand() * 3))
 					end
+					-- each layer's own gallery dressing, a little way along the segment
+					local gx, gd, gz = a.x + dx * 0.3, a.d + (b.d - a.d) * 0.3, a.z + dz * 0.3
+					local roll = rand()
+					if style == "mine" and roll < 0.6 then
+						onCeiling("mine_lamp", mx, md, mz, 1 + math.floor(rand() * 2))
+					elseif style == "crystal" and roll < 0.55 then
+						onFloor("crystal_cluster", gx, gd, gz, rand() * 6.28, 1 + math.floor(rand() * 3))
+					elseif style == "ruin" and roll < 0.35 then
+						onFloor("brazier", gx, gd, gz, rand() * 6.28, 1)
+					elseif style == "lava" and roll < 0.4 then
+						onFloor("lava_pool", gx, gd, gz, 0, 1)
+					elseif style == "abyss" and roll < 0.5 then
+						onFloor("mushroom", gx, gd, gz, rand() * 6.28, 1 + math.floor(rand() * 3))
+					elseif style == "core" and roll < 0.35 then
+						onFloor("pillar", gx, gd, gz, 0, 1)
+					end
 				end
 			end
 			-- a cart abandoned at the end of a gallery
@@ -228,6 +244,36 @@ function ScenePlan.plan(seed: number, sector: Caves.Sector): { Prop }
 				onCeiling("stalactite", x, c.d, z, 1 + math.floor(rand() * 3))
 				x, z = around(0.9)
 				onFloor("stalagmite", x, floorLevel, z, rand() * 6.28, 1 + math.floor(rand() * 3))
+			end
+			-- each layer's own chamber dressing
+			if style == "mine" then
+				local x, z = around(0.8)
+				onFloor("crates", x, floorLevel, z, rand() * 6.28, 1)
+			elseif style == "crystal" then
+				for _ = 1, 2 do
+					local x, z = around(0.8)
+					onFloor("crystal_cluster", x, floorLevel, z, rand() * 6.28, 1 + math.floor(rand() * 3))
+				end
+			elseif style == "ruin" then
+				for _ = 1, 2 do
+					local x, z = around(0.85)
+					onFloor("brazier", x, floorLevel, z, rand() * 6.28, 1)
+				end
+				if rand() < 0.45 then
+					local x, z = around(0.5)
+					onFloor("idol", x, floorLevel, z, rand() * 6.28, 1)
+				end
+			elseif style == "lava" then
+				local x, z = around(0.6)
+				onFloor("lava_pool", x, floorLevel, z, 0, 1 + math.floor(rand() * 2))
+			elseif style == "abyss" then
+				for _ = 1, if big then 4 else 2 do
+					local x, z = around(0.85)
+					onFloor("mushroom", x, floorLevel, z, rand() * 6.28, 1 + math.floor(rand() * 3))
+				end
+			elseif style == "core" then
+				local x, z = around(0.6)
+				onFloor("pillar", x, floorLevel, z, 0, 1 + math.floor(rand() * 2))
 			end
 			if style == "mine" then
 				if not campPlaced and rand() < 0.45 then

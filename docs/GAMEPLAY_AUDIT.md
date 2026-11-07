@@ -561,6 +561,26 @@ los puntos de interacción, nombres y posiciones de siempre (`ShopCounter`, `Sel
 - **Para ti:** la hierba del terreno de Roblox es alta y no se puede quitar desde el código; si la
   prefieres más baja, en Studio: Workspace → Terrain → propiedad `Decoration`.
 
+### Rediseño visual, fase 2: el subsuelo
+- **Estaciones del montacargas:** de dos postes y un cartel a un descansillo industrial en la misma
+  huella de 7×7 (se instala donde está el jugador, a menudo en un pozo): plataforma de chapa con
+  franjas de peligro en los cuatro bordes, pórtico amarillo con riostras, polea roja que gira y cable
+  hacia la roca, barandillas laterales abiertas por delante, mazos de cables, faroles enjaulados (uno
+  parpadea), panel con luces verde y roja que laten y cartel iluminado con una franja del color de la
+  zona [Studio: instalada jugando a 72 m; modelo visto en una copia en la superficie].
+- **Cada capa con elementos propios en galerías y cámaras** (`ScenePlan`, `CaveScenes`):
+  - Minas: bombillas colgando de su cable, que parpadean; cajas, barril y saco de mineral brillante.
+  - Cuevas de Cristal: racimos de cristales luminosos que crecen del suelo, el central late.
+  - Cavernas Antiguas: braseros de piedra con fuego de verdad y cabezas talladas con ojos que
+    brillan.
+  - Profundidades Volcánicas: pozas de lava con borde de basalto y brasas.
+  - Abismo: setas gigantes luminosas con motas en el sombrero.
+  - Núcleo: pilares de luz con piedras que orbitan.
+  De 7,1 a 10,3 elementos por sector de media (máximo 26, presupuesto 60); el test comprueba que
+  cada uno está sobre suelo o techo reales y solo en su capa [Studio: los ocho, vistos en una fila
+  de muestra; en las cuevas, las bombillas de las Minas].
+- **Pendiente de ver bajando:** las capas profundas, en una partida larga o con el montacargas.
+
 ### Problemas abiertos de la fase 3
 - Resuelto: los tests pasan en local con Lune.
 - Lanzamiento largo del gancho motorizado sin comprobar en Studio.

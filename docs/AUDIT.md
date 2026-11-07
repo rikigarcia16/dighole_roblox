@@ -368,3 +368,5 @@ durante la prueba (no en el repositorio).
 | X44 | Rodear la casa | Entramado, tejado de tejas, buhardilla, chimenea con humo, veleta, ventanas iluminadas, porche y jardín con buzón. |
 | X45 | Entrar en la tienda y el mercado | Cartel grande, engranaje que gira, toldos, herramientas colgadas; vender y comprar siguen igual. |
 | X46 | Montacargas | Castillete con rueda que gira y luces que laten; el panel sigue abriendo el menú. |
+| X47 | Instalar una estación (H) | Descansillo con franjas, pórtico amarillo, polea que gira, faroles y cartel con el color de la zona; el panel sigue abriendo el menú. |
+| X48 | Recorrer cada capa | Minas: bombillas y cajas. Cristal: racimos. Cavernas: braseros e ídolos. Volcánicas: pozas de lava. Abismo: setas. Núcleo: pilares de luz. |
