@@ -26,6 +26,7 @@ local InventoryUI = require(UI.InventoryUI)
 local MobilityUI = require(UI.MobilityUI)
 local TutorialUI = require(UI.TutorialUI)
 local GearUI = require(UI.GearUI)
+local CoinFx = require(UI.CoinFx)
 local Mobility = require(ReplicatedStorage.Shared.Config.Mobility)
 
 local ClientState = require(script.Parent.ClientState)
@@ -122,8 +123,9 @@ function UIController.start()
 	end
 
 	-- Top bar -------------------------------------------------------------------------------------
-	local _, coinsLabel =
+	local coinsPill, coinsLabel =
 		pill(gui, "Coins", UDim2.fromOffset(12, 10), Vector2.zero, UDim2.fromOffset(190, 46), Theme.coins)
+	local coinFx = CoinFx.new(gui, coinsPill)
 	local _, depthLabel =
 		pill(gui, "Depth", UDim2.new(0.5, 0, 0, 10), Vector2.new(0.5, 0), UDim2.fromOffset(300, 46), Theme.text)
 
@@ -394,6 +396,31 @@ function UIController.start()
 		Parent = banner,
 	})
 	Build.textStroke().Parent = bannerSubtitle
+	-- first time in a zone: the title lands with a bounce, a line in the zone's colour opens under it
+	-- and the screen edges glow in that colour for a moment
+	local bannerScale = Instance.new("UIScale")
+	bannerScale.Parent = banner
+	local bannerLine = Build("Frame", {
+		Name = "Line",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 60),
+		Size = UDim2.fromOffset(0, 4),
+		BorderSizePixel = 0,
+		Parent = banner,
+		[Build.Children] = { Build.corner(2) },
+	})
+	local zoneGlow = Build("Frame", {
+		Name = "ZoneGlow",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Active = false,
+		ZIndex = 0,
+		Parent = gui,
+	})
+	local zoneGlowStroke = Instance.new("UIStroke")
+	zoneGlowStroke.Thickness = 26
+	zoneGlowStroke.Transparency = 1
+	zoneGlowStroke.Parent = zoneGlow
 	local bannerToken = 0
 	local function showBanner(zone: Zones.Zone, firstTime: boolean)
 		bannerToken += 1
@@ -406,8 +433,22 @@ function UIController.start()
 			l.TextTransparency = 1
 			TweenService:Create(l, TweenInfo.new(0.5), { TextTransparency = 0 }):Play()
 		end
+		bannerLine.BackgroundColor3 = zone.accent
+		bannerLine.Size = UDim2.fromOffset(0, 4)
 		if firstTime then
 			EffectsController.playUi("zone")
+			bannerScale.Scale = 1.35
+			TweenService:Create(bannerScale, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				Scale = 1,
+			}):Play()
+			TweenService:Create(bannerLine, TweenInfo.new(0.8, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+				Size = UDim2.fromOffset(420, 4),
+			}):Play()
+			zoneGlowStroke.Color = zone.accent
+			zoneGlowStroke.Transparency = 0.3
+			TweenService:Create(zoneGlowStroke, TweenInfo.new(2.4, Enum.EasingStyle.Quad), { Transparency = 1 }):Play()
+		else
+			bannerScale.Scale = 1
 		end
 		task.delay(if firstTime then 4 else 2.2, function()
 			if token ~= bannerToken then
@@ -416,6 +457,7 @@ function UIController.start()
 			for _, l in { bannerTitle, bannerSubtitle } do
 				TweenService:Create(l, TweenInfo.new(0.6), { TextTransparency = 1 }):Play()
 			end
+			TweenService:Create(bannerLine, TweenInfo.new(0.6), { Size = UDim2.fromOffset(0, 4) }):Play()
 			task.wait(0.6)
 			if token == bannerToken then
 				banner.Visible = false
@@ -684,6 +726,8 @@ function UIController.start()
 
 	-- State bindings ---------------------------------------------------------------------------------
 	local displayedCoins = 0
+	local loadedCoins = false
+	local ownedTools: { [string]: boolean }? = nil -- nil until the first state (the saved tools)
 	local coinTween: Tween? = nil
 	local coinValue = Instance.new("NumberValue")
 	coinValue.Changed:Connect(function(value)
@@ -743,6 +787,9 @@ function UIController.start()
 			coinTween:Cancel()
 		end
 		if math.abs(state.coins - displayedCoins) > 0 then
+			if loadedCoins then
+				coinFx.changed(displayedCoins, state.coins)
+			end
 			coinTween =
 				TweenService:Create(coinValue, TweenInfo.new(0.4, Enum.EasingStyle.Quad), { Value = state.coins });
 			(coinTween :: Tween):Play()
@@ -750,12 +797,21 @@ function UIController.start()
 		else
 			coinsLabel.Text = "● " .. Format.number(state.coins)
 		end
+		loadedCoins = true -- the first state is the saved balance, not a gain
 		local fraction = math.clamp(state.used / math.max(state.capacity, 1), 0, 1)
 		TweenService:Create(backpackFill, TweenInfo.new(0.2), { Size = UDim2.fromScale(fraction, 1) }):Play()
 		backpackFill.BackgroundColor3 = if fraction >= 1 then Theme.danger else Theme.backpack
 		backpackLabel.Text = string.format("Mochila  %d/%d", state.used, state.capacity)
 		local tool = Tools.get(state.equippedTool)
 		toolLabel.Text = if tool then string.format("%s · P%d", tool.name, tool.power) else ""
+		-- a tool bought (or earned) right now: a moment of its own, not just a toast
+		if ownedTools and tool and state.tools[tool.id] and not ownedTools[tool.id] then
+			EffectsController.narrative:Fire(
+				string.format("¡NUEVA HERRAMIENTA! %s · potencia %d", tool.name, tool.power)
+			)
+			EffectsController.playUi("discover_epic")
+		end
+		ownedTools = table.clone(state.tools)
 		if state.coins > 0 and (state.discoveries.dirt or 0) > 0 and state.used == 0 then
 			hasSold = true
 		end
@@ -824,10 +880,11 @@ function UIController.start()
 		Name = "RareBanner",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.4),
-		Size = UDim2.fromOffset(520, 44),
+		Size = UDim2.fromOffset(640, 44),
 		MaxTextSize = 34,
 		Text = "",
 		TextTransparency = 1,
+		ZIndex = 30, -- above the garage window: a tool bought there is announced over it
 		Parent = gui,
 	})
 	local rareStroke = Build.textStroke()
