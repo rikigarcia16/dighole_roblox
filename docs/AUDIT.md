@@ -364,3 +364,7 @@ durante la prueba (no en el repositorio).
 | X40 | Comprar una herramienta | «¡NUEVA HERRAMIENTA! …» por encima del garaje. |
 | X41 | Llegar a una zona nueva | Título con rebote, línea y brillo de bordes del color de la zona. |
 | X42 | Probar → Dispositivo: teléfono y tableta | El HUD, el garaje y los ajustes caben y se leen. |
+| X43 | Aparecer en una partida nueva | Plaza redonda con flores, caminos de grava con bordillos, arco «EL AGUJERO», casa con jardín al fondo, nubes y colinas. |
+| X44 | Rodear la casa | Entramado, tejado de tejas, buhardilla, chimenea con humo, veleta, ventanas iluminadas, porche y jardín con buzón. |
+| X45 | Entrar en la tienda y el mercado | Cartel grande, engranaje que gira, toldos, herramientas colgadas; vender y comprar siguen igual. |
+| X46 | Montacargas | Castillete con rueda que gira y luces que laten; el panel sigue abriendo el menú. |

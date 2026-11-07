@@ -7,7 +7,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
+local CollectionService = game:GetService("CollectionService")
 local TerrainChunkService = require(script.Parent.TerrainChunkService)
+local Art = require(script.Parent.SurfaceArt)
+local ToolModels = require(ReplicatedStorage.Shared.Util.ToolModels)
 
 local WorldBuilder = {}
 
@@ -26,7 +29,7 @@ local Palette = {
 	glass = Color3.fromRGB(170, 210, 240),
 	leaves = Color3.fromRGB(86, 150, 64),
 	leavesDark = Color3.fromRGB(64, 124, 52),
-	path = Color3.fromRGB(176, 160, 130),
+	path = Color3.fromRGB(214, 192, 150),
 	sign = Color3.fromRGB(60, 46, 34),
 	accent = Color3.fromRGB(255, 196, 64),
 	sell = Color3.fromRGB(80, 190, 90),
@@ -323,17 +326,32 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 	digMarker.CanQuery = false
 	digMarker.CanTouch = false
 
-	-- Paths ------------------------------------------------------------------------------------
+	-- Paths: warm gravel with stone curbs -----------------------------------------------------------
 	local function path(from: Vector3, to: Vector3, width: number)
+		-- bare earth under the path, or the terrain's grass blades grow through it
+		local lo = Vector3.new(math.min(from.X, to.X), 0, math.min(from.Z, to.Z))
+		local hi = Vector3.new(math.max(from.X, to.X), 0, math.max(from.Z, to.Z))
+		bareGround((lo + hi) / 2, hi.X - lo.X + width - 5, hi.Z - lo.Z + width - 5)
 		local mid = (from + to) / 2
+		local cf = CFrame.lookAt(mid + Vector3.new(0, 0.1, 0), to + Vector3.new(0, 0.1, 0))
+		local length = (to - from).Magnitude + width
 		make(folder, {
 			name = "Path",
-			size = Vector3.new(width, 0.2, (to - from).Magnitude + width),
-			cframe = CFrame.lookAt(mid + Vector3.new(0, 0.1, 0), to + Vector3.new(0, 0.1, 0)),
+			size = Vector3.new(width, 0.2, length),
+			cframe = cf,
 			color = Palette.path,
-			material = Enum.Material.Cobblestone,
+			material = Enum.Material.Pebble,
 			shadow = false,
 		})
+		for _, side in { -1, 1 } do
+			Art.deco(folder, {
+				name = "Curb",
+				size = Vector3.new(0.7, 0.45, length),
+				cframe = cf * CFrame.new(side * (width / 2 + 0.3), 0.12, 0),
+				color = Art.Palette.stone,
+				material = Enum.Material.Slate,
+			})
+		end
 	end
 	path(at(0, 0, -half + 4), at(0, 0, -HALF_DIG - CELL - 4), 8)
 	path(at(-HALF_DIG - CELL - 4, 0, -46), at(-62, 0, -46), 6)
@@ -341,15 +359,34 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 	path(at(HALF_DIG + CELL + 4, 0, -46), at(58, 0, -46), 6)
 	path(at(58, 0, -46), at(58, 0, -10), 6)
 	path(at(-HALF_DIG - CELL - 4, 0, -46), at(HALF_DIG + CELL + 4, 0, -46), 6)
+	path(at(0, 0, HALF_DIG + CELL + 4), at(0, 0, 46), 6)
 
-	-- Spawn pad --------------------------------------------------------------------------------
+	-- Spawn plaza: a round stone square ringed with flowers, lanterns either side --------------------
+	bareGround(at(0, 0, -56), 12, 12)
 	make(folder, {
 		name = "SpawnPad",
-		size = Vector3.new(10, 0.4, 10),
-		cframe = CFrame.new(at(0, 0.2, -56)),
-		color = Palette.path,
+		shape = Enum.PartType.Cylinder,
+		size = Vector3.new(0.6, 18, 18),
+		cframe = CFrame.new(at(0, 0.3, -56)) * CFrame.Angles(0, 0, math.rad(90)),
+		color = Color3.fromRGB(196, 186, 168),
 		material = Enum.Material.Slate,
 	})
+	Art.deco(folder, {
+		name = "PlazaRing",
+		shape = Enum.PartType.Cylinder,
+		size = Vector3.new(0.5, 19.4, 19.4),
+		cframe = CFrame.new(at(0, 0.15, -56)) * CFrame.Angles(0, 0, math.rad(90)),
+		color = Art.Palette.stoneDark,
+		material = Enum.Material.Slate,
+	})
+	for i = 0, 5 do
+		local a = math.rad(30 + i * 60)
+		local p = at(math.cos(a) * 12, 0, -56 + math.sin(a) * 12)
+		if math.abs(math.cos(a) * 12) > 5 then
+			bareGround(p, -2, -2)
+			Art.flowerBed(folder, p, 2.2, 8, index * 100 + i)
+		end
+	end
 	local spawnCFrame = CFrame.lookAt(at(0, 4, -56), at(0, 4, 0))
 
 	-- House (behind the hole) -------------------------------------------------------------------
@@ -391,22 +428,6 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 				color = Palette.wall,
 				material = Enum.Material.Plaster,
 			})
-			local window = make(folder, {
-				name = "Window",
-				size = Vector3.new(4, 3.5, 0.3),
-				cframe = CFrame.new(at(hx + side * 8, 6.5, front - 0.05)),
-				color = Palette.glass,
-				material = Enum.Material.Glass,
-				transparency = 0.3,
-			})
-			window.Reflectance = 0.2
-			make(folder, {
-				name = "WindowFrame",
-				size = Vector3.new(4.6, 0.4, 0.5),
-				cframe = CFrame.new(at(hx + side * 8, 4.6, front - 0.1)),
-				color = Palette.trim,
-				material = Enum.Material.Wood,
-			})
 		end
 		make(folder, {
 			name = "HouseFront",
@@ -421,34 +442,28 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 			cframe = CFrame.new(at(hx - 2.5, 4.9, front + 0.4))
 				* CFrame.Angles(0, math.rad(-70), 0)
 				* CFrame.new(2.3, 0, 0),
-			color = Palette.wood,
+			color = Art.Palette.door,
 			material = Enum.Material.Wood,
 		})
-		-- Gable roof
-		for _, side in { -1, 1 } do
-			make(folder, {
-				name = "Roof",
-				wedge = true,
-				size = Vector3.new(w + 2, 6, dpt / 2 + 1),
-				cframe = CFrame.new(at(hx, h + 1 + 3, hz + side * (dpt / 4 + 0.5)))
-					* CFrame.Angles(0, if side > 0 then math.pi else 0, 0),
-				color = Palette.roof,
-				material = Enum.Material.SmoothPlastic,
-			})
-		end
-		make(folder, {
-			name = "Chimney",
-			size = Vector3.new(2.4, 7, 2.4),
-			cframe = CFrame.new(at(hx + 9, h + 5, hz + 4)),
-			color = Color3.fromRGB(140, 80, 66),
-			material = Enum.Material.Brick,
-		})
-		make(folder, {
-			name = "Porch",
-			size = Vector3.new(10, 0.6, 4),
-			cframe = CFrame.new(at(hx, 0.3, front - 2)),
-			color = Palette.wood,
+		-- ceiling inside, so the roof's underside is never seen from the room
+		Art.deco(folder, {
+			name = "Ceiling",
+			size = Vector3.new(w - 2, 0.4, dpt - 2),
+			cframe = CFrame.new(at(hx, h + 0.8, hz)),
+			color = Art.Palette.timberLight,
 			material = Enum.Material.WoodPlanks,
+		})
+		Art.cottageExterior(folder, at(hx, 0, hz), { width = w, depth = dpt, wallHeight = h })
+		bareGround(at(hx, 0, front - 11), 26, 10)
+		Art.frontGarden(folder, at(hx, 0, front - 6), 26, 10)
+		-- rug inside
+		Art.deco(folder, {
+			name = "Rug",
+			shape = Enum.PartType.Cylinder,
+			size = Vector3.new(0.1, 9, 9),
+			cframe = CFrame.new(at(hx + 1, 1.05, hz - 2)) * CFrame.Angles(0, 0, math.rad(90)),
+			color = Color3.fromRGB(196, 74, 74),
+			material = Enum.Material.Fabric,
 		})
 		-- Table with the mysterious note
 		make(folder, {
@@ -527,23 +542,27 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 		light.Parent = make(folder, {
 			name = "CeilingLamp",
 			size = Vector3.new(1.2, 0.6, 1.2),
-			cframe = CFrame.new(at(hx, h, hz)),
+			cframe = CFrame.new(at(hx, h + 0.3, hz)),
 			color = Color3.fromRGB(255, 230, 180),
 			material = Enum.Material.Neon,
 			collide = false,
 		})
+		Art.tree(folder, at(hx - 24, 0, hz - 6), 1.1, index * 7 + 1, true)
+		Art.tree(folder, at(hx + 25, 0, hz + 6), 1, index * 7 + 2, true)
+		Art.butterflies(folder, at(hx, 0, front - 6), 3, index * 13)
 	end
 
-	-- Garage + shop (west of the hole, open towards it) -------------------------------------------
+	-- Garage: a digging-supplies shop with a striped awning, tools on show and machinery -----------
 	local shopPoint: Vector3
 	do
 		local gx, gz, dpt, w, h = -76, 6, 24, 32, 13
 		local back = gx - dpt / 2
+		local open = gx + dpt / 2
 		make(folder, {
 			name = "GarageFloor",
 			size = Vector3.new(dpt, 0.6, w),
 			cframe = CFrame.new(at(gx, 0.3, gz)),
-			color = Color3.fromRGB(150, 150, 150),
+			color = Color3.fromRGB(170, 170, 176),
 			material = Enum.Material.Concrete,
 		})
 		bareGround(at(gx, 0, gz), dpt, w)
@@ -551,7 +570,7 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 			name = "GarageWall",
 			size = Vector3.new(1, h, w),
 			cframe = CFrame.new(at(back + 0.5, h / 2, gz)),
-			color = Color3.fromRGB(180, 70, 56),
+			color = Art.Palette.brick,
 			material = Enum.Material.Brick,
 		})
 		for _, side in { -1, 1 } do
@@ -559,80 +578,223 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 				name = "GarageWall",
 				size = Vector3.new(dpt, h, 1),
 				cframe = CFrame.new(at(gx, h / 2, gz + side * (w / 2 - 0.5))),
-				color = Color3.fromRGB(180, 70, 56),
+				color = Art.Palette.brick,
 				material = Enum.Material.Brick,
+			})
+			-- stone base course outside
+			Art.deco(folder, {
+				name = "GarageBase",
+				size = Vector3.new(dpt + 0.6, 1.6, 0.5),
+				cframe = CFrame.new(at(gx, 0.8, gz + side * (w / 2 + 0.1))),
+				color = Art.Palette.stone,
+				material = Enum.Material.Cobblestone,
 			})
 			make(folder, {
 				name = "GaragePillar",
-				size = Vector3.new(1.6, h, 1.6),
-				cframe = CFrame.new(at(gx + dpt / 2 - 0.8, h / 2, gz + side * (w / 2 - 0.8))),
-				color = Palette.trim,
-				material = Enum.Material.Concrete,
+				size = Vector3.new(1.8, h, 1.8),
+				cframe = CFrame.new(at(open - 0.8, h / 2, gz + side * (w / 2 - 0.8))),
+				color = Art.Palette.hazardY,
+				material = Enum.Material.Metal,
 			})
+			Art.hazard(
+				folder,
+				at(open - 0.8, 1, gz + side * (w / 2 - 0.8) - 0.9),
+				at(open - 0.8, 1, gz + side * (w / 2 - 0.8) + 0.9),
+				1.9,
+				1.6
+			)
 		end
+		Art.deco(folder, {
+			name = "GarageBase",
+			size = Vector3.new(0.5, 1.6, w + 0.6),
+			cframe = CFrame.new(at(back - 0.1, 0.8, gz)),
+			color = Art.Palette.stone,
+			material = Enum.Material.Cobblestone,
+		})
+		-- corrugated roof: teal panels with lighter ribs
 		make(folder, {
 			name = "GarageRoof",
 			size = Vector3.new(dpt + 3, 1, w + 2),
 			cframe = CFrame.new(at(gx + 1, h + 0.5, gz)),
-			color = Palette.garageRoof,
+			color = Color3.fromRGB(46, 120, 168),
 			material = Enum.Material.Metal,
 		})
-		local sign = make(folder, {
-			name = "GarageSign",
-			size = Vector3.new(0.5, 3, 16),
-			cframe = CFrame.new(at(gx + dpt / 2 + 0.6, h - 1.5, gz)),
-			color = Palette.sign,
-			material = Enum.Material.Wood,
+		for i = 0, 7 do
+			Art.deco(folder, {
+				name = "RoofRib",
+				size = Vector3.new(dpt + 3.1, 0.35, 0.6),
+				cframe = CFrame.new(at(gx + 1, h + 1.15, gz - w / 2 + 2 + i * (w - 4) / 7)),
+				color = Color3.fromRGB(96, 168, 210),
+				material = Enum.Material.Metal,
+			})
+		end
+		-- false front with the big sign and a turning gear
+		local facade = make(folder, {
+			name = "GarageFacade",
+			size = Vector3.new(1, 6.5, w + 2),
+			cframe = CFrame.new(at(open + 0.4, h + 3.6, gz)),
+			color = Art.Palette.timber,
+			material = Enum.Material.WoodPlanks,
 		})
-		label(sign, Enum.NormalId.Right, "GARAJE · TIENDA", Palette.accent)
+		local sign = Art.deco(folder, {
+			name = "GarageSign",
+			size = Vector3.new(0.4, 4.4, w - 6),
+			cframe = CFrame.new(at(open + 1, h + 3.6, gz - 1.6)),
+			color = Color3.fromRGB(250, 236, 200),
+			material = Enum.Material.SmoothPlastic,
+		})
+		Art.label(sign, Enum.NormalId.Right, "TIENDA DE EXCAVACIÓN", Color3.fromRGB(226, 84, 60))
+		Art.wheel(folder, CFrame.new(at(open + 1.1, h + 3.6, gz + w / 2 - 2.6)), 5, Art.Palette.hazardY, 0.6)
+		Art.awning(
+			folder,
+			at(open + 0.2, h - 1.2, gz),
+			Vector3.new(1, 0, 0),
+			Vector3.new(0, 0, 1),
+			w - 6,
+			4.2,
+			1.8,
+			{ Art.Palette.awningA, Art.Palette.awningB }
+		)
+		_ = facade
 		-- Shop counter
 		local counter = make(folder, {
 			name = "ShopCounter",
 			size = Vector3.new(3, 3.4, 10),
 			cframe = CFrame.new(at(gx + 3, 1.7, gz)),
-			color = Palette.wood,
+			color = Color3.fromRGB(226, 84, 60),
 			material = Enum.Material.WoodPlanks,
 		})
 		make(folder, {
 			name = "CounterTop",
-			size = Vector3.new(3.4, 0.3, 10.4),
-			cframe = CFrame.new(at(gx + 3, 3.55, gz)),
-			color = Palette.darkWood,
+			size = Vector3.new(3.6, 0.4, 10.6),
+			cframe = CFrame.new(at(gx + 3, 3.6, gz)),
+			color = Art.Palette.timber,
 			material = Enum.Material.Wood,
 		})
 		prompt(counter, "Shop", "Garaje", "Abrir tienda", 12)
 		shopPoint = at(gx + 3, 0, gz)
-		-- Tool wall: pegboard for decoration
+		-- cash register and an OPEN sign that glows
+		Art.deco(folder, {
+			name = "Register",
+			size = Vector3.new(1.6, 1.2, 1.8),
+			cframe = CFrame.new(at(gx + 3, 4.4, gz + 3)),
+			color = Color3.fromRGB(80, 84, 96),
+			material = Enum.Material.Metal,
+		})
+		local screen = Art.deco(folder, {
+			name = "RegisterScreen",
+			size = Vector3.new(0.2, 0.8, 1.4),
+			cframe = CFrame.new(at(gx + 3.9, 5.2, gz + 3)) * CFrame.Angles(0, 0, math.rad(-15)),
+			color = Color3.fromRGB(110, 240, 140),
+			material = Enum.Material.Neon,
+			shadow = false,
+		})
+		_ = screen
+		local open_ = Art.deco(folder, {
+			name = "OpenSign",
+			size = Vector3.new(0.3, 1.6, 4.4),
+			cframe = CFrame.new(at(open - 2, h - 2.6, gz - 9)),
+			color = Color3.fromRGB(255, 80, 120),
+			material = Enum.Material.Neon,
+			shadow = false,
+		})
+		Art.label(open_, Enum.NormalId.Right, "ABIERTO", Color3.fromRGB(255, 255, 255))
+		open_:SetAttribute("PulsePeriod", 2.4)
+		CollectionService:AddTag(open_, "THNE_Pulse")
+		-- tool wall: the real tools of the game, from the cheapest to the most powerful
 		make(folder, {
 			name = "Pegboard",
-			size = Vector3.new(0.3, 6, 18),
-			cframe = CFrame.new(at(back + 1.2, 6, gz)),
-			color = Color3.fromRGB(196, 160, 110),
+			size = Vector3.new(0.3, 7, w - 6),
+			cframe = CFrame.new(at(back + 1.2, 6.5, gz)),
+			color = Color3.fromRGB(214, 176, 120),
 			material = Enum.Material.Wood,
 		})
+		local shown = {
+			"rusty_shovel",
+			"reinforced_shovel",
+			"steel_shovel",
+			"miner_pick",
+			"industrial_pick",
+			"portable_drill",
+			"plasma_digger",
+		}
+		for i, id in shown do
+			local ok, model = pcall(ToolModels.buildModel, id)
+			if ok and model then
+				-- the row stops short of the workbench in the far corner
+				local z = gz - 12 + (i - 1) * 16 / (#shown - 1)
+				model:PivotTo(
+					CFrame.new(at(back + 1.7, 7.4, z))
+						* CFrame.Angles(0, 0, math.rad(90))
+						* CFrame.Angles(0, math.rad(90), 0)
+				)
+				for _, d in model:GetDescendants() do
+					if d:IsA("BasePart") then
+						d.Anchored = true
+						d.CanCollide = false
+						d.CanQuery = false
+					end
+				end
+				model.Parent = folder
+			end
+		end
+		-- shelves of ore crates on the side walls, a workbench with a drill press, pendant lamps
+		for i, gem in { Color3.fromRGB(255, 140, 60), Color3.fromRGB(120, 200, 255), Color3.fromRGB(200, 110, 255) } do
+			Art.oreCrate(folder, CFrame.new(at(back + 3 + (i - 1) * 3.2, 0.6, gz - w / 2 + 2.6)), gem, index * 17 + i)
+		end
 		make(folder, {
 			name = "Workbench",
 			size = Vector3.new(4, 3, 8),
 			cframe = CFrame.new(at(back + 3, 1.5, gz + 10)),
-			color = Palette.darkWood,
+			color = Art.Palette.timber,
 			material = Enum.Material.WoodPlanks,
 		})
-		local garageLight = Instance.new("PointLight")
-		garageLight.Range = 22
-		garageLight.Brightness = 1
-		garageLight.Color = Color3.fromRGB(255, 236, 200)
-		garageLight.Parent = make(folder, {
-			name = "GarageLamp",
-			size = Vector3.new(6, 0.3, 1),
-			cframe = CFrame.new(at(gx, h - 0.3, gz)),
-			color = Color3.fromRGB(255, 250, 230),
-			material = Enum.Material.Neon,
-			collide = false,
-			shadow = false,
+		Art.deco(folder, {
+			name = "DrillColumn",
+			shape = Enum.PartType.Cylinder,
+			size = Vector3.new(4, 0.6, 0.6),
+			cframe = CFrame.new(at(back + 2.4, 5, gz + 12)) * CFrame.Angles(0, 0, math.rad(90)),
+			color = Art.Palette.steel,
+			material = Enum.Material.Metal,
 		})
+		Art.deco(folder, {
+			name = "DrillHead",
+			size = Vector3.new(1.6, 1.4, 1.4),
+			cframe = CFrame.new(at(back + 3, 6.6, gz + 12)),
+			color = Color3.fromRGB(226, 84, 60),
+			material = Enum.Material.Metal,
+		})
+		for _, z in { -8, 0, 8 } do
+			local shade = Art.deco(folder, {
+				name = "PendantShade",
+				size = Vector3.new(2, 0.8, 2),
+				cframe = CFrame.new(at(gx, h - 1.6, gz + z)),
+				color = Art.Palette.iron,
+				material = Enum.Material.Metal,
+			})
+			_ = shade
+			local bulb = Art.deco(folder, {
+				name = "GarageLamp",
+				shape = Enum.PartType.Ball,
+				size = Vector3.one * 0.9,
+				cframe = CFrame.new(at(gx, h - 2.2, gz + z)),
+				color = Art.Palette.lampGlow,
+				material = Enum.Material.Neon,
+				shadow = false,
+			})
+			local garageLight = Instance.new("PointLight")
+			garageLight.Range = 14
+			garageLight.Brightness = 0.9
+			garageLight.Color = Color3.fromRGB(255, 226, 180)
+			garageLight.Parent = bulb
+		end
+		-- outside: barrels and a stack of crates by the door
+		Art.barrel(folder, at(open + 3, 0, gz - w / 2 - 2), Color3.fromRGB(214, 64, 60))
+		Art.barrel(folder, at(open + 5.4, 0, gz - w / 2 - 1.2), Color3.fromRGB(60, 120, 210))
+		Art.oreCrate(folder, CFrame.new(at(open + 3, 0, gz + w / 2 + 2.4)), Color3.fromRGB(255, 210, 80), index * 19)
 	end
 
-	-- Sell station (east of the hole) ------------------------------------------------------------
+	-- Sell station: a market stall with a striped canopy ---------------------------------------------
 	local sellPoint: Vector3
 	do
 		local sx, sz = 58, -4
@@ -640,31 +802,36 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 			name = "SellDeck",
 			size = Vector3.new(14, 0.6, 12),
 			cframe = CFrame.new(at(sx, 0.3, sz)),
-			color = Palette.wood,
+			color = Art.Palette.timberLight,
 			material = Enum.Material.WoodPlanks,
 		})
 		bareGround(at(sx, 0, sz), 14, 12)
 		for _, c in { { -6, -5 }, { 6, -5 }, { -6, 5 }, { 6, 5 } } do
 			make(folder, {
 				name = "SellPost",
-				size = Vector3.new(0.8, 10, 0.8),
+				size = Vector3.new(0.9, 10, 0.9),
 				cframe = CFrame.new(at(sx + c[1], 5, sz + c[2])),
-				color = Palette.darkWood,
+				color = Art.Palette.trim,
 				material = Enum.Material.Wood,
 			})
 		end
-		make(folder, {
-			name = "SellRoof",
-			size = Vector3.new(16, 0.8, 14),
-			cframe = CFrame.new(at(sx, 10.4, sz)),
-			color = Palette.sell,
-			material = Enum.Material.SmoothPlastic,
-		})
+		for _, side in { -1, 1 } do
+			Art.awning(
+				folder,
+				at(sx, 12.4, sz),
+				Vector3.new(side, 0, 0),
+				Vector3.new(0, 0, 1),
+				14,
+				8,
+				2.6,
+				{ Art.Palette.marketA, Art.Palette.awningB }
+			)
+		end
 		local cart = make(folder, {
 			name = "SellCart",
 			size = Vector3.new(5, 2.6, 7),
 			cframe = CFrame.new(at(sx - 2, 2.2, sz)),
-			color = Palette.metal,
+			color = Color3.fromRGB(110, 118, 130),
 			material = Enum.Material.DiamondPlate,
 		})
 		for _, c in { { -2.6, -2.4 }, { -2.6, 2.4 }, { 2.6, -2.4 }, { 2.6, 2.4 } } do
@@ -677,82 +844,131 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 				material = Enum.Material.Metal,
 			})
 		end
-		make(folder, {
-			name = "CartOre",
-			size = Vector3.new(4.2, 0.6, 6.2),
-			cframe = CFrame.new(at(sx - 2, 3.5, sz)),
-			color = Color3.fromRGB(214, 120, 64),
-			material = Enum.Material.Sandstone,
-			collide = false,
-		})
+		for _, c in { -1.2, 0, 1.2 } do
+			Art.deco(folder, {
+				name = "CartOre",
+				size = Vector3.new(1.4, 1, 1.4),
+				cframe = CFrame.new(at(sx - 2 + c, 3.7, sz + c * 1.4)) * CFrame.Angles(0.4, c, 0.3),
+				color = ({ Color3.fromRGB(255, 140, 60), Color3.fromRGB(120, 200, 255), Color3.fromRGB(255, 210, 80) })[math.floor(
+					c / 1.2
+				) + 2],
+				material = Enum.Material.Neon,
+				shadow = false,
+			})
+		end
 		local board = make(folder, {
 			name = "SellSign",
-			size = Vector3.new(0.5, 3, 12),
-			cframe = CFrame.new(at(sx - 7.2, 8.6, sz)),
-			color = Palette.sign,
+			size = Vector3.new(0.5, 3.4, 12),
+			cframe = CFrame.new(at(sx - 7.2, 7.4, sz)),
+			color = Color3.fromRGB(250, 236, 200),
 			material = Enum.Material.Wood,
+			collide = false,
 		})
-		label(board, Enum.NormalId.Left, "VENDER MINERALES", Palette.sell)
+		Art.label(board, Enum.NormalId.Left, "VENTA DE MINERALES", Color3.fromRGB(46, 150, 72))
+		-- a big gold coin above the sign
+		local coin = Art.deco(folder, {
+			name = "Coin",
+			shape = Enum.PartType.Cylinder,
+			size = Vector3.new(0.6, 3.4, 3.4),
+			cframe = CFrame.new(at(sx - 7.4, 11.4, sz)),
+			color = Art.Palette.gold,
+			material = Enum.Material.Metal,
+		})
+		coin:SetAttribute("SpinSpeed", 0.8)
+		CollectionService:AddTag(coin, "THNE_Spin")
+		-- scales and crates of ore on the deck
+		Art.oreCrate(folder, CFrame.new(at(sx + 3.5, 0.6, sz - 3)), Color3.fromRGB(120, 200, 255), index * 23)
+		Art.oreCrate(folder, CFrame.new(at(sx + 3.5, 0.6, sz + 3)), Color3.fromRGB(255, 120, 160), index * 29)
 		prompt(cart, "Sell", "Estación de venta", "Vender todo", 12)
 		sellPoint = at(sx - 2, 0, sz)
 	end
 
-	-- Lift winch (west rim of the hole): the surface end of the lift stations ---------------
+	-- Lift: a proper mine headframe with a turning wheel -------------------------------------------
 	local liftPoint: Vector3
 	do
 		local wx, wz = -HALF_DIG - CELL - 7, 16
-		for _, side in { -1, 1 } do
-			make(folder, {
-				name = "WinchPost",
-				size = Vector3.new(0.9, 12, 0.9),
-				cframe = CFrame.new(at(wx, 6, wz + side * 3)) * CFrame.Angles(side * math.rad(8), 0, 0),
-				color = Palette.darkWood,
-				material = Enum.Material.Wood,
+		for _, sz in { -3.6, 3.6 } do
+			for _, sx in { -2.6, 2.6 } do
+				local foot, top = at(wx + sx, 0, wz + sz), at(wx, 13.4, wz + sz)
+				make(folder, {
+					name = "WinchPost",
+					size = Vector3.new(0.8, 0.8, (top - foot).Magnitude),
+					cframe = CFrame.lookAt((foot + top) / 2, top),
+					color = Art.Palette.hazardY,
+					material = Enum.Material.Metal,
+				})
+			end
+			Art.deco(folder, {
+				name = "WinchBrace",
+				size = Vector3.new(3.6, 0.5, 0.5),
+				cframe = CFrame.new(at(wx, 6.5, wz + sz)),
+				color = Art.Palette.hazardY,
+				material = Enum.Material.Metal,
 			})
 		end
 		make(folder, {
 			name = "WinchBeam",
-			size = Vector3.new(1, 1, 7.5),
-			cframe = CFrame.new(at(wx, 11.6, wz)),
-			color = Palette.metal,
+			size = Vector3.new(1.4, 1.2, 8.6),
+			cframe = CFrame.new(at(wx, 13.6, wz)),
+			color = Art.Palette.iron,
 			material = Enum.Material.Metal,
 		})
-		make(folder, {
-			name = "WinchWheel",
-			shape = Enum.PartType.Cylinder,
-			size = Vector3.new(0.6, 4, 4),
-			cframe = CFrame.new(at(wx + 0.8, 10.4, wz)),
-			color = Color3.fromRGB(70, 70, 76),
-			material = Enum.Material.DiamondPlate,
-		})
+		Art.wheel(
+			folder,
+			CFrame.new(at(wx + 1, 12, wz)) * CFrame.Angles(0, math.rad(90), 0),
+			5.5,
+			Color3.fromRGB(226, 84, 60),
+			0.5
+		)
 		make(folder, {
 			name = "WinchCable",
-			size = Vector3.new(0.15, 0.15, 12),
-			cframe = CFrame.lookAt(at(wx + 0.8, 10.4, wz), at(-HALF_DIG + 2, 0.2, wz)) * CFrame.new(0, 0, -6),
+			size = Vector3.new(0.15, 0.15, 14),
+			cframe = CFrame.lookAt(at(wx + 1, 12, wz), at(-HALF_DIG + 2, 0.2, wz)) * CFrame.new(0, 0, -7),
 			color = Color3.fromRGB(40, 40, 44),
 			material = Enum.Material.Metal,
 			collide = false,
 		})
+		-- platform with hazard edges
+		bareGround(at(wx, 0, wz), 7, 10)
+		make(folder, {
+			name = "LiftDeck",
+			size = Vector3.new(7, 0.5, 10),
+			cframe = CFrame.new(at(wx, 0.25, wz)),
+			color = Color3.fromRGB(120, 124, 132),
+			material = Enum.Material.DiamondPlate,
+		})
+		Art.hazard(folder, at(wx - 3.5, 0.55, wz - 5), at(wx - 3.5, 0.55, wz + 5), 0.5, 0.2)
+		Art.hazard(folder, at(wx + 3.5, 0.55, wz - 5), at(wx + 3.5, 0.55, wz + 5), 0.5, 0.2)
 		local panel = make(folder, {
 			name = "LiftPanel",
-			size = Vector3.new(1.4, 3.2, 1),
+			size = Vector3.new(1.4, 3.2, 1.6),
 			cframe = CFrame.new(at(wx - 2.5, 1.6, wz - 4)),
-			color = Color3.fromRGB(200, 160, 60),
+			color = Art.Palette.hazardY,
 			material = Enum.Material.Metal,
 		})
+		for i, color in { Color3.fromRGB(80, 255, 120), Color3.fromRGB(255, 70, 70) } do
+			local lamp_ = Art.deco(folder, {
+				name = "PanelLamp",
+				shape = Enum.PartType.Ball,
+				size = Vector3.one * 0.5,
+				cframe = CFrame.new(at(wx - 1.75, 2.4 - (i - 1) * 0.7, wz - 4)),
+				color = color,
+				material = Enum.Material.Neon,
+				shadow = false,
+			})
+			lamp_:SetAttribute("PulsePeriod", 1.2 + i * 0.5)
+			CollectionService:AddTag(lamp_, "THNE_Pulse")
+		end
 		prompt(panel, "Lift", "Montacargas", "Viajar", 10)
-		label(
-			make(folder, {
-				name = "LiftSign",
-				size = Vector3.new(4, 1.4, 0.3),
-				cframe = CFrame.new(at(wx - 2.5, 4, wz - 4)) * CFrame.Angles(0, math.rad(90), 0),
-				color = Palette.sign,
-				material = Enum.Material.Wood,
-			}),
-			Enum.NormalId.Front,
-			"MONTACARGAS",
-			Palette.accent
-		)
+		local liftSign = Art.deco(folder, {
+			name = "LiftSign",
+			size = Vector3.new(0.4, 2, 8),
+			cframe = CFrame.new(at(wx - 0.9, 15.2, wz)),
+			color = Art.Palette.iron,
+			material = Enum.Material.Metal,
+		})
+		Art.label(liftSign, Enum.NormalId.Left, "MONTACARGAS", Art.Palette.hazardY)
+		Art.label(liftSign, Enum.NormalId.Right, "MONTACARGAS", Art.Palette.hazardY)
 		liftPoint = at(wx - 2.5, 0, wz - 4)
 	end
 
@@ -763,9 +979,9 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 		for _, off in { -3.5, 3.5 } do
 			make(folder, {
 				name = "BoardPost",
-				size = Vector3.new(0.6, 9, 0.6),
+				size = Vector3.new(0.7, 9, 0.7),
 				cframe = CFrame.new(at(bx + off, 4.5, bz)),
-				color = Palette.darkWood,
+				color = Art.Palette.timber,
 				material = Enum.Material.Wood,
 			})
 		end
@@ -775,6 +991,12 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 			cframe = CFrame.new(at(bx, 6.4, bz)),
 			color = Palette.sign,
 			material = Enum.Material.Wood,
+		})
+		Art.deco(folder, {
+			name = "BoardRoof",
+			size = Vector3.new(9.2, 0.5, 1.4),
+			cframe = CFrame.new(at(bx, 9.1, bz)),
+			color = Art.Palette.roof,
 		})
 		ownerLabel = label(board, Enum.NormalId.Front, "Parcela libre", Palette.trim)
 		ownerLabel.Size = UDim2.fromScale(1, 0.45)
@@ -786,6 +1008,24 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 		if extraGui then
 			extraGui:Destroy()
 		end
+		bareGround(at(bx, 0, bz - 2.2), 0, 0)
+		Art.flowerBed(folder, at(bx, 0, bz - 2.2), 2.4, 8, index * 31)
+	end
+
+	-- The way in: a mine arch over the path to the hole ----------------------------------------
+	Art.mineArch(folder, at(0, 0, -HALF_DIG - CELL - 6), 10, "EL AGUJERO")
+
+	-- Rolling hills outside the fence give the horizon some shape ---------------------------------
+	for _, hill in
+		{
+			{ -70, half + 46, 44 },
+			{ 10, half + 54, 52 },
+			{ 86, half + 40, 40 },
+			{ -half - 34, 30, 30 },
+			{ half + 34, -20, 28 },
+		}
+	do
+		workspace.Terrain:FillBall(at(hill[1], -hill[3] * 0.55, hill[2]), hill[3], Enum.Material.Grass)
 	end
 
 	-- Fence with the entrance at the front ------------------------------------------------------
@@ -795,22 +1035,64 @@ function WorldBuilder.buildPlot(parent: Instance, index: number, originX: number
 	fenceLine(folder, corners[3], corners[4])
 	fenceLine(folder, corners[4], corners[1])
 
-	-- Trees and lamps ---------------------------------------------------------------------------
-	for _, t in
+	-- Nature: trees, pines, bushes, rocks and flowers, placed clear of paths and buildings ---------
+	local seed = index * 1000
+	for i, t in
 		{
 			{ -96, -94, 1.1 },
 			{ 92, -90, 1.3 },
 			{ -98, 60, 1.2 },
 			{ 96, 96, 1 },
-			{ 40, 96, 1.2 },
+			{ 40, 98, 1.2 },
 			{ -40, 98, 0.9 },
-			{ 96, 30, 1.1 },
+			{ 98, 30, 1.1 },
+			{ -100, -40, 1 },
+			{ 100, -50, 1.2 },
+			{ -30, -96, 0.9 },
+			{ 32, -98, 1 },
+			{ 70, 86, 1.1 },
 		}
 	do
-		tree(folder, at(t[1], 0, t[2]), t[3])
+		Art.tree(folder, at(t[1], 0, t[2]), t[3], seed + i, i % 5 == 0)
 	end
-	lamp(folder, at(-8, 0, -60), 8)
-	lamp(folder, at(8, 0, -60), 8)
+	for i, p in { { -100, 100 }, { -84, 104 }, { 104, 70 }, { 102, -104 }, { -104, -104 }, { -60, 104 } } do
+		Art.pine(folder, at(p[1], 0, p[2]), 1 + (i % 3) * 0.15)
+	end
+	for i, b in
+		{
+			{ -50, 40 },
+			{ 50, 46 },
+			{ -20, -66 },
+			{ 20, -70 },
+			{ 80, 60 },
+			{ -80, 76 },
+			{ 104, 0 },
+			{ -50, -90 },
+			{ 74, -30 },
+		}
+	do
+		Art.bush(folder, at(b[1], 0, b[2]), 1, seed + 50 + i, i % 3 == 0)
+	end
+	for i, r in { { -54, -78 }, { 64, -80 }, { 86, 60 }, { -58, 96 }, { 104, -20 }, { -104, 20 }, { 30, 60 } } do
+		Art.rock(folder, at(r[1], 0, r[2]), 0.9 + (i % 3) * 0.25, seed + 80 + i)
+	end
+	for i, f in
+		{ { -26, -84 }, { 24, -86 }, { -78, -40 }, { 80, -66 }, { -46, 66 }, { 48, 70 }, { 84, 12 }, { -60, -60 } }
+	do
+		bareGround(at(f[1], 0, f[2]), 0, 0)
+		Art.flowerBed(folder, at(f[1], 0, f[2]), 3.5, 12, seed + 120 + i)
+	end
+	Art.butterflies(folder, at(-26, 0, -84), 2, seed + 7)
+	Art.butterflies(folder, at(48, 0, 70), 2, seed + 9)
+
+	-- Lanterns along the paths, and at the corners of the hole --------------------------------------
+	for _, l in { { -6, -66 }, { 6, -66 }, { -6, -92 }, { 6, -92 }, { -66, -40 }, { 62, -40 }, { -10, 42 } } do
+		Art.lantern(folder, at(l[1], 0, l[2]), 7, if l[1] < 0 then math.rad(-90) else math.rad(90))
+	end
+	for _, corner in { { -1, -1 }, { -1, 1 }, { 1, -1 }, { 1, 1 } } do
+		local base = at(corner[1] * (HALF_DIG + CELL / 2), 0, corner[2] * (HALF_DIG + CELL / 2))
+		Art.lantern(folder, base, 6, math.atan2(-corner[1], -corner[2]) + math.pi)
+	end
 
 	folder.Parent = parent
 	return folder,

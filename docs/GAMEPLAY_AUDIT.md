@@ -523,6 +523,44 @@ mirar la cámara). Lo que estaba mal, por orden de gravedad:
 - **Pendiente:** revisar en el emulador de móvil y tableta de Studio (Probar → Dispositivo), que no
   puedo manejar desde aquí; escuchar sonidos y música.
 
+### Rediseño visual, fase 1: el exterior
+Todo hecho con piezas propias (`Services/SurfaceArt.lua`, sin modelos ni texturas externas), y con
+los puntos de interacción, nombres y posiciones de siempre (`ShopCounter`, `SellCart`, `LiftPanel`,
+`DigMarker`, `points.*`).
+- **Casa:** de caja blanca a casita de cuento: zócalo de piedra, entramado de madera, esquinas,
+  tejado de tejas a dos aguas con alero, cumbrera y relleno del hastial, buhardilla con ventana,
+  ventanas iluminadas con marco blanco, cruceta, contraventanas turquesa y jardineras con flores,
+  ojos de buey en los hastiales, puerta turquesa con faroles y cartel «MI CASA», porche con escalón,
+  postes y tejadillo, chimenea de ladrillo con humo, veleta que gira, techo interior y alfombra.
+  Delante, jardín con valla blanca, puerta con bolas doradas, parterres con flores, arbustos con
+  bayas, pasadera de piedras y buzón azul.
+- **Paisaje:** árboles redondos de tres verdes, cerezos rosas, pinos escalonados, arbustos, rocas
+  con musgo, parterres de flores en anillos de piedra, mariposas que revolotean, colinas en el
+  horizonte, nubes en el cielo, farolas de hierro con farol cálido.
+- **Caminos y plaza:** grava clara con bordillos de piedra; plaza redonda en el punto de aparición,
+  rodeada de flores. La hierba del terreno (más de un stud de alto) tapaba caminos y flores: debajo
+  de caminos, plaza, jardín y parterres ahora hay tierra.
+- **Entrada al agujero:** arco de mina con cartel «EL AGUJERO», faroles que parpadean y pico y pala
+  cruzados encima.
+- **Tienda de excavación** (garaje): fachada con cartel grande y engranaje que gira, tejado
+  ondulado, toldo de rayas rojas y blancas, columnas con franjas de peligro, mostrador rojo con
+  caja registradora, letrero «ABIERTO» que late, las herramientas reales del juego colgadas en orden
+  de progresión, cajas de mineral brillante, taladro de columna, lámparas colgantes y barriles.
+- **Mercado de minerales** (venta): toldo verde y blanco a dos aguas, moneda dorada que gira,
+  carro con mineral brillante, cajas de gemas y cartel nuevo (sin colisión: a la altura de la cabeza
+  cortaba el paso).
+- **Montacargas:** castillete minero amarillo con rueda roja que gira, plataforma con franjas de
+  peligro, panel con luces verde y roja que laten y cartel «MONTACARGAS» arriba.
+- **Vida en el cliente:** `AmbientLifeController` anima ahora rotores (`THNE_Rotor`) y mariposas
+  (`THNE_Flutter`), solo cerca de la cámara (hasta 120 objetos).
+- Coste: unas 1 300 piezas por parcela (antes ~350), todas ancladas y casi todas sin colisión ni
+  consultas.
+- **Studio:** capturas de antes y después (vista general, plaza, casa de frente y de lado, tienda
+  por fuera y por dentro, mercado y montacargas). Jugando: cavar, vender (+11, misión), abrir la
+  tienda y el panel del montacargas.
+- **Para ti:** la hierba del terreno de Roblox es alta y no se puede quitar desde el código; si la
+  prefieres más baja, en Studio: Workspace → Terrain → propiedad `Decoration`.
+
 ### Problemas abiertos de la fase 3
 - Resuelto: los tests pasan en local con Lune.
 - Lanzamiento largo del gancho motorizado sin comprobar en Studio.

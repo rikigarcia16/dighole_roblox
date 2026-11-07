@@ -2,7 +2,9 @@
 -- Small signs of life near the player, all client-side and purely visual:
 --   THNE_Flicker  old lanterns and vents: the light wavers and sometimes dips
 --   THNE_Pulse    crystals and luminous bulbs: slow breathing glow
---   THNE_Spin     the Core's floating shards: turn and bob
+--   THNE_Spin     the Core's floating shards, a weathervane, a coin: turn and bob
+--   THNE_Rotor    wheels and gears (garage sign, lift headframe): turn about their own axis
+--   THNE_Flutter  butterfly wings over the gardens: fly in loose circles, flapping
 --   falling dust  every few seconds a little dust trickles from the ceiling above the player
 --
 -- Only objects within ACTIVE_RANGE of the camera are animated (at most MAX_ACTIVE, list refreshed
@@ -23,7 +25,7 @@ local AmbientLifeController = {}
 
 local player = Players.LocalPlayer
 local ACTIVE_RANGE = 140
-local MAX_ACTIVE = 80 -- most objects animated at once (the nearest ones within range)
+local MAX_ACTIVE = 120 -- most objects animated at once (the nearest ones within range)
 
 type Living = { part: BasePart, kind: string, light: PointLight?, base: number, cframe: CFrame, phase: number }
 
@@ -78,6 +80,22 @@ local function animate(entry: Living, now: number)
 		else
 			p.Transparency = math.clamp(entry.base + 0.3 * (1 - s), 0, 0.9)
 		end
+	elseif entry.kind == "THNE_Rotor" then
+		local speed = (p:GetAttribute("RotorSpeed") :: number?) or 0.5
+		p.CFrame = entry.cframe * CFrame.Angles(now * speed, 0, 0)
+	elseif entry.kind == "THNE_Flutter" then
+		local center = p:GetAttribute("Center") :: Vector3?
+		if not center then
+			return
+		end
+		local radius = (p:GetAttribute("Radius") :: number?) or 4
+		local speed = (p:GetAttribute("Speed") :: number?) or 0.6
+		local side = (p:GetAttribute("Side") :: number?) or 1
+		local t = now * speed + ((p:GetAttribute("Phase") :: number?) or 0)
+		local pos = center + Vector3.new(math.cos(t) * radius, math.sin(t * 2.3) * 0.7, math.sin(t) * radius)
+		local heading = Vector3.new(-math.sin(t), 0, math.cos(t))
+		local flap = math.sin(now * 16 + t) * 0.9
+		p.CFrame = CFrame.lookAt(pos, pos + heading) * CFrame.Angles(0, 0, side * flap) * CFrame.new(side * 0.3, 0, 0)
 	elseif entry.kind == "THNE_Spin" then
 		local speed = (p:GetAttribute("SpinSpeed") :: number?) or 0.5
 		local bob = math.sin(now * 0.9 + entry.phase) * 0.35
@@ -136,7 +154,7 @@ local function dustFall()
 end
 
 function AmbientLifeController.start()
-	for _, kind in { "THNE_Flicker", "THNE_Pulse", "THNE_Spin" } do
+	for _, kind in { "THNE_Flicker", "THNE_Pulse", "THNE_Spin", "THNE_Rotor", "THNE_Flutter" } do
 		for _, instance in CollectionService:GetTagged(kind) do
 			register(instance, kind)
 		end

@@ -291,6 +291,14 @@ local function applySurfaceLighting()
 	Lighting.ShadowSoftness = 0.25
 	Lighting.FogColor = Color3.fromRGB(190, 210, 230)
 	Lighting.FogEnd = 1400
+	-- soft cartoon clouds drifting over the gardens
+	if not workspace.Terrain:FindFirstChildOfClass("Clouds") then
+		local clouds = Instance.new("Clouds")
+		clouds.Cover = 0.55
+		clouds.Density = 0.45
+		clouds.Color = Color3.fromRGB(255, 255, 255)
+		clouds.Parent = workspace.Terrain
+	end
 end
 
 function PlotService.start()
