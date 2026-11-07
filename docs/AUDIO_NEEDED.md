@@ -68,3 +68,13 @@ misma familia de timbre.
 | `core_engrave` | 9118656994 | Rock Movement 21 (ProSoundEffects), la pared graba tu número |
 | `core_break` | 9118666800 | Rock Scrape Deep Grinding Impacts 16 (ProSoundEffects), la roca madre cede |
 | `core_light` | 9125635430 | Magical Exit Sparkling Chimes 5 (ProSoundEffects), la luz blanca |
+
+## Excavación y recompensas (biblioteca, provisionales)
+
+ProSoundEffects: tierra 9114083746 / 9114083260, roca 9118622414 / 9125879007, metal 9113267751,
+tintineo 9125741593, campana 9116224180, campanillas 9125635426 / 9125635650.
+
+## Música (APM, biblioteca de Roblox)
+
+Jardín 1839605617, Minas 1842185105, Cristal 1848350082, Cavernas 1840715922, Volcánicas 9038326809,
+Abismo 1840147295, Núcleo 1840981466. Se cambian en `Config/Music`.

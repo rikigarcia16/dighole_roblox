@@ -358,3 +358,9 @@ durante la prueba (no en el repositorio).
 | X34 | Garaje → Herramientas | Cada herramienta gira entera dentro de su recuadro. |
 | X35 | Garaje → Mejoras sin equipo | Batería: «Primero, equipo con batería». Tras comprar la linterna: «Mejorar · 120». |
 | X36 | Mantener E desde la superficie con la pala reforzada | Bajas sin atascarte hasta el techo del Contador (~135 m); al topar con plata, sigue cavando al lado. |
+| X37 | Cavar tierra, piedra, un mineral y cristal | Cada material suena distinto (pala, roca, metal, tintineo); romper suena más lleno. |
+| X38 | Escuchar en la superficie y bajar a las Minas | Música suave del Jardín; a los 50 m cambia con fundido. ⚙ → «Música: No» la quita y se recuerda. |
+| X39 | Vender una mochila llena | El contador salta y brilla, «+N» sube y unas monedas vuelan hasta él. Al comprar: sacudida y «−N». |
+| X40 | Comprar una herramienta | «¡NUEVA HERRAMIENTA! …» por encima del garaje. |
+| X41 | Llegar a una zona nueva | Título con rebote, línea y brillo de bordes del color de la zona. |
+| X42 | Probar → Dispositivo: teléfono y tableta | El HUD, el garaje y los ajustes caben y se leen. |

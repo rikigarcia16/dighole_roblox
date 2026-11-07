@@ -8,6 +8,7 @@ local order = {
 	"CameraController",
 	"EffectsController",
 	"AmbienceController",
+	"MusicController",
 	"AmbientLifeController",
 	"DigController",
 	"DetectorController",

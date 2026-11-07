@@ -34,6 +34,7 @@ local DigController = require(script.Parent.DigController)
 local AmbienceController = require(script.Parent.AmbienceController)
 local EffectsController = require(script.Parent.EffectsController)
 local CounterController = require(script.Parent.CounterController)
+local MusicController = require(script.Parent.MusicController)
 
 local UIController = {}
 
@@ -557,7 +558,7 @@ function UIController.start()
 	local settings = Build("Frame", {
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -12, 0, 64),
-		Size = UDim2.fromOffset(260, 150),
+		Size = UDim2.fromOffset(260, 178),
 		BackgroundColor3 = Theme.panel,
 		Visible = false,
 		ZIndex = 45,
@@ -579,13 +580,14 @@ function UIController.start()
 	local qualityButtons: { TextButton } = {}
 	local currentQuality = 1
 	local shakeOn = true
+	local musicOn = true
 	local function paintQuality()
 		for i, b in qualityButtons do
 			b.BackgroundColor3 = if i == currentQuality then Theme.accent else Theme.card
 		end
 	end
 	local function saveSettings()
-		Remotes.event("SaveSettings"):FireServer({ effects = currentQuality - 1, shake = shakeOn })
+		Remotes.event("SaveSettings"):FireServer({ effects = currentQuality - 1, shake = shakeOn, music = musicOn })
 	end
 	for i, q in qualities do
 		local b = Build.button(q[1], Theme.card, {
@@ -617,6 +619,19 @@ function UIController.start()
 		EffectsController.playUi("ui_click")
 		saveSettings()
 	end)
+	local musicButton = Build.button("Música: Sí", Theme.card, {
+		Position = UDim2.new(0, 0, 0, 124),
+		Size = UDim2.new(1, 0, 0, 36),
+		ZIndex = 46,
+		Parent = settings,
+	})
+	musicButton.Activated:Connect(function()
+		musicOn = not musicOn
+		MusicController.setEnabled(musicOn)
+		musicButton.Text = "Música: " .. (if musicOn then "Sí" else "No")
+		EffectsController.playUi("ui_click")
+		saveSettings()
+	end)
 	-- saved preferences arrive with the first state
 	local settingsApplied = false
 	local function applySavedSettings(state: any)
@@ -631,6 +646,9 @@ function UIController.start()
 		shakeOn = saved.shake ~= false
 		EffectsController.setCameraShake(shakeOn)
 		shakeButton.Text = "Sacudida al golpear: " .. (if shakeOn then "Sí" else "No")
+		musicOn = saved.music ~= false
+		MusicController.setEnabled(musicOn)
+		musicButton.Text = "Música: " .. (if musicOn then "Sí" else "No")
 	end
 	local tutorial = TutorialUI.new(gui)
 	local gear = GearUI.new(gui, {

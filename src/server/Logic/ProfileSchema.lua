@@ -50,7 +50,7 @@ export type Profile = {
 	},
 	quests: { index: number, completed: { [string]: boolean } },
 	-- player preferences (added without a version bump: older saves get the defaults)
-	settings: { effects: number, shake: boolean, tutorialDone: boolean },
+	settings: { effects: number, shake: boolean, tutorialDone: boolean, music: boolean },
 	gear: { [string]: boolean }, -- special equipment owned (Config/Gear); additive like settings
 	feats: { [string]: boolean }, -- optional challenges earned (Config/Feats); additive like gear
 	stats: {
@@ -94,7 +94,7 @@ function ProfileSchema.default(seed: number): Profile
 		},
 		mobility = { ropes = 0, placedRopes = {}, stations = {}, rescues = 0 },
 		quests = { index = 1, completed = {} },
-		settings = { effects = 0, shake = true, tutorialDone = false },
+		settings = { effects = 0, shake = true, tutorialDone = false, music = true },
 		gear = {},
 		feats = {},
 		stats = {
@@ -136,6 +136,9 @@ function ProfileSchema.applySettings(target: any, input: any)
 	end
 	if type(input.shake) == "boolean" then
 		target.shake = input.shake
+	end
+	if type(input.music) == "boolean" then
+		target.music = input.music
 	end
 	if input.tutorialDone == true then
 		target.tutorialDone = true -- one way: the tutorial never comes back once finished

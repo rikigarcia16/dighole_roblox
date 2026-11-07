@@ -500,6 +500,29 @@ mirar la cámara). Lo que estaba mal, por orden de gravedad:
 - Para quien prueba: Escape abre el menú de Roblox y, mientras está abierto, ninguna tecla del juego
   responde (fue mi atajo, no un fallo del juego).
 
+### Mejora integral, primer bloque: sonido, música y recompensas
+- **Excavar suena a excavar:** golpes y roturas con efectos de ProSoundEffects (biblioteca de Roblox,
+  creador verificado, gratis, con licencia): pala en tierra, impacto en roca (más grave en basalto y
+  abismo), golpe metálico en minerales, tintineo en cristal, derrumbe al romper roca. Hallazgos
+  raros, épicos y legendarios con campanillas; venta y compra con tintineos; zona nueva con
+  campanillas graves. Los once cargan en Studio [cómo suenan: a tu oído].
+- **Música por zona** (`Config/Music`, `MusicController`): siete pistas de APM (biblioteca con
+  licencia de Roblox), una por zona, bajitas y con fundido de 2,5 s al cambiar de zona. Botón
+  «Música: Sí/No» en ⚙, guardado en `settings.music` (por defecto sí, saneado, con test)
+  [Studio: suena la del Jardín, cambia a la de las Minas al bajar, el botón la silencia].
+- **El contador de monedas celebra** (`UI/CoinFx`): al ganar, salta y se ilumina, aparece «+N» que
+  sube; al vender (≥20) vuelan monedas desde el centro de la pantalla hasta el contador; al gastar,
+  se sacude con «−N» en rojo [Studio: visto en la primera venta].
+- **Zona nueva:** el título entra con rebote, se abre una línea del color de la zona y los bordes de
+  la pantalla brillan con ese color un momento (sin destellos a pantalla completa).
+- **Herramienta nueva:** «¡NUEVA HERRAMIENTA! Pala reforzada · potencia 2» con campanillas, por
+  encima de la ventana del garaje [Studio: visto].
+- Partida de prueba: 20 bloques en 20 s, primera venta (29 + 20 de misión), compra de la pala
+  reforzada y bajada con E a las Minas (53 m). Atajos: mochila grande para la bajada y 150 monedas
+  para repetir la compra.
+- **Pendiente:** revisar en el emulador de móvil y tableta de Studio (Probar → Dispositivo), que no
+  puedo manejar desde aquí; escuchar sonidos y música.
+
 ### Problemas abiertos de la fase 3
 - Resuelto: los tests pasan en local con Lune.
 - Lanzamiento largo del gancho motorizado sin comprobar en Studio.
