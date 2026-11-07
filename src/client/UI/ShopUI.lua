@@ -2,6 +2,7 @@
 -- Garage shop: tools, upgrades and expedition gear with previews, stats comparison and purchase confirmation.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
 local Tools = require(ReplicatedStorage.Shared.Config.Tools)
@@ -302,7 +303,12 @@ function ShopUI.new(parent: Instance, deps: Deps)
 				Parent = c,
 			})
 			Build.label({
-				Text = string.format("Llevas <b>%d/%d</b> · tecla <b>Q</b> para colgarla", carried, maxCarried),
+				Text = string.format(
+					"Llevas <b>%d/%d</b> · %s para colgarla",
+					carried,
+					maxCarried,
+					if UserInputService.KeyboardEnabled then "tecla <b>Q</b>" else "botón <b>Cuerda</b>"
+				),
 				RichText = true,
 				Font = Theme.bodyFont,
 				Size = UDim2.new(1, 0, 0, 22),

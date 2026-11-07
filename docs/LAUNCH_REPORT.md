@@ -45,6 +45,7 @@ la carpeta local de la sesión de Claude Code, no en el repositorio.
 | Estaciones y montacargas | Studio | Instalar con H a 72 m; el panel abre el menú de viaje |
 | Contenido avanzado | Studio con atajos (generar terreno, mover al personaje) | Zonas profundas con sus elementos; final completo (grabado, herramienta, roca madre → jardín) |
 | Rendimiento | Studio | Cliente a 60 fps con ~5 800 piezas en streaming; servidor ~10 400 piezas y 203 luces, latido a 60/s |
+| Multijugador (lógica) | Revisión del código nuevo | Efectos, botín, venta, hazañas, fondo y trofeos van por jugador o por parcela propia; nada compartido sin dueño |
 | Seguridad | Revisión de código | Todos los remotos con límite de frecuencia y validación de tipos; el servidor decide monedas, compras, excavación y recompensas |
 | Depuración | Búsqueda en el código | Solo un probador de sonido limitado a Studio (F7); ningún atajo en el repositorio |
 
@@ -66,7 +67,7 @@ de Play y nunca se guardaron en el proyecto.
 |---|---|
 | Alta (bloquea lanzamiento) | Guardado real sin probar: necesita el sitio publicado con acceso a API |
 | Alta (bloquea lanzamiento) | Multijugador sin probar con clientes reales (la lógica está pensada y probada por separado) |
-| Media | Controles táctiles y escala en móvil/tableta sin probar en dispositivo ni emulador |
+| Media | Controles táctiles y escala en móvil/tableta sin probar en dispositivo ni emulador. Revisado en el código: la interfaz escala con la pantalla (mínimo 0,62), cada tecla tiene botón táctil y los textos ya no piden teclas en pantallas táctiles |
 | Media | Sonidos y música de biblioteca: escúchalos; cámbialos en `Config/Sounds` y `Config/Music` |
 | Baja | Hierba del terreno alta; solo se ajusta en Studio (Terrain → `Decoration`) |
 | Baja | La etiqueta del nombre de un hallazgo raro no se ve en las capturas de la herramienta (sí existe); confírmala jugando |

@@ -401,7 +401,12 @@ function MobilityUI.new(gui: ScreenGui, buttons: Frame, deps: Deps)
 		installButton.Visible = def ~= nil
 		if def then
 			local affordable = state.coins >= def.cost
-			installButton.Text = string.format("[H] Instalar %s · ● %s", def.name, Format.number(def.cost))
+			installButton.Text = string.format(
+				"%sInstalar %s · ● %s",
+				if UserInputService.KeyboardEnabled then "[H] " else "",
+				def.name,
+				Format.number(def.cost)
+			)
 			installButton.BackgroundColor3 = if affordable then Color3.fromRGB(70, 130, 200) else Theme.card
 		end
 	end
