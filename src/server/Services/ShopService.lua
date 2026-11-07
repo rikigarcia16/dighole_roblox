@@ -19,6 +19,7 @@ local PlotService = require(script.Parent.PlotService)
 local StateService = require(script.Parent.StateService)
 local EquipmentService = require(script.Parent.EquipmentService)
 local EnergyService = require(script.Parent.EnergyService)
+local TelemetryService = require(script.Parent.TelemetryService)
 
 local ShopService = {}
 
@@ -167,7 +168,14 @@ function ShopService.start()
 		if not handler or not profile then
 			return { ok = false, message = "Petición no válida." }
 		end
-		return handler(player, profile, id)
+		local coinsBefore = profile.coins
+		local result = handler(player, profile, id)
+		local spent = coinsBefore - profile.coins
+		if result.ok and spent > 0 then
+			-- `id` passed the handler's validation, so it is a real catalogue id (bounded cardinality)
+			TelemetryService.event(player, "Compra", spent, "Articulo - " .. action .. ":" .. id)
+		end
+		return result
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		limiter:forget(player)

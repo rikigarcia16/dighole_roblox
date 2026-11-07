@@ -27,10 +27,10 @@ Alternativa: **8 de enero de 2027**, tras las vacaciones, con más pulido.
 | 🔴 | Guardar el sitio en Studio; publicar en **privado**; activar el acceso a la API | 👤 |
 | 🔴 | Prueba de guardado real y de dos jugadores (`docs/TEST_SAVES_TWO_PLAYERS.md`) | 👤 + 🤖 |
 | 🔴 | Prueba en el emulador de móvil y tableta y, si puedes, en un teléfono real | 👤 + 🤖 |
-| 🔴 | **Eventos de embudo y propios** (lista en [09](09_DESCUBRIMIENTO_ANALITICAS.md)) | 🤖 |
+| 🔴 | **Eventos de embudo y propios** (lista en [09](09_DESCUBRIMIENTO_ANALITICAS.md)): programados; falta comprobarlos con el juego publicado | ✅ 🤖 / 👤 |
 | 🔴 | Cuestionario de madurez **completo** (no contestar «No» a la primera pregunta para saltarlo: eso deja el juego en «Content May Vary» y solo 16+ para siempre) | 👤 |
 | 🔴 | Verificación de tu cuenta (documento si eres mayor de edad) y **verificación en dos pasos** | 👤 |
-| 🟡 | Botón de invitar a amigos y lectura de `LaunchData` | 🤖 |
+| 🟡 | Botón de invitar a amigos y lectura de `LaunchData`: programados; falta probarlos en Studio | ✅ 🤖 |
 | 🟡 | Encuesta de Instagram «¿Juegas a Roblox?» y revisión de las estadísticas de tu cuenta | 👤 |
 | 🟡 | Comprobar y reservar el nombre en Instagram, TikTok y YouTube | 👤 |
 | ⚪ | Insignias por zona (como hacen los competidores) | 🤖 |
@@ -46,7 +46,7 @@ Alternativa: **8 de enero de 2027**, tras las vacaciones, con más pulido.
 | 🟡 | Tráiler de redes (30 s) y lote de 10 vídeos cortos | 👤 |
 | 🟡 | Reel 1 «He hecho un juego» | 👤 |
 | 🟡 | Grupo de Roblox del juego (para avisos) | 👤 |
-| 🟡 | Enlaces de compartir por canal (`ig_bio`, `ig_stories`, `tiktok_bio`…) | 👤 |
+| 🟡 | Enlaces de compartir por canal, con **custom LaunchData** = el código del canal (lista en [09](09_DESCUBRIMIENTO_ANALITICAS.md) §9.4) | 👤 |
 | ⚪ | Encuesta de icono en Stories | 👤 |
 
 ### D-14 (27 nov): beta pública

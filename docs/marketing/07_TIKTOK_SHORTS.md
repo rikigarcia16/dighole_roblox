@@ -79,7 +79,7 @@ ideas. Edítalos en CapCut u otro editor con plantillas (texto, velocidad ×2–
 
 ## 7.6 Cómo saber qué formatos traen jugadores (no solo visualizaciones)
 
-1. **Un enlace de compartir por plataforma** (`tiktok_bio`, `yt_shorts`) en la bio o la descripción.
+1. **Un enlace de compartir por plataforma** (LaunchData `tiktok` y `youtube`) en la bio o la descripción.
 2. **Etiqueta cada vídeo con su formato** en una hoja de cálculo (fecha, plataforma, formato, gancho,
    visualizaciones, % visto completo, seguidores ganados, visitas a la bio).
 3. **Cada semana** cruza las visitas por enlace (*Share Links*) con los picos de cada vídeo. Si un formato

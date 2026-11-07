@@ -10,6 +10,7 @@
 --   GearPulse() -> { ok, found, kind, band, direction, message }   resonance detector pulse
 --   GearHook(target: Vector3) -> { ok, point, normal, message }      grappling hook check
 --   SellItem(resourceId)                            sell one kept piece (relic), near the sell station
+--   InviteSent(count: number)                       the Roblox invite prompt closed after inviting `count` friends (analytics only)
 --   Shop(action: string, id: string) -> result      RemoteFunction: "buyTool" | "equipTool" | "buyUpgrade"
 --   GetState() -> snapshot                          RemoteFunction: initial state
 -- Server -> Client
@@ -54,6 +55,7 @@ local EVENTS = {
 	"SellItem",
 	"SaveSettings",
 	"GearLamp",
+	"InviteSent",
 }
 local FUNCTIONS = { "Shop", "GetState", "RescueQuote", "LiftTravel", "GearPulse", "GearHook" }
 

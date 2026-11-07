@@ -58,27 +58,57 @@
 | Opiniones | Con la Player Feedback API | *Feedback* (mencionado en el anuncio de Experience Betas) |
 | Tráfico de Instagram | Indirecto | Share Link `ig_*` + Acquisition (fuente externa) |
 
-## 9.4 Eventos que hay que añadir al juego antes de promocionar
+## 9.4 Eventos que registra el juego (implementado)
 
-**Embudo de primera partida** (onboarding funnel, en orden):
+Código: `src/server/Services/TelemetryService.lua` y `src/server/Logic/AnalyticsPlan.lua` (con tests).
+Roblox **solo acepta estos eventos desde servidores de un juego publicado**: en Studio no se envía nada,
+así que las pruebas no ensucian los datos reales. Nada de esto se guarda en el perfil. Al entrar se toma
+una foto del progreso y solo se registra lo que se consigue durante la sesión.
+
+**Embudo de primera partida** (Analytics → Funnels → Onboarding). Roblox cuenta cada paso una sola vez por
+jugador:
 
 1. Entra en la parcela
-2. Lee la nota de la casa
-3. Primer golpe
-4. Primer mineral
-5. Primera venta
-6. Compra la pala reforzada
-7. Llega a 25 m
-8. Llega a las Minas (50 m)
-9. Instala la primera estación
+2. Primer golpe
+3. Primer mineral
+4. Primera venta
+5. Segunda herramienta
+6. 25 m
+7. Minas Olvidadas
+8. Primera estación
+9. Cuevas de Cristal
 
-**Eventos propios:** zona alcanzada (con su número), herramienta comprada (con su nivel), nota leída, hazaña
-conseguida, llegada a El fondo, final completado, uso de cuerda o gancho, ajustes de música y calidad
-(para saber cuánta gente baja la calidad).
+**Eventos propios** (Analytics → Custom events). Todos llevan el campo 2 «Origen - …»:
 
-**Por qué es imprescindible:** el día del lanzamiento vas a querer saber si la gente se va antes de la
-primera venta (problema de inicio) o después de las Minas (problema de ritmo). Sin esto, toda decisión
-sobre anuncios es a ciegas. Lo puedo programar yo en una sesión, cuando me lo pidas.
+| Evento | Valor | Campo 1 |
+|---|---|---|
+| `Sesion` | 1 | Tipo - nuevo / vuelve |
+| `ZonaAlcanzada` | número de zona (1–7) | Zona - id |
+| `HerramientaConseguida` | nivel (2–10) | Herramienta - id |
+| `NotaLeida` | 1 | Nota - id |
+| `HazanaConseguida` | 1 | Hazana - id |
+| `EquipoConseguido` | 1 | Equipo - id |
+| `EstacionInstalada` | n.º de estación | Estacion - id |
+| `Historia` | 1 | Paso - counter_found / counter_solved / workshop_found / workshop_hung / core_found / core_engraved / core_looped |
+| `Venta` | monedas | Tipo - carga / id de la reliquia |
+| `Compra` | monedas gastadas | Articulo - acción:id |
+| `Rescate` | monedas | Tipo - baliza |
+| `Invitacion` | amigos invitados | Tipo - amigos |
+
+**Origen del jugador:** el juego lee el *LaunchData* del enlace de compartir por el que entró. Al crear
+cada enlace en Creator Hub, activa **custom LaunchData** y escribe exactamente uno de estos códigos:
+
+`ig_bio` · `ig_stories` · `ig_reels` · `ig_post` · `ig_beta` · `tiktok` · `youtube` · `ads` ·
+`creador_<nombre>` (todos cuentan como «creador»)
+
+Cualquier otro valor se registra como «otro», y la entrada sin enlace como «ninguno». Así podrás ver el
+embudo y la retención **por canal**, no solo las visitas.
+
+**Botón «Invitar amigos»** en la barra inferior izquierda. Abre la ventana de invitación de Roblox y solo
+aparece si Roblox permite invitar a ese jugador.
+
+**Lo que no está probado:** ni el botón ni los eventos se han probado todavía en Studio (estaba cerrado), y
+los eventos solo se verán en Analytics cuando el juego esté publicado.
 
 ## 9.5 Panel de métricas recomendado (revisión diaria las 2 primeras semanas, luego semanal)
 

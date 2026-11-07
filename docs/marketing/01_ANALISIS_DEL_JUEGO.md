@@ -141,8 +141,8 @@ Consecuencias para la estrategia:
 | Prioridad | Mejora | Por qué | Esfuerzo |
 |---|---|---|---|
 | **Bloqueante** | Probar guardado real, dos jugadores y móvil (pasos de `docs/LAUNCH_REPORT.md`) | No se promociona un juego que puede perder partidas | Lo haces tú, con mi ayuda |
-| **Bloqueante** | Eventos de embudo y eventos propios con `AnalyticsService` (primer golpe, primera venta, primera herramienta, Minas, cada zona, cada nota, final) | Sin ellos no sabremos dónde abandonan ni si un anuncio trae jugadores buenos | 1 sesión mía |
-| Alta | Botón «Invitar amigos» y lectura de `LaunchData` (para enlaces con regalo de bienvenida) | Jugar con amigos es una señal de recomendación; permite medir Instagram | 1 sesión mía |
+| ~~Bloqueante~~ **Hecho** | Eventos de embudo y eventos propios con `AnalyticsService` (ver 09 §9.4) | Sin ellos no sabremos dónde abandonan ni si un anuncio trae jugadores buenos | Hecho, sin probar aún en Studio |
+| Alta, **hecho en parte** | Botón «Invitar amigos» y lectura de `LaunchData` (origen del jugador). Falta el regalo de bienvenida opcional | Jugar con amigos es una señal de recomendación; permite medir Instagram | Hecho, sin probar aún en Studio |
 | Alta | Vídeo de juego subido en la pestaña **Videos** de la página | Roblox lo reproduce automáticamente en Recomendados; según Roblox, en sus pruebas los juegos con vídeo tuvieron hasta un 39 % más de tiempo de juego | Lo grabas tú (guion en 03) |
 | Alta | 3–5 miniaturas limpias a 1920×1080 sin interfaz | Personalización de miniaturas (necesita 2 o más activas) | Tú, con la guía de 03 |
 | Media | Pasada de inglés (tabla de localización o textos sin `string.format` frágiles) | Abre el mercado internacional | 2–3 sesiones mías |

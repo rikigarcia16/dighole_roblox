@@ -93,8 +93,9 @@ estrategia. Enseña su entrada en sombras como mucho.
 
 1. **Enlaces de compartir de Roblox** (Creator Hub → **Creations → Share Links → Experience Links → Create
    link**). Son gratis y no hay límite. Crea **uno por canal**:
-   `ig_bio`, `ig_stories`, `ig_reels`, `ig_post_lanzamiento`, `tiktok_bio`, `yt_shorts`,
-   `creador_[nombre]`… El panel muestra cuántas personas llegaron a la página del juego por cada enlace
+   `ig_bio`, `ig_stories`, `ig_reels`, `ig_post`, `ig_beta`, `tiktok`, `youtube`, `ads`,
+   `creador_[nombre]`. **Activa «custom LaunchData» y escribe ese mismo código**: el juego ya lo lee y
+   registra el embudo y la retención de cada canal ([09](09_DESCUBRIMIENTO_ANALITICAS.md) §9.4). El panel muestra cuántas personas llegaron a la página del juego por cada enlace
    (*Link Visits*) y Analytics → Adquisición muestra **qué canal trae jugadores más comprometidos**. Los
    datos se actualizan una vez al día.
 2. **Enlace en la bio** (Instagram permite varios enlaces en la bio): el enlace `ig_bio` en primer lugar,

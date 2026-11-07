@@ -2296,4 +2296,78 @@ test("the bottom: journal grows with the engraving and with each time the hole t
 	ok((body() :: string):find("Ya van 3 veces"), "again and again")
 end)
 
+print("Analytics")
+local AnalyticsPlan = H.module("ServerScriptService", "Server", "Logic", "AnalyticsPlan")
+local ProfileSchemaA = H.module("ServerScriptService", "Server", "Logic", "ProfileSchema")
+
+test("a new profile is at onboarding step 1 with no milestones", function()
+	local p = ProfileSchemaA.default(3)
+	eq(AnalyticsPlan.onboardingStep(p), 1, "joined")
+	local count = 0
+	for _ in AnalyticsPlan.milestones(p) do
+		count += 1
+	end
+	eq(count, 1, "only the garden zone")
+end)
+
+test("onboarding steps follow the first minutes in order", function()
+	local p = ProfileSchemaA.default(3)
+	p.stats.cellsDug = 4
+	eq(AnalyticsPlan.onboardingStep(p), 2, "first hit")
+	p.discoveries.dirt = 3
+	eq(AnalyticsPlan.onboardingStep(p), 2, "dirt is not an ore")
+	p.discoveries.coal = 1
+	eq(AnalyticsPlan.onboardingStep(p), 3, "first ore")
+	p.stats.sales = 1
+	p.tools.reinforced_shovel = true
+	p.stats.maxDepth = 30
+	eq(AnalyticsPlan.onboardingStep(p), 6, "sale, tool, 25 m")
+	p.zonesReached.forgotten_mines = true
+	table.insert(p.mobility.stations, { id = "mines", cx = 0, d = 60, cz = 0 })
+	p.zonesReached.crystal_caves = true
+	eq(AnalyticsPlan.onboardingStep(p), #AnalyticsPlan.Onboarding, "all steps")
+end)
+
+test("a missing step stops the funnel (steps must imply the previous ones)", function()
+	local p = ProfileSchemaA.default(3)
+	p.stats.maxDepth = 60
+	p.zonesReached.forgotten_mines = true
+	eq(AnalyticsPlan.onboardingStep(p), 1, "no hit recorded yet")
+end)
+
+test("only milestones reached since the baseline are reported", function()
+	local p = ProfileSchemaA.default(3)
+	local before = AnalyticsPlan.milestones(p)
+	p.zonesReached.forgotten_mines = true
+	p.tools.steel_shovel = true
+	p.clues.house_note = true
+	p.feats.three_geodes = true
+	p.anomalies.core.found = true
+	table.insert(p.mobility.stations, { id = "mines", cx = 0, d = 60, cz = 0 })
+	local new = AnalyticsPlan.newMilestones(before, AnalyticsPlan.milestones(p))
+	local events = {}
+	for _, m in new do
+		events[m.event] = (events[m.event] or 0) + 1
+		ok(#m.field > 0 and #m.field < 60, "field " .. m.field)
+	end
+	eq(events.ZonaAlcanzada, 1, "zone")
+	eq(events.HerramientaConseguida, 1, "tool")
+	eq(events.NotaLeida, 1, "note")
+	eq(events.HazanaConseguida, 1, "feat")
+	eq(events.Historia, 1, "core found")
+	eq(events.EstacionInstalada, 1, "station")
+	eq(#AnalyticsPlan.newMilestones(AnalyticsPlan.milestones(p), AnalyticsPlan.milestones(p)), 0, "nothing twice")
+end)
+
+test("launch data keeps only known origins", function()
+	eq(AnalyticsPlan.origin(nil), "ninguno", "no data")
+	eq(AnalyticsPlan.origin(""), "ninguno", "empty")
+	eq(AnalyticsPlan.origin("ig_stories"), "ig_stories", "known")
+	eq(AnalyticsPlan.origin("IG_BIO"), "ig_bio", "case")
+	eq(AnalyticsPlan.origin("creador_chuymine"), "creador", "creator links collapse")
+	eq(AnalyticsPlan.origin("hola que tal"), "otro", "unknown")
+	eq(AnalyticsPlan.origin({}), "ninguno", "not a string")
+	eq(AnalyticsPlan.origin(string.rep("x", 500)), "otro", "long")
+end)
+
 H.finish()

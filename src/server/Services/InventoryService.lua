@@ -15,6 +15,7 @@ local Inventory = require(script.Parent.Parent.Logic.Inventory)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local PlotService = require(script.Parent.PlotService)
 local StateService = require(script.Parent.StateService)
+local TelemetryService = require(script.Parent.TelemetryService)
 
 local InventoryService = {}
 
@@ -105,6 +106,7 @@ function InventoryService.sellAll(player: Player): number
 	profile.coins += value
 	profile.stats.coinsEarned += value
 	profile.stats.sales += 1
+	TelemetryService.event(player, "Venta", value, "Tipo - carga")
 	StateService.notify(
 		player,
 		"sell",
@@ -135,6 +137,7 @@ function InventoryService.sellOne(player: Player, resourceId: string): boolean
 	profile.inventory[resourceId] = if count > 1 then count - 1 else nil
 	profile.coins += resource.value
 	profile.stats.coinsEarned += resource.value
+	TelemetryService.event(player, "Venta", resource.value, "Tipo - " .. resource.id)
 	StateService.notify(player, "sell", resource.name .. " vendida por " .. Format.number(resource.value) .. " monedas")
 	StateService.push(player)
 	return true

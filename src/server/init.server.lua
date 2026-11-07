@@ -13,6 +13,7 @@ local order = {
 	"ExhibitService",
 	"ShopService",
 	"QuestService",
+	"TelemetryService", -- after QuestService: reports what quests and state settle on each push
 	"SpecialsService",
 	"AnomalyService",
 	"WorkshopService",

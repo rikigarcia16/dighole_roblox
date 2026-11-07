@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SocialService = game:GetService("SocialService")
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -190,6 +191,32 @@ function UIController.start()
 		Visible = false,
 		Parent = buttons,
 	})
+	-- Invite friends: Roblox's own invite prompt. Playing together is one of the signals Roblox uses
+	-- to recommend games (docs/marketing/09). Shown only where Roblox allows invites.
+	local inviteButton = Build.button("Invitar amigos", Color3.fromRGB(90, 160, 90), {
+		Name = "InviteButton",
+		Size = UDim2.fromOffset(160, 50),
+		LayoutOrder = 3,
+		Visible = false,
+		Parent = buttons,
+	})
+	task.spawn(function()
+		local ok, canInvite = pcall(function()
+			return SocialService:CanSendGameInviteAsync(Players.LocalPlayer)
+		end)
+		inviteButton.Visible = ok and canInvite == true
+	end)
+	inviteButton.Activated:Connect(function()
+		EffectsController.playUi("ui_click")
+		pcall(function()
+			SocialService:PromptGameInvite(Players.LocalPlayer)
+		end)
+	end)
+	SocialService.GameInvitePromptClosed:Connect(function(_sender: Player, recipientIds: { number })
+		if #recipientIds > 0 then
+			Remotes.event("InviteSent"):FireServer(#recipientIds)
+		end
+	end)
 
 	-- Touch DIG button ----------------------------------------------------------------------------
 	local digButton = Build("TextButton", {

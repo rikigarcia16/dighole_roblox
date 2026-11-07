@@ -29,6 +29,7 @@ local StateService = require(script.Parent.StateService)
 local CaveProps = require(script.Parent.CaveProps)
 local AnomalyService = require(script.Parent.AnomalyService)
 local EnergyService = require(script.Parent.EnergyService)
+local TelemetryService = require(script.Parent.TelemetryService)
 local Gear = require(ReplicatedStorage.Shared.Config.Gear)
 local Zones = require(ReplicatedStorage.Shared.Config.Zones)
 local Feats = require(ReplicatedStorage.Shared.Config.Feats)
@@ -595,6 +596,7 @@ local function startRescue(player: Player)
 		end
 		profile.coins -= final.pay
 		profile.mobility.rescues += 1
+		TelemetryService.event(player, "Rescate", final.pay, "Tipo - baliza")
 		local target = destinationCFrame(player, final.destination)
 		if target then
 			Remotes.event("LiftRide"):FireClient(player, 1.6)
