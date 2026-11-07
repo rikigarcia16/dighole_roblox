@@ -196,6 +196,25 @@ function AmbientLifeController.start()
 		end
 	end)
 
+	-- Decorative lights (lanterns, windows, signs) cost the most on modest devices: off on low
+	-- graphics, back on otherwise. Checked every 2 s, cheap (a flag per light).
+	task.spawn(function()
+		local lightsOn: boolean? = nil
+		while true do
+			local on = AmbienceController.effectsScale() > 0.4
+			if on ~= lightsOn then
+				lightsOn = on
+				for _, l in CollectionService:GetTagged("THNE_DecoLight") do
+					(l :: PointLight).Enabled = on
+				end
+			end
+			task.wait(2)
+		end
+	end)
+	CollectionService:GetInstanceAddedSignal("THNE_DecoLight"):Connect(function(l)
+		(l :: PointLight).Enabled = AmbienceController.effectsScale() > 0.4
+	end)
+
 	task.spawn(function()
 		while true do
 			local scale = AmbienceController.effectsScale()

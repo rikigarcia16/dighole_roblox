@@ -370,3 +370,7 @@ durante la prueba (no en el repositorio).
 | X46 | Montacargas | Castillete con rueda que gira y luces que laten; el panel sigue abriendo el menú. |
 | X47 | Instalar una estación (H) | Descansillo con franjas, pórtico amarillo, polea que gira, faroles y cartel con el color de la zona; el panel sigue abriendo el menú. |
 | X48 | Recorrer cada capa | Minas: bombillas y cajas. Cristal: racimos. Cavernas: braseros e ídolos. Volcánicas: pozas de lava. Abismo: setas. Núcleo: pilares de luz. |
+| X49 | Romper mineral / encontrar uno raro | Piezas brillantes vuelan hasta ti; lo raro sube en un haz de luz con su nombre. |
+| X50 | Vender | La carga vuela al carro y saltan monedas. |
+| X51 | Comprar herramienta | Tarjeta con el modelo 3D girando, nombre, potencia y bloques por golpe. |
+| X52 | ⚙ → Bajo | Se apagan las luces decorativas; el juego sigue legible. |

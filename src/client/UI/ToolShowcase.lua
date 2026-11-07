@@ -10,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 local Tools = require(ReplicatedStorage.Shared.Config.Tools)
 local ToolModels = require(ReplicatedStorage.Shared.Util.ToolModels)
 local Theme = require(script.Parent.Theme)
+local Grid = require(ReplicatedStorage.Shared.Util.Grid)
 
 local ToolShowcase = {}
 
@@ -31,6 +32,20 @@ function ToolShowcase.new(gui: ScreenGui): Api
 	root.Parent = gui
 	local scale = Instance.new("UIScale")
 	scale.Parent = root
+	-- a dark card of its own, so it reads clearly over the garage window it usually appears on
+	local card = Instance.new("Frame")
+	card.Size = UDim2.fromScale(1, 1)
+	card.BackgroundColor3 = Color3.fromRGB(16, 18, 26)
+	card.BackgroundTransparency = 0.08
+	card.ZIndex = 34
+	card.Parent = root
+	local cardCorner = Instance.new("UICorner")
+	cardCorner.CornerRadius = UDim.new(0, 24)
+	cardCorner.Parent = card
+	local cardStroke = Instance.new("UIStroke")
+	cardStroke.Thickness = 3
+	cardStroke.Color = Theme.coins
+	cardStroke.Parent = card
 
 	-- burst of light: thin rays around the centre, turning slowly
 	local burst = Instance.new("Frame")
@@ -155,7 +170,9 @@ function ToolShowcase.new(gui: ScreenGui): Api
 		end
 		halo.BackgroundColor3 = accent:Lerp(Color3.new(1, 1, 1), 0.6)
 		nameLabel.Text = tool.name
-		powerLabel.Text = string.format("Potencia %d · área %d", tool.power, tool.radius * 2 + 1)
+		powerLabel.Text =
+			string.format("Potencia %d · %d bloques por golpe", tool.power, #Grid.sphereOffsets(tool.radius))
+		cardStroke.Color = accent
 		root.Visible = true
 		scale.Scale = 0.3
 		TweenService:Create(scale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })

@@ -107,6 +107,8 @@ local function light(parent: BasePart, color: Color3, range: number, brightness:
 	l.Brightness = brightness
 	l.Shadows = false
 	l.Parent = parent
+	-- decorative: switched off on low graphics (AmbientLifeController), the scene stays readable
+	CollectionService:AddTag(l, "THNE_DecoLight")
 	return l
 end
 

@@ -581,6 +581,13 @@ los puntos de interacción, nombres y posiciones de siempre (`ShopCounter`, `Sel
   de muestra; en las cuevas, las bombillas de las Minas].
 - **Pendiente de ver bajando:** las capas profundas, en una partida larga o con el montacargas.
 
+### Rediseño visual, fase 3 y pulido final
+- Botín visible (`LootController`): piezas de mineral que vuelan al jugador, hallazgos raros en un
+  haz de luz, venta hacia el carro con fuente de monedas. Presentación 3D de herramienta nueva
+  (`ToolShowcase`) con tarjeta propia y bloques por golpe correctos [Studio: vistos jugando].
+- Calidad «Bajo» apaga las luces decorativas (`THNE_DecoLight`).
+- Informe completo y pasos para publicar: `docs/LAUNCH_REPORT.md`.
+
 ### Problemas abiertos de la fase 3
 - Resuelto: los tests pasan en local con Lune.
 - Lanzamiento largo del gancho motorizado sin comprobar en Studio.
