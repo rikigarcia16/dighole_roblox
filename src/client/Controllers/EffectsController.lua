@@ -20,6 +20,10 @@ local EffectsController = {}
 EffectsController.progressReported = Signal.new()
 -- (resource) an epic/legendary discovery by the local player: UI shows a banner
 EffectsController.bigDiscovery = Signal.new()
+-- (position, resource) the local player broke an ore cell; (position, resourceId) a rare or better
+-- find: LootController shows what flies to the player
+EffectsController.oreBroken = Signal.new()
+EffectsController.bigFind = Signal.new()
 -- (text) a short centred line for narrative moments
 EffectsController.narrative = Signal.new()
 
@@ -506,9 +510,15 @@ function EffectsController.start()
 			end
 			if broke and resource then
 				EffectsController.breakBurst(position, resource)
+				if mine then
+					EffectsController.oreBroken:Fire(position, resource)
+				end
 			end
 			if bestId then
 				EffectsController.discovery(position, bestId, mine)
+				if mine then
+					EffectsController.bigFind:Fire(position, bestId)
+				end
 			end
 		end
 	)

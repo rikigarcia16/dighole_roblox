@@ -7,6 +7,7 @@ local order = {
 	"ClientState",
 	"CameraController",
 	"EffectsController",
+	"LootController",
 	"AmbienceController",
 	"MusicController",
 	"AmbientLifeController",

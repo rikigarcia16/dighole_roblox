@@ -27,6 +27,7 @@ local MobilityUI = require(UI.MobilityUI)
 local TutorialUI = require(UI.TutorialUI)
 local GearUI = require(UI.GearUI)
 local CoinFx = require(UI.CoinFx)
+local ToolShowcase = require(UI.ToolShowcase)
 local Mobility = require(ReplicatedStorage.Shared.Config.Mobility)
 
 local ClientState = require(script.Parent.ClientState)
@@ -35,6 +36,7 @@ local AmbienceController = require(script.Parent.AmbienceController)
 local EffectsController = require(script.Parent.EffectsController)
 local CounterController = require(script.Parent.CounterController)
 local MusicController = require(script.Parent.MusicController)
+local LootController = require(script.Parent.LootController)
 
 local UIController = {}
 
@@ -127,6 +129,7 @@ function UIController.start()
 	local coinsPill, coinsLabel =
 		pill(gui, "Coins", UDim2.fromOffset(12, 10), Vector2.zero, UDim2.fromOffset(190, 46), Theme.coins)
 	local coinFx = CoinFx.new(gui, coinsPill)
+	local showcase = ToolShowcase.new(gui)
 	local _, depthLabel =
 		pill(gui, "Depth", UDim2.new(0.5, 0, 0, 10), Vector2.new(0.5, 0), UDim2.fromOffset(300, 46), Theme.text)
 
@@ -371,6 +374,20 @@ function UIController.start()
 			EffectsController.playUi("error")
 		elseif kind == "sell" then
 			EffectsController.playUi("sell")
+			-- a sale of the whole backpack: the load flies into the cart (the state still holds it)
+			local state = ClientState.data
+			if state and text:find("^Vendido") then
+				local colors = {}
+				for id, count in state.inventory or {} do
+					local resource = Resources.get(id)
+					if resource and count > 0 and not resource.keep then
+						table.insert(colors, resource.color)
+					end
+				end
+				if #colors > 0 then
+					LootController.sold(colors)
+				end
+			end
 		elseif kind == "quest" then
 			EffectsController.playUi("purchase")
 		end
@@ -824,9 +841,7 @@ function UIController.start()
 		toolLabel.Text = if tool then string.format("%s · P%d", tool.name, tool.power) else ""
 		-- a tool bought (or earned) right now: a moment of its own, not just a toast
 		if ownedTools and tool and state.tools[tool.id] and not ownedTools[tool.id] then
-			EffectsController.narrative:Fire(
-				string.format("¡NUEVA HERRAMIENTA! %s · potencia %d", tool.name, tool.power)
-			)
+			showcase.show(tool.id)
 			EffectsController.playUi("discover_epic")
 		end
 		ownedTools = table.clone(state.tools)
