@@ -6,8 +6,8 @@ import sys, os
 from video import *
 
 W, H = 1080, 1920
-OUT = os.path.join(ROOT, "12_FINAL_EXPORTS", "shorts_9x16")
-COVERS = os.path.join(ROOT, "05_INSTAGRAM", "portadas_reels")
+OUT = suffix(os.path.join(ROOT, "12_FINAL_EXPORTS", "shorts_9x16"))
+COVERS = os.path.join(suffix(os.path.join(ROOT, "05_INSTAGRAM")), "portadas_reels")
 
 
 def vf(focus=0.5, zoom=1.0):
@@ -43,7 +43,7 @@ def end_card(text="BÚSCALO EN ROBLOX", bg_clip="plot_crane", bg_t=9.5):
 def make(sid, title, segs, ovs, music="music_short_upbeat_120bpm.wav", cues=(), card_text="BÚSCALO EN ROBLOX", card_s=2.6,
          cover=None, music_start=0.0):
     os.makedirs(OUT, exist_ok=True)
-    out = os.path.join(OUT, f"THNE_short_{sid}.mp4")
+    out = os.path.join(OUT, f"THNE_short_{sid}{'_en' if LANG == 'en' else ''}.mp4")
     render(segs, ovs, out, (W, H), list(cues), music, 0.8, music_start, tail_card=(end_card(card_text), card_s), crf=19)
     # cover: chosen frame + hook
     if cover:
@@ -55,7 +55,7 @@ def make(sid, title, segs, ovs, music="music_short_upbeat_120bpm.wav", cues=(), 
             h = fit(h, w=960)
         im = place(im, h, (W // 2, 330), "tc")
         im = place(im, fit(logo("horizontal_en", "oscuro"), w=640), (W // 2, 1380), "tc")
-        save_jpg(im, os.path.join(COVERS, f"THNE_portada_{sid}.jpg"))
+        save_jpg(im, os.path.join(COVERS, f"THNE_portada_{sid}{'_en' if LANG == 'en' else ''}.jpg"))
 
 
 def starts_of(segs):
@@ -247,3 +247,4 @@ if __name__ == "__main__":
         if ids and not any(k.startswith(i) for i in ids):
             continue
         fn()
+    print("MISSING", sorted(MISSING))

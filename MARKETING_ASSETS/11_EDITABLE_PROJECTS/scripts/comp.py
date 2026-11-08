@@ -3,6 +3,7 @@ Every finished image is rebuilt from the raw captures/renders by make_*.py scrip
 import os, glob
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
+from i18n import tr, LANG, MISSING, suffix
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
@@ -91,6 +92,7 @@ def _gradient_fill(size, top, bottom):
 def headline(text, size, colors=GOLD, stroke=None, shadow=True, font_path=None, tracking=0, outer=None):
     """Big cartoon title as an RGBA image: vertical gradient fill + thick ink stroke + soft shadow.
     `outer` = (px, rgb) adds a second, lighter stroke (for dark backgrounds)."""
+    text = tr(text)
     f = font(font_path or FONT_TITLE, size)
     stroke = stroke if stroke is not None else max(4, size // 9)
     lines = text.split("\n")
@@ -149,6 +151,7 @@ def headline(text, size, colors=GOLD, stroke=None, shadow=True, font_path=None, 
 
 
 def body_text(text, size, color=(255, 255, 255), stroke=0, stroke_color=INK, font_path=None, align="center", spacing=1.18, max_w=None):
+    text = tr(text)
     f = font(font_path or FONT_BODY, size)
     lines = []
     for para in text.split("\n"):
@@ -174,6 +177,7 @@ def body_text(text, size, color=(255, 255, 255), stroke=0, stroke_color=INK, fon
 
 
 def pill(text, size, bg=(255, 196, 40), fg=INK, pad=(0.6, 0.32), font_path=None, radius=None, border=None):
+    text = tr(text)
     f = font(font_path or FONT_TITLE, size)
     bb = f.getbbox(text)
     w, h = bb[2] - bb[0], int(size * 0.95)
@@ -208,6 +212,8 @@ def fit(im, w=None, h=None):
 
 
 def logo(kind="horizontal_en", bg="oscuro"):
+    if LANG == "en":
+        kind = kind.replace("_es", "_en")
     return Image.open(os.path.join(BRAND, f"THNE_logo_{kind}_fondo_{bg}.png")).convert("RGBA")
 
 

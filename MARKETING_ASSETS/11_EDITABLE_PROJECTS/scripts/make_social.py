@@ -63,7 +63,7 @@ def banners():
 
 
 def instagram():
-    out = os.path.join(R, "05_INSTAGRAM")
+    out = suffix(os.path.join(R, "05_INSTAGRAM"))
     W, Hh = 1080, 1350
     # presentation post (4:5)
     im = bg_from(clip_frame("surface_hero", 200), (W, Hh), (0.55, 0.5))
@@ -146,7 +146,7 @@ def instagram():
 
 
 def youtube():
-    out = os.path.join(R, "07_YOUTUBE")
+    out = suffix(os.path.join(R, "07_YOUTUBE"))
     S = (1280, 720)
     items = [("trailer_oficial", clip_frame("surface_hero", 200), (0.5, 0.45), "TRÁILER", None),
              ("cave_1000m", clip_frame("descent_b", 4), (0.5, 0.62), "CAVÉ 1.000 m", None),
@@ -167,13 +167,15 @@ def youtube():
 
 
 def tiktok_copies():
-    src = os.path.join(R, "05_INSTAGRAM", "portadas_reels")
-    dst = os.path.join(R, "06_TIKTOK", "portadas")
+    src = os.path.join(suffix(os.path.join(R, "05_INSTAGRAM")), "portadas_reels")
+    dst = os.path.join(suffix(os.path.join(R, "06_TIKTOK")), "portadas")
     os.makedirs(dst, exist_ok=True)
     for f in glob.glob(os.path.join(src, "*.jpg")):
         shutil.copy(f, os.path.join(dst, os.path.basename(f)))
 
 
 if __name__ == "__main__":
-    banners(); instagram(); youtube(); tiktok_copies()
-    print("social done")
+    if LANG != "en":
+        banners()  # the banner set already contains its EN versions
+    instagram(); youtube(); tiktok_copies()
+    print("social done", LANG, "MISSING", sorted(MISSING))

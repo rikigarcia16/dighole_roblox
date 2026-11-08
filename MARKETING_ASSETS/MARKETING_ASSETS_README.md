@@ -5,6 +5,18 @@ El inventario completo, con las dimensiones reales de cada archivo, está en **[
 
 > **Nada se ha publicado ni subido.** No he cambiado el juego, su nombre, sus imágenes ni ninguna campaña.
 
+**¿Qué subo a Roblox?** → **[SUBIR_A_ROBLOX.md](SUBIR_A_ROBLOX.md)**. Los archivos exactos, numerados, están en
+`12_FINAL_EXPORTS/SUBIR_A_ROBLOX/`.
+
+## Versiones en inglés
+Todo tiene copia en inglés, en una subcarpeta **`EN/`** junto a la española (archivos acabados en `_en`):
+logo (`*_en`), miniaturas (`03_ROBLOX_THUMBNAILS/EN`), anuncios (`08_ROBLOX_ADS/EN`), Instagram completo
+(`05_INSTAGRAM/EN`: post, carrusel, Stories, comunidad, plantillas, portadas), TikTok (`06_TIKTOK/EN`),
+YouTube (`07_YOUTUBE/EN`), banners de lanzamiento y actualización (`_en`), tráiler 16:9 y 9:16
+(`THNE_trailer_oficial_en_*`) y los 15 vídeos cortos (`12_FINAL_EXPORTS/shorts_9x16/EN`).
+Los textos ingleses están en `11_EDITABLE_PROJECTS/scripts/i18n.py`. Para regenerar en inglés: `THNE_LANG=en python make_….py`.
+**Ojo:** la interfaz que se ve en las capturas es la del juego, y está en español en ambas versiones.
+
 ## 1. Cómo se ha hecho (y qué es real)
 
 | Pieza | Método | ¿Es gameplay real? |

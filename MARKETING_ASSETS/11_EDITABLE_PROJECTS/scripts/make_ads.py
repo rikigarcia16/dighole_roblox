@@ -4,7 +4,7 @@ import os
 from comp import *
 from make_thumbnails import title, T03, T01b
 
-OUT = os.path.join(ROOT, "08_ROBLOX_ADS")
+OUT = suffix(os.path.join(ROOT, "08_ROBLOX_ADS"))
 W, H = 1920, 1080
 
 
@@ -42,7 +42,7 @@ def ad_descubrimientos_B():
 
 
 def ad_progresion_A():
-    img = T01b("es")
+    img = T01b(LANG)
     return img
 
 
@@ -68,7 +68,7 @@ def ad_exploracion_B():
 
 
 def ad_herramientas_A():
-    return T03("es")
+    return T03(LANG)
 
 
 def ad_herramientas_B():
@@ -94,7 +94,7 @@ ADS = [
 if __name__ == "__main__":
     lines = ["# Creatividades de Roblox Ads (1920x1080, 16:9)\n", "| Archivo | Hipótesis |", "|---|---|"]
     for name, fn, hyp in ADS:
-        p = save_jpg(fn(), os.path.join(OUT, f"THNE_anuncio_{name}.jpg"))
-        lines.append(f"| `THNE_anuncio_{name}.jpg` | {hyp} |")
+        p = save_jpg(fn(), os.path.join(OUT, f"THNE_anuncio_{name}{'_en' if LANG == 'en' else ''}.jpg"))
+        lines.append(f"| `THNE_anuncio_{name}{'_en' if LANG == 'en' else ''}.jpg` | {hyp} |")
         print(p)
     open(os.path.join(OUT, "HIPOTESIS.md"), "w", encoding="utf-8").write("\n".join(lines) + "\n")
