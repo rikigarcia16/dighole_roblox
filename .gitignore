@@ -5,3 +5,8 @@
 sourcemap.json
 /build/
 /tools/luaucheck/target/
+
+# Marketing: heavy local-only material (regenerable; see MARKETING_ASSETS/MARKETING_ASSETS_README.md)
+MARKETING_ASSETS/10_RAW_GAMEPLAY/
+MARKETING_ASSETS/**/*.mp4
+MARKETING_ASSETS/**/*.wav
