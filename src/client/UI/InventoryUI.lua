@@ -147,7 +147,7 @@ function InventoryUI.new(parent: Instance, deps: Deps)
 				end
 			end
 			summary.Text = string.format(
-				'%d/%d · <font color="#FFCD3C">● %s</font>',
+				'%d/%d · vale <font color="#FFCD3C">● %s</font>',
 				state.used,
 				state.capacity,
 				Format.number(total)
