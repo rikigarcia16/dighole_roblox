@@ -82,8 +82,11 @@ local function load(player: Player): Session?
 	local key = "player_" .. player.UserId
 	local fallback = ProfileSchema.default(newSeed(player))
 
-	if not store or RunService:IsStudio() and player.UserId <= 0 then
-		-- Test players in Studio (negative ids) never touch real data.
+	local studioNoSave = RunService:IsStudio()
+		and (player.UserId <= 0 or game:GetService("ServerStorage"):GetAttribute("StudioNoSave") == true)
+	if not store or studioNoSave then
+		-- Test players in Studio (negative ids) never touch real data. In Studio, the ServerStorage
+		-- attribute StudioNoSave also gives a throwaway profile (used to record footage safely).
 		return { player = player, key = key, profile = fallback, canSave = false, saving = false, released = false }
 	end
 	local dataStore = store :: DataStore

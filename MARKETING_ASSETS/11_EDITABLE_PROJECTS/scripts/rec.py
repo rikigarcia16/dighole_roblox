@@ -6,7 +6,7 @@ from wincap import find, Grabber
 VIEW = (20, 348, 2532, 1674)
 name, secs = sys.argv[1], float(sys.argv[2])
 scale = float(sys.argv[3]) if len(sys.argv) > 3 else 1.0
-out = os.path.join(os.path.dirname(__file__), "..", "..", "10_RAW_GAMEPLAY", "clips", name)
+out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "10_RAW_GAMEPLAY", "clips", name)
 os.makedirs(out, exist_ok=True)
 q = queue.Queue(maxsize=200)
 def saver():

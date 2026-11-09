@@ -125,3 +125,15 @@ Todo se reconstruye desde `11_EDITABLE_PROJECTS/` (Python 3 con Pillow, numpy e 
 **Notas de uso de las Stories** (añade los stickers en la app): 01 encuesta «¿Juegas a Roblox?» · 02 deslizador de emoji ·
 03 encuesta A/B · 04 enlace `ig_beta` · 05 cuenta atrás · 06 enlace `ig_stories` · 07 caja de preguntas.
 Recuerda usar los códigos LaunchData del manual (`ig_reels`, `tiktok`…) en los enlaces para medir de dónde viene cada jugador.
+
+## Reels de pantalla partida (arriba tu clip, abajo gameplay)
+
+- **Clips de gameplay editados** (20–30 s, 1080×960, con música y efectos): `12_FINAL_EXPORTS/gameplay_clips_split/THNE_gp_01…10`.
+  Del 07 al 10 salen del gameplay grabado el 10/11/2026: perforadora abisal, cartel de cada zona y hallazgos épicos y legendarios.
+  Se grabó en Studio con un perfil desechable (atributo `StudioNoSave` en ServerStorage), sin tocar tu partida guardada.
+  El arranque y el resto de los recursos se generan con `make_gameplay_clips.py`.
+- **Plantilla:** `11_EDITABLE_PROJECTS/scripts/make_split.py`. Monta arriba el clip que elijas (con su sonido) y abajo el gameplay:
+  - `python make_split.py MI_CLIP.mp4 --bottom auto-gp --text "TEXTO DEL GANCHO"`
+  - `python make_split.py CARPETA/ --bottom auto-gp` hace un reel por cada vídeo de la carpeta, con un clip de gameplay distinto en cada uno.
+  - Sin `--bottom`, abajo hace cortes automáticos. Salida: `12_FINAL_EXPORTS/reels_split/`.
+- El clip de arriba lo eliges tú y eres responsable de tener derecho a usarlo (los clips de series o programas de TV pueden recibir reclamaciones).

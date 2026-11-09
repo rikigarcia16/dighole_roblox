@@ -17,6 +17,10 @@ CLIPS = {
     "mines_action": dict(slow=4), "crystal_action": dict(slow=4), "abyss_action": dict(slow=4),
     "garage_pan": dict(slow=4), "dig_surface": dict(slow=1), "sell_ui": dict(slow=1),
     "showcase_ui": dict(slow=1), "legendary_ui": dict(slow=1),
+    # Recorded 10 Nov 2026 in Studio with a throwaway profile (nothing saved): real digging with the
+    # abyss borer, camera following the player, HUD visible. ~12 fps realtime.
+    "rec_borer_shaft": dict(slow=1), "rec_zone_crystal": dict(slow=1), "rec_zone_caverns": dict(slow=1),
+    "rec_zone_volcanic": dict(slow=1), "rec_zone_abyss": dict(slow=1), "rec_surface_borer": dict(slow=1),
 }
 
 
