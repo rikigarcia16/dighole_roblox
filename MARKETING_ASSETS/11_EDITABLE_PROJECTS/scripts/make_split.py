@@ -114,14 +114,100 @@ def bottom_frame(plan_item, lt):
     return img
 
 
-def end_panel():
+TXT = {
+    "es": {"cta": "BÚSCALO EN ROBLOX", "sub": "Gratis · Enlace en la bio", "what": "¿QUÉ JUEGO ES ESTE?"},
+    "en": {"cta": "SEARCH IT ON ROBLOX", "sub": "Free · Link in bio", "what": "WHAT GAME IS THIS?"},
+}
+
+
+def end_panel(lang="es"):
     bg = ImageEnhance.Brightness(land(clip("plot_crane").at(9.5), (0.5, 0.5), 1.0, (W, HALF)).filter(ImageFilter.GaussianBlur(10))).enhance(0.45)
     bg = place(bg, fit(logo("main_en", "oscuro"), h=int(HALF * 0.55)), (W // 2, 40), "tc")
-    bg = place(bg, pill("BÚSCALO EN ROBLOX", 60, bg=(120, 220, 90)), (W // 2, int(HALF * 0.74)), "cc")
-    return place(bg, body_text("Gratis · Enlace en la bio", 40, (255, 255, 255), stroke=4), (W // 2, int(HALF * 0.88)), "cc")
+    bg = place(bg, pill(TXT[lang]["cta"], 60, bg=(120, 220, 90)), (W // 2, int(HALF * 0.74)), "cc")
+    return place(bg, body_text(TXT[lang]["sub"], 40, (255, 255, 255), stroke=4), (W // 2, int(HALF * 0.88)), "cc")
+
+
+# ------------------------------------------------------------------ captions (word by word)
+YELLOW = ((255, 236, 60), (255, 200, 20))
+CAP_SIZE = 76
+_word_cache = {}
+
+
+def load_words(top_path):
+    """Words from transcribe.py (TOP.words.json next to the clip), or [] if there is no transcript."""
+    p = os.path.splitext(top_path)[0] + ".words.json"
+    if not os.path.exists(p):
+        return []
+    return [w for w in json.load(open(p, encoding="utf-8")) if w["w"].strip()]
+
+
+def chunk_words(words, max_words=3, gap=0.45):
+    """Groups of up to 3 words; a new group starts after punctuation or a pause."""
+    chunks, cur = [], []
+    for w in words:
+        if cur and (len(cur) >= max_words or w["s"] - cur[-1]["e"] > gap or cur[-1]["w"][-1:] in ".,!?"):
+            chunks.append(cur); cur = []
+        cur.append(w)
+    if cur:
+        chunks.append(cur)
+    return chunks
+
+
+def word_img(text, colors):
+    k = (text, colors)
+    if k not in _word_cache:
+        _word_cache[k] = headline(text, CAP_SIZE, colors)
+    return _word_cache[k]
+
+
+def caption_img(chunk, active):
+    """The group in white with the word being spoken in yellow, slightly bigger."""
+    parts = []
+    for i, w in enumerate(chunk):
+        txt = w["w"].upper().strip(",")
+        im = word_img(txt, YELLOW if i == active else WHITE)
+        if i == active:
+            im = im.resize((int(im.width * 1.12), int(im.height * 1.12)), Image.LANCZOS)
+        parts.append(im)
+    gapx = 14
+    wd = sum(p.width for p in parts) + gapx * (len(parts) - 1)
+    ht = max(p.height for p in parts)
+    out = Image.new("RGBA", (wd, ht), (0, 0, 0, 0))
+    x = 0
+    for p in parts:
+        out.alpha_composite(p, (x, (ht - p.height) // 2)); x += p.width + gapx
+    return fit(out, w=1000) if out.width > 1000 else out
+
+
+def draw_caption(frame, chunks, t):
+    for ch in chunks:
+        if ch[0]["s"] - 0.05 <= t <= ch[-1]["e"] + 0.15:
+            active = max([i for i, w in enumerate(ch) if w["s"] - 0.05 <= t] or [0])
+            im = caption_img(ch, active)
+            u = (t - ch[0]["s"]) / 0.12  # pop on each new group
+            if u < 1:
+                s = 0.8 + 0.2 * max(0.0, u)
+                im = im.resize((max(1, int(im.width * s)), max(1, int(im.height * s))), Image.BILINEAR)
+            return place(frame, im, (W // 2, TOP_H - 210), "cc")
+    return frame
 
 
 GP_DIR = os.path.join(ROOT, "12_FINAL_EXPORTS", "gameplay_clips_split")
+
+
+def basic_frames(seed, dur, speed=1.1):
+    """Plain continuous gameplay (rec_basic_dig): no cuts, no effects, like someone just playing.
+    Each reel starts at a different point of the take so the bottoms do not repeat."""
+    c = clip("rec_basic_dig")
+    span = c.duration - 4.0
+    start = 3.0 + ((seed * 17.3) % max(1.0, span - dur * speed))
+    t = 0.0
+    while True:
+        src = start + t * speed
+        if src > c.duration - 0.1:  # wrap if a reel is longer than the take
+            src = 3.0 + (src - 3.0) % (c.duration - 3.1)
+        yield land(c.at(src), (0.5, 0.5), 1.25, (W, HALF))
+        t += 1.0 / FPS
 
 
 def bottom_frames(path, dur):
@@ -150,7 +236,7 @@ def top_frames_once(path):
     p.wait()
 
 
-def make(top_path, text=None, seed=1, max_s=60.0, name=None, end_s=1.6, bottom=None, game_audio=False):
+def make(top_path, text=None, seed=1, max_s=60.0, name=None, end_s=1.6, bottom=None, game_audio=False, lang="es", captions=True):
     dur = min(probe_duration(top_path), max_s)
     name = name or os.path.splitext(os.path.basename(top_path))[0]
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -159,14 +245,22 @@ def make(top_path, text=None, seed=1, max_s=60.0, name=None, end_s=1.6, bottom=N
 
     plan = bottom_plan(dur, seed)
     tag = pill("THE HOLE NEVER ENDS · ROBLOX", 30, bg=(255, 196, 40))
-    hook_img = fit(headline(text, 78, WHITE), w=960) if text else None
-    card = end_panel()
+    hook_img = fit(headline(text, 84, YELLOW), w=980) if text else None
+    card = end_panel(lang)
+    chunks = chunk_words(load_words(top_path)) if captions else []
+    # "What game is this?" over the gameplay, around the middle of the reel
+    what = pill(TXT[lang]["what"], 46, bg=(255, 255, 255))
+    what_t0 = max(3.2, dur * 0.42); what_t1 = min(dur - end_s - 0.2, what_t0 + 2.4)
 
     cmd = [FFMPEG, "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
            "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-pix_fmt", "yuv420p", "-movflags", "+faststart", tmp_v]
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     tops = top_frames(top_path, dur)
-    bots = bottom_frames(bottom, dur) if bottom else None
+    if bottom == "basic":
+        bots = basic_frames(seed, dur)
+        bottom = None
+    else:
+        bots = bottom_frames(bottom, dur) if bottom else None
     n = int(round(dur * FPS)); k = 0
     for f in range(n):
         t = f / FPS
@@ -186,8 +280,12 @@ def make(top_path, text=None, seed=1, max_s=60.0, name=None, end_s=1.6, bottom=N
         dr.rectangle([0, TOP_H - 3, W, TOP_H + 3], fill=(255, 196, 40))  # seam line
         dr.rectangle([0, 0, int(W * (t + 1 / FPS) / dur), 9], fill=(255, 196, 40))  # progress bar
         frame = place(frame, tag, (W // 2, TOP_H), "cc")  # brand on the seam
-        if hook_img is not None and t < 3.0:
-            frame = Overlay(hook_img, 0.0, 3.0, (W // 2, TOP_H - 40), "bc").draw(frame, t)  # just above the seam
+        if chunks:
+            frame = draw_caption(frame, chunks, t)
+        if hook_img is not None and t < 2.4:
+            frame = Overlay(hook_img, 0.0, 2.4, (W // 2, 70), "tc").draw(frame, t)  # hook at the top
+        if what_t0 < what_t1 and what_t0 <= t <= what_t1:
+            frame = Overlay(what, what_t0, what_t1, (W // 2, TOP_H + 70), "tc").draw(frame, t)
         p.stdin.write(frame.tobytes())
     p.stdin.close(); p.wait()
 
@@ -243,8 +341,10 @@ if __name__ == "__main__":
     ap.add_argument("--seed", type=int, default=1, help="cambia el orden de los cortes de abajo")
     ap.add_argument("--max", type=float, default=60.0, help="duración máxima en segundos")
     ap.add_argument("--name", default=None)
-    ap.add_argument("--bottom", default=None, help='clip de gameplay editado para abajo, o "auto-gp" (por defecto: cortes rápidos automáticos)')
+    ap.add_argument("--bottom", default=None, help='clip de gameplay editado para abajo, "auto-gp" (uno distinto por reel) o "basic" (gameplay normal continuo); por defecto: cortes rápidos automáticos')
     ap.add_argument("--game-audio", action="store_true", help="añadir música y efectos del juego (por defecto solo suena el clip de arriba)")
+    ap.add_argument("--lang", default="es", choices=["es", "en"], help="idioma de los textos del juego (final y «¿qué juego es este?»)")
+    ap.add_argument("--no-captions", action="store_true", help="sin subtítulos aunque exista CLIP.words.json")
     a = ap.parse_args()
     gps = sorted(glob.glob(os.path.join(GP_DIR, "THNE_gp_*.mp4")))
 
@@ -258,6 +358,7 @@ if __name__ == "__main__":
     if os.path.isdir(a.top):
         files = sorted(f for f in glob.glob(os.path.join(a.top, "*")) if f.lower().endswith((".mp4", ".mov", ".webm", ".mkv")))
         for i, f in enumerate(files):
-            make(f, a.text, a.seed + i, a.max, bottom=pick_bottom(i), game_audio=a.game_audio)
+            make(f, a.text, a.seed + i, a.max, bottom=pick_bottom(i), game_audio=a.game_audio, lang=a.lang, captions=not a.no_captions)
     else:
-        make(a.top, a.text, a.seed, a.max, a.name, bottom=pick_bottom(0), game_audio=a.game_audio)
+        make(a.top, a.text, a.seed, a.max, a.name, bottom=pick_bottom(0), game_audio=a.game_audio, lang=a.lang,
+             captions=not a.no_captions)

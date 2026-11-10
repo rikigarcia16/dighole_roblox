@@ -21,6 +21,9 @@ CLIPS = {
     # abyss borer, camera following the player, HUD visible. ~12 fps realtime.
     "rec_borer_shaft": dict(slow=1), "rec_zone_crystal": dict(slow=1), "rec_zone_caverns": dict(slow=1),
     "rec_zone_volcanic": dict(slow=1), "rec_zone_abyss": dict(slow=1), "rec_surface_borer": dict(slow=1),
+    # Plain gameplay, no HUD and no in-world text: spawn at the house, walk to the garden and dig a
+    # 3x3 pit layer by layer with the rusty shovel (~100 s, ~10 fps realtime).
+    "rec_basic_dig": dict(slow=1),
 }
 
 
