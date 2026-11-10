@@ -24,6 +24,11 @@ CLIPS = {
     # Plain gameplay, no HUD and no in-world text: spawn at the house, walk to the garden and dig a
     # 3x3 pit layer by layer with the rusty shovel (~100 s, ~10 fps realtime).
     "rec_basic_dig": dict(slow=1),
+    # Skit scenes (11 Nov 2026): no HUD, in-game chat bubbles in English, NPCs built locally.
+    "sk_mom_outside": dict(slow=1), "sk_mom_dinner": dict(slow=1), "sk_gf_where": dict(slow=1),
+    "sk_abyss_coming": dict(slow=1), "sk_abyss_almost": dict(slow=1), "sk_abyss_plain": dict(slow=1),
+    "sk_cave_dad": dict(slow=1), "sk_cave_box": dict(slow=1), "sk_cave_who": dict(slow=1),
+    "sk_friend_boring": dict(slow=1), "sk_one_more": dict(slow=1),
 }
 
 

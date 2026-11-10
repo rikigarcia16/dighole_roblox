@@ -144,3 +144,18 @@ Recuerda usar los códigos LaunchData del manual (`ig_reels`, `tiktok`…) en lo
 - Para descargarlos al clonar hay que tener Git LFS instalado: ejecuta `git lfs install` una vez y luego `git clone` (o `git lfs pull` en un clon que ya tengas).
 - Para volver a montar los vídeos, descomprime cada zip de `10_RAW_GAMEPLAY_ZIP/clips_*.zip` en `10_RAW_GAMEPLAY/clips/` y `stills_sueltos.zip` en `10_RAW_GAMEPLAY/stills/`.
 - **No están en el repositorio** los clips de series de televisión (`CLIPS_PARA_REELS/`) ni los reels hechos con ellos, porque no tenemos derecho a redistribuirlos. Las plantillas para montarlos sí están (`make_split.py`, `cut_clips.py`, `transcribe.py`).
+
+## Sketches de historia (12_FINAL_EXPORTS/skits_9x16)
+
+Formato copiado de los sketches POV de Roblox que se hacen virales: una frase-gancho, una mini historia contada con los bocadillos de chat del juego, una escalada y un remate. Están en inglés y no llevan música: la canción de moda se añade en la app al publicar.
+
+| Archivo | Gancho |
+|---|---|
+| `THNE_skit_01_mom_said_go_outside` | POV: mom said "go play outside" → 3 hours later, 1,000 m underground |
+| `THNE_skit_02_she_said_she_would_wait` | she said she'd wait for me at the surface → "almost there" (he was not) |
+| `THNE_skit_03_dad_went_to_get_milk` | dad went to get milk 10 years ago → "DAD???" → his old box |
+| `THNE_skit_04_just_one_more_block` | me at 2 AM: "ok just ONE more block" → 6 hours later, the Abyss |
+| `THNE_skit_05_friend_said_boring` | my friend: "this game is boring" → "try this" (abyss borer) |
+| `THNE_skit_06_someone_dug_here_before` | POV: you find a tunnel under YOUR house → "who dug this??" |
+
+Escenas grabadas en Studio con un perfil desechable: sin HUD, bocadillos en inglés y personajes secundarios creados solo en el cliente. Se regeneran con `make_skits.py`; las grabaciones en bruto están en `10_RAW_GAMEPLAY_ZIP/clips_sk_*.zip`.
