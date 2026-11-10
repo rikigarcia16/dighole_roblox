@@ -137,3 +137,10 @@ Recuerda usar los códigos LaunchData del manual (`ig_reels`, `tiktok`…) en lo
   - `python make_split.py CARPETA/ --bottom auto-gp` hace un reel por cada vídeo de la carpeta, con un clip de gameplay distinto en cada uno.
   - Sin `--bottom`, abajo hace cortes automáticos. Salida: `12_FINAL_EXPORTS/reels_split/`.
 - El clip de arriba lo eliges tú y eres responsable de tener derecho a usarlo (los clips de series o programas de TV pueden recibir reclamaciones).
+
+## Archivos grandes en GitHub (Git LFS)
+
+- Los vídeos (`.mp4`), los audios (`.wav`) y las grabaciones en bruto se guardan con **Git LFS**. Las grabaciones están comprimidas en `10_RAW_GAMEPLAY_ZIP/`, una por toma.
+- Para descargarlos al clonar hay que tener Git LFS instalado: ejecuta `git lfs install` una vez y luego `git clone` (o `git lfs pull` en un clon que ya tengas).
+- Para volver a montar los vídeos, descomprime cada zip de `10_RAW_GAMEPLAY_ZIP/clips_*.zip` en `10_RAW_GAMEPLAY/clips/` y `stills_sueltos.zip` en `10_RAW_GAMEPLAY/stills/`.
+- **No están en el repositorio** los clips de series de televisión (`CLIPS_PARA_REELS/`) ni los reels hechos con ellos, porque no tenemos derecho a redistribuirlos. Las plantillas para montarlos sí están (`make_split.py`, `cut_clips.py`, `transcribe.py`).

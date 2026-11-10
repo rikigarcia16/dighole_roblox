@@ -6,8 +6,12 @@ sourcemap.json
 /build/
 /tools/luaucheck/target/
 
-# Marketing: heavy local-only material (regenerable; see MARKETING_ASSETS/MARKETING_ASSETS_README.md)
+# Marketing: videos, audio and the raw gameplay (as zips in 10_RAW_GAMEPLAY_ZIP) are stored with Git LFS
+# (.gitattributes). The unzipped raw frames stay local.
 MARKETING_ASSETS/10_RAW_GAMEPLAY/
-MARKETING_ASSETS/**/*.mp4
-MARKETING_ASSETS/**/*.wav
+# Third-party clips (TV series) and the reels made from them are never uploaded: not ours to redistribute.
 MARKETING_ASSETS/CLIPS_PARA_REELS/
+MARKETING_ASSETS/**/*family_guy*
+# Intermediate render files
+MARKETING_ASSETS/**/*.v.mp4
+MARKETING_ASSETS/**/*.mix.wav
