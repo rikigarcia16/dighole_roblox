@@ -160,6 +160,14 @@ class Shot:
         src = min(self.src_time(lt, self.start, self.speed), c.duration - 0.05)
         if self.layout == "full":
             im = frame_full(c.at(src), self.cam.at(u), (W, H), lt, self.cam.shake)
+        elif self.layout == "fit":  # whole landscape frame across the width, over a blurred copy of itself
+            src_im = c.at(src).crop((0, CROP_TOP, c.at(src).width, c.at(src).height))
+            z = self.cam.at(u)[2]
+            fw = int(W * z); fh = int(src_im.height * fw / src_im.width)
+            bg = ImageEnhance.Brightness(src_im.resize((W // 8, H // 8)).filter(ImageFilter.GaussianBlur(3)).resize((W, H), Image.BILINEAR)).enhance(0.4)
+            fg = src_im.resize((fw, fh), Image.LANCZOS)
+            bg.paste(fg, ((W - fw) // 2, (H - fh) // 2 + int(self.cam.at(u)[1] * 0) ))
+            im = bg
         else:
             c2 = V.clip(self.clip2)
             src2 = min(self.src_time(lt, self.start2, self.speed2), c2.duration - 0.05)
@@ -248,7 +256,7 @@ def text_img(s, size, path=FONT_TITLE, fill=(255, 255, 255), stroke=8, stroke_fi
     f = font(path, size)
     d0 = ImageDraw.Draw(Image.new("RGB", (8, 8)))
     box = d0.multiline_textbbox((0, 0), s, font=f, stroke_width=stroke, spacing=spacing, align=align)
-    w, h = box[2] - box[0] + 24, box[3] - box[1] + 24
+    w, h = int(box[2] - box[0] + 24), int(box[3] - box[1] + 24)
     im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     if shadow:
         sh = Image.new("RGBA", (w, h), (0, 0, 0, 0))
